@@ -22,3 +22,8 @@ exclude = ["CHANGELOG.md", "*.sh", ".gitignore"]
 [dependencies]
 hdrhistogram = "7.5"
 statrs = "0.18"
+sha2 = { version = "0.10", optional = true }
+
+[features]
+# intended only to be used in development
+dev = ["dep:sha2"]

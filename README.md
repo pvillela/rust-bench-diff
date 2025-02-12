@@ -1,6 +1,6 @@
 # bench_diff
 
-This library supports the reliable comparison of the difference in latency between two functions/closures.
+This library supports the reliable comparison of the latencies of two functions/closures.
 
 ## Documentation
 

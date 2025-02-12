@@ -10,7 +10,7 @@ use std::{
 
 const WARMUP_COUNT: usize = 10;
 
-fn latency(f: impl Fn()) -> u64 {
+pub(crate) fn latency(f: impl Fn()) -> u64 {
     let start = Instant::now();
     f();
     let elapsed = Instant::now().duration_since(start);

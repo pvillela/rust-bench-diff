@@ -1,6 +1,6 @@
 //! Module that provides functions to simulate work, used to support benchmarks.
 
-use crate::latency;
+use crate::{latency, LatencyUnit};
 use sha2::{Digest, Sha256};
 use std::{hint::black_box, thread, time::Duration};
 
@@ -10,8 +10,9 @@ pub fn lazy_work(micros: u64) {
 }
 
 /// Function that does a significant amount of computation to support benchmarks.
-pub fn real_work(iterations: u32) {
-    let extent = black_box(iterations);
+/// `effort` is the number of iterations that determines the amount of work performed.
+pub fn real_work(effort: u32) {
+    let extent = black_box(effort);
     let seed = black_box(0_u64);
     let buf = seed.to_be_bytes();
     let mut hasher = Sha256::new();
@@ -23,12 +24,21 @@ pub fn real_work(iterations: u32) {
 }
 
 /// Returns an estimate of the number of iterations required for [`real_work`] to have a latency
-/// of `target_micros`. `calibration_iterations` is the number of iterations executed during calibration.
+/// of `target_micros`.
 ///
-/// `calibration_iterations` should be greater than or equal to the returned value, ideally many times larger.
-/// If it is not, the calibration is inaccurate and should be done again with a higher `calibration_iterations`
-/// value.
-pub fn calibrate_real_work(target_micros: u64, calibration_iterations: u32) -> u32 {
-    let elapsed = latency(|| real_work(calibration_iterations));
-    ((target_micros as f64 / elapsed as f64) * calibration_iterations as f64).ceil() as u32
+/// Calls [`calibrate_real_work_x`] with a predefined `calibration_effort`;
+pub fn calibrate_real_work(unit: LatencyUnit, target_latency: u64) -> u32 {
+    const CALIBRATION_EFFORT: u32 = 1000;
+    calibrate_real_work_x(unit, target_latency, CALIBRATION_EFFORT)
+}
+
+/// Returns an estimate of the number of iterations required for [`real_work`] to have a latency
+/// of `target_micros`. `calibration_effort` is the number of iterations executed during calibration.
+pub fn calibrate_real_work_x(
+    unit: LatencyUnit,
+    target_latency: u64,
+    calibration_effort: u32,
+) -> u32 {
+    let elapsed = latency(unit, || real_work(calibration_effort));
+    ((target_latency as f64 / elapsed as f64) * calibration_effort as f64).ceil() as u32
 }

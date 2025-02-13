@@ -10,25 +10,34 @@ use std::{
 
 const WARMUP_COUNT: usize = 10;
 
-pub(crate) fn latency(f: impl Fn()) -> u64 {
-    let start = Instant::now();
-    f();
-    let elapsed = Instant::now().duration_since(start);
-    elapsed.as_micros() as u64
+#[derive(Clone, Copy)]
+pub enum LatencyUnit {
+    Micro,
+    Nano,
 }
 
-fn quad_exec(f1: impl Fn(), f2: impl Fn()) -> [(u64, u64); 4] {
-    let l01 = latency(&f1);
-    let l02 = latency(&f2);
+pub fn latency(unit: LatencyUnit, f: impl Fn()) -> u64 {
+    let start = Instant::now();
+    f();
+    let duration = Instant::now().duration_since(start);
+    match unit {
+        LatencyUnit::Micro => duration.as_micros() as u64,
+        LatencyUnit::Nano => duration.as_nanos() as u64,
+    }
+}
 
-    let l11 = latency(&f1);
-    let l12 = latency(&f2);
+fn quad_exec(unit: LatencyUnit, f1: impl Fn(), f2: impl Fn()) -> [(u64, u64); 4] {
+    let l01 = latency(unit, &f1);
+    let l02 = latency(unit, &f2);
 
-    let l22 = latency(&f2);
-    let l21 = latency(&f1);
+    let l11 = latency(unit, &f1);
+    let l12 = latency(unit, &f2);
 
-    let l32 = latency(&f2);
-    let l31 = latency(&f1);
+    let l22 = latency(unit, &f2);
+    let l21 = latency(unit, &f1);
+
+    let l32 = latency(unit, &f2);
+    let l31 = latency(unit, &f1);
 
     [(l01, l02), (l11, l12), (l21, l22), (l31, l32)]
 }
@@ -162,6 +171,7 @@ impl BenchDiffOut {
 ///
 /// The benchmark is warmed-up with one additional initial outer loop iteration for which measurements are not collected.
 pub fn bench_diff_x(
+    unit: LatencyUnit,
     f1: impl Fn(),
     f2: impl Fn(),
     exec_count: usize,
@@ -179,13 +189,13 @@ pub fn bench_diff_x(
 
     // Warm-up
     for _ in 0..WARMUP_COUNT {
-        quad_exec(&f1, &f2);
+        quad_exec(unit, &f1, &f2);
     }
 
     outer_loop_pre();
 
     for i in 1..=exec_count / 4 {
-        let pairs = quad_exec(&f1, &f2);
+        let pairs = quad_exec(unit, &f1, &f2);
 
         for (elapsed1, elapsed2) in pairs {
             hist_f1
@@ -231,11 +241,17 @@ pub fn bench_diff_x(
     }
 }
 
-pub fn bench_diff(f1: impl Fn(), f2: impl Fn(), exec_count: usize) -> BenchDiffOut {
-    bench_diff_x(f1, f2, exec_count, || (), |_| ())
+pub fn bench_diff(
+    unit: LatencyUnit,
+    f1: impl Fn(),
+    f2: impl Fn(),
+    exec_count: usize,
+) -> BenchDiffOut {
+    bench_diff_x(unit, f1, f2, exec_count, || (), |_| ())
 }
 
 pub fn bench_diff_print(
+    unit: LatencyUnit,
     f1: impl Fn(),
     f2: impl Fn(),
     exec_count: usize,
@@ -263,7 +279,7 @@ pub fn bench_diff_print(
         stdout().flush().expect("unexpected I/O error");
     };
 
-    let diff_out = bench_diff_x(f1, f2, exec_count, outer_loop_pre, outer_loop_tail);
+    let diff_out = bench_diff_x(unit, f1, f2, exec_count, outer_loop_pre, outer_loop_tail);
 
     println!(" done\n");
 

@@ -7,6 +7,5 @@ pub use bench_diff::*;
 mod summary_stats;
 pub use summary_stats::*;
 
-#[cfg(feature = "dev")]
-#[doc(hidden)]
-pub mod dev_support;
+#[cfg(feature = "dev_utils")]
+pub mod dev_utils;

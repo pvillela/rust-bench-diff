@@ -1,4 +1,4 @@
-use bench_diff::dev_support::{calibrate_real_work, real_work};
+use bench_diff::dev_utils::{calibrate_real_work, real_work};
 use bench_diff::{latency, LatencyUnit};
 
 fn main() {

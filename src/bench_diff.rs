@@ -8,7 +8,7 @@ use std::{
     time::Instant,
 };
 
-const WARMUP_COUNT: usize = 10;
+const WARMUP_COUNT: usize = 20;
 
 #[derive(Clone, Copy)]
 pub enum LatencyUnit {
@@ -16,7 +16,7 @@ pub enum LatencyUnit {
     Nano,
 }
 
-pub fn latency(unit: LatencyUnit, f: impl Fn()) -> u64 {
+pub fn latency(unit: LatencyUnit, mut f: impl FnMut()) -> u64 {
     let start = Instant::now();
     f();
     let duration = Instant::now().duration_since(start);
@@ -26,18 +26,18 @@ pub fn latency(unit: LatencyUnit, f: impl Fn()) -> u64 {
     }
 }
 
-fn quad_exec(unit: LatencyUnit, f1: impl Fn(), f2: impl Fn()) -> [(u64, u64); 4] {
-    let l01 = latency(unit, &f1);
-    let l02 = latency(unit, &f2);
+fn quad_exec(unit: LatencyUnit, mut f1: impl FnMut(), mut f2: impl FnMut()) -> [(u64, u64); 4] {
+    let l01 = latency(unit, &mut f1);
+    let l02 = latency(unit, &mut f2);
 
-    let l11 = latency(unit, &f1);
-    let l12 = latency(unit, &f2);
+    let l11 = latency(unit, &mut f1);
+    let l12 = latency(unit, &mut f2);
 
-    let l22 = latency(unit, &f2);
-    let l21 = latency(unit, &f1);
+    let l22 = latency(unit, &mut f2);
+    let l21 = latency(unit, &mut f1);
 
-    let l32 = latency(unit, &f2);
-    let l31 = latency(unit, &f1);
+    let l32 = latency(unit, &mut f2);
+    let l31 = latency(unit, &mut f1);
 
     [(l01, l02), (l11, l12), (l21, l22), (l31, l32)]
 }
@@ -172,8 +172,8 @@ impl BenchDiffOut {
 /// The benchmark is warmed-up with one additional initial outer loop iteration for which measurements are not collected.
 pub fn bench_diff_x(
     unit: LatencyUnit,
-    f1: impl Fn(),
-    f2: impl Fn(),
+    mut f1: &mut impl FnMut(),
+    mut f2: &mut impl FnMut(),
     exec_count: usize,
     outer_loop_pre: impl Fn(),
     outer_loop_tail: impl Fn(usize),
@@ -189,13 +189,13 @@ pub fn bench_diff_x(
 
     // Warm-up
     for _ in 0..WARMUP_COUNT {
-        quad_exec(unit, &f1, &f2);
+        quad_exec(unit, &mut f1, &mut f2);
     }
 
     outer_loop_pre();
 
     for i in 1..=exec_count / 4 {
-        let pairs = quad_exec(unit, &f1, &f2);
+        let pairs = quad_exec(unit, &mut f1, &mut f2);
 
         for (elapsed1, elapsed2) in pairs {
             hist_f1
@@ -243,17 +243,17 @@ pub fn bench_diff_x(
 
 pub fn bench_diff(
     unit: LatencyUnit,
-    f1: impl Fn(),
-    f2: impl Fn(),
+    f1: &mut impl FnMut(),
+    f2: &mut impl FnMut(),
     exec_count: usize,
 ) -> BenchDiffOut {
     bench_diff_x(unit, f1, f2, exec_count, || (), |_| ())
 }
 
-pub fn bench_diff_print(
+pub fn bench_diff_print_verbose(
     unit: LatencyUnit,
-    f1: impl Fn(),
-    f2: impl Fn(),
+    f1: &mut impl FnMut(),
+    f2: &mut impl FnMut(),
     exec_count: usize,
     print_sub_header: impl Fn(),
     print_stats: impl Fn(BenchDiffOut),
@@ -282,6 +282,23 @@ pub fn bench_diff_print(
     let diff_out = bench_diff_x(unit, f1, f2, exec_count, outer_loop_pre, outer_loop_tail);
 
     println!(" done\n");
+
+    print_stats(diff_out);
+}
+
+pub fn bench_diff_print(
+    unit: LatencyUnit,
+    f1: &mut impl FnMut(),
+    f2: &mut impl FnMut(),
+    exec_count: usize,
+    print_sub_header: impl Fn(),
+    print_stats: impl Fn(BenchDiffOut),
+) {
+    println!("\nbench_diff: exec_count={exec_count}");
+    print_sub_header();
+    println!();
+
+    let diff_out = bench_diff_x(unit, f1, f2, exec_count, || {}, |_| {});
 
     print_stats(diff_out);
 }

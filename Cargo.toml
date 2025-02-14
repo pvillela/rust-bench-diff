@@ -20,10 +20,20 @@ exclude = ["CHANGELOG.md", "*.sh", ".gitignore"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rand = { version = "0.9.0", features = ["std_rng"] }
 hdrhistogram = "7.5"
 statrs = "0.18"
+rand_distr = "0.5.0"
 sha2 = { version = "0.10", optional = true }
 
 [features]
+# utilities for creation of synthetic benchmarks
+dev_utils = ["dep:sha2"]
+
 # intended only to be used in development
-dev = ["dep:sha2"]
+dev = []
+
+
+[[bench]]
+name = "benchmark"
+harness = false

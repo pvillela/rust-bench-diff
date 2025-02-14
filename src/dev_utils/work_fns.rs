@@ -1,4 +1,4 @@
-//! Module that provides functions to simulate work, used to support benchmarks.
+//! Module that provides functions to simulate work, used to support creation of synthetic benchmarks.
 
 use crate::{latency, LatencyUnit};
 use sha2::{Digest, Sha256};

@@ -26,7 +26,7 @@ fn main() {
         &mut base_median_lo_var,
         &mut base_median_hi_var,
         EXEC_COUNT,
-        || println!("base_median_lo_var -> base_median_hi_var"),
+        || println!("f1=base_median_lo_var, f2=base_median_hi_var"),
         print_diff_out,
     );
 
@@ -35,7 +35,7 @@ fn main() {
         &mut base_median_lo_var,
         &mut hi_median_lo_var,
         EXEC_COUNT,
-        || println!("base_median_lo_var -> hi_median_lo_var"),
+        || println!("f1=base_median_lo_var, f2=hi_median_lo_var"),
         print_diff_out,
     );
 
@@ -44,7 +44,7 @@ fn main() {
         &mut base_median_lo_var,
         &mut hi_median_hi_var,
         EXEC_COUNT,
-        || println!("base_median_lo_var -> hi_median_hi_var"),
+        || println!("f1=base_median_lo_var, f2=hi_median_hi_var"),
         print_diff_out,
     );
 }

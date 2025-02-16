@@ -5,10 +5,11 @@ use hdrhistogram::Histogram;
 use statrs::distribution::{ContinuousCDF, StudentsT};
 use std::{
     io::{stdout, Write},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
-const WARMUP_COUNT: usize = 20;
+const WARMUP_MILLIS: u64 = 3_000;
+const WARMUP_INCREMENT_COUNT: usize = 20;
 
 #[derive(Clone, Copy)]
 pub enum LatencyUnit {
@@ -152,6 +153,115 @@ impl BenchDiffOut {
     }
 }
 
+type BenchDiffState = BenchDiffOut;
+
+impl BenchDiffState {
+    fn new() -> BenchDiffState {
+        let hist_f1_lt_f2 = new_timing(20 * 1000 * 1000, 2);
+        let hist_f1_ge_f2 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
+        let hist_f1 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
+        let hist_f2 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
+        let sum_ln_f1 = 0.0_f64;
+        let sum2_ln_f1 = 0.0_f64;
+        let sum_ln_f2 = 0.0_f64;
+        let sum2_ln_f2 = 0.0_f64;
+
+        Self {
+            hist_f1,
+            hist_f2,
+            hist_f1_lt_f2,
+            hist_f1_ge_f2,
+            sum_ln_f1,
+            sum2_ln_f1,
+            sum_ln_f2,
+            sum2_ln_f2,
+        }
+    }
+
+    fn reset(&mut self) {
+        self.hist_f1_lt_f2.clear();
+        self.hist_f1_ge_f2.clear();
+        self.hist_f1.clear();
+        self.hist_f2.clear();
+        self.sum_ln_f1 = 0.0;
+        self.sum2_ln_f1 = 0.0;
+        self.sum_ln_f2 = 0.0;
+        self.sum2_ln_f2 = 0.0;
+    }
+
+    fn execute(
+        &mut self,
+        unit: LatencyUnit,
+        mut f1: impl FnMut(),
+        mut f2: impl FnMut(),
+        exec_count: usize,
+        pre_exec: impl Fn(),
+        mut exec_status: impl FnMut(usize),
+    ) {
+        pre_exec();
+
+        for i in 1..=exec_count / 4 {
+            let pairs = quad_exec(unit, &mut f1, &mut f2);
+
+            for (elapsed1, elapsed2) in pairs {
+                self.hist_f1
+                    .record(elapsed1)
+                    .expect("can't happen: histogram is auto-resizable");
+                self.hist_f2
+                    .record(elapsed2)
+                    .expect("can't happen: histogram is auto-resizable");
+
+                let diff = elapsed1 as i64 - elapsed2 as i64;
+
+                if diff >= 0 {
+                    self.hist_f1_ge_f2
+                        .record(diff as u64)
+                        .expect("can't happen: histogram is auto-resizable");
+                } else {
+                    self.hist_f1_lt_f2
+                        .record(-diff as u64)
+                        .expect("can't happen: histogram is auto-resizable");
+                }
+
+                let ln_f1 = (elapsed1 as f64).ln();
+                self.sum_ln_f1 += ln_f1;
+                self.sum2_ln_f1 += ln_f1 * ln_f1;
+
+                let ln_f2 = (elapsed1 as f64).ln();
+                self.sum_ln_f2 += ln_f2;
+                self.sum2_ln_f2 += ln_f2 * ln_f2;
+            }
+
+            exec_status(i * 4);
+        }
+    }
+
+    fn warm_up(
+        &mut self,
+        unit: LatencyUnit,
+        mut f1: impl FnMut(),
+        mut f2: impl FnMut(),
+        mut warm_up_status: impl FnMut(usize, u64, u64),
+    ) {
+        let start = Instant::now();
+        for i in 1.. {
+            self.execute(
+                unit,
+                &mut f1,
+                &mut f2,
+                WARMUP_INCREMENT_COUNT,
+                || {},
+                |_| {},
+            );
+            let elapsed = Instant::now().duration_since(start);
+            warm_up_status(i, elapsed.as_millis() as u64, WARMUP_MILLIS);
+            if elapsed.ge(&Duration::from_millis(WARMUP_MILLIS)) {
+                break;
+            }
+        }
+    }
+}
+
 /// Compares the difference of total latency for two closures `f1` and `f2` in ***microseconds***.
 /// Differences (latency(f1) - latency(f2)) are collected in two [`Histogram`]s, one for positive differences and the
 /// other for negative differences.
@@ -172,88 +282,37 @@ impl BenchDiffOut {
 /// The benchmark is warmed-up with one additional initial outer loop iteration for which measurements are not collected.
 pub fn bench_diff_x(
     unit: LatencyUnit,
-    mut f1: &mut impl FnMut(),
-    mut f2: &mut impl FnMut(),
+    mut f1: impl FnMut(),
+    mut f2: impl FnMut(),
     exec_count: usize,
-    outer_loop_pre: impl Fn(),
-    outer_loop_tail: impl Fn(usize),
+    warm_up_status: impl FnMut(usize, u64, u64),
+    pre_exec: impl Fn(),
+    exec_status: impl FnMut(usize),
 ) -> BenchDiffOut {
-    let mut hist_f1_lt_f2 = new_timing(20 * 1000 * 1000, 2);
-    let mut hist_f1_ge_f2 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
-    let mut hist_f1 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
-    let mut hist_f2 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
-    let mut sum_ln_f1 = 0.0_f64;
-    let mut sum2_ln_f1 = 0.0_f64;
-    let mut sum_ln_f2 = 0.0_f64;
-    let mut sum2_ln_f2 = 0.0_f64;
+    let mut state = BenchDiffState::new();
 
-    // Warm-up
-    for _ in 0..WARMUP_COUNT {
-        quad_exec(unit, &mut f1, &mut f2);
-    }
+    state.warm_up(unit, &mut f1, &mut f2, warm_up_status);
+    state.reset();
 
-    outer_loop_pre();
+    state.execute(unit, f1, f2, exec_count, pre_exec, exec_status);
 
-    for i in 1..=exec_count / 4 {
-        let pairs = quad_exec(unit, &mut f1, &mut f2);
-
-        for (elapsed1, elapsed2) in pairs {
-            hist_f1
-                .record(elapsed1)
-                .expect("can't happen: histogram is auto-resizable");
-            hist_f2
-                .record(elapsed2)
-                .expect("can't happen: histogram is auto-resizable");
-
-            let diff = elapsed1 as i64 - elapsed2 as i64;
-
-            if diff >= 0 {
-                hist_f1_ge_f2
-                    .record(diff as u64)
-                    .expect("can't happen: histogram is auto-resizable");
-            } else {
-                hist_f1_lt_f2
-                    .record(-diff as u64)
-                    .expect("can't happen: histogram is auto-resizable");
-            }
-
-            let ln_f1 = (elapsed1 as f64).ln();
-            sum_ln_f1 += ln_f1;
-            sum2_ln_f1 += ln_f1 * ln_f1;
-
-            let ln_f2 = (elapsed1 as f64).ln();
-            sum_ln_f2 += ln_f2;
-            sum2_ln_f2 += ln_f2 * ln_f2;
-        }
-
-        outer_loop_tail(i * 4);
-    }
-
-    BenchDiffOut {
-        hist_f1,
-        hist_f2,
-        hist_f1_lt_f2,
-        hist_f1_ge_f2,
-        sum_ln_f1,
-        sum2_ln_f1,
-        sum_ln_f2,
-        sum2_ln_f2,
-    }
+    let out: BenchDiffOut = state;
+    out
 }
 
 pub fn bench_diff(
     unit: LatencyUnit,
-    f1: &mut impl FnMut(),
-    f2: &mut impl FnMut(),
+    f1: impl FnMut(),
+    f2: impl FnMut(),
     exec_count: usize,
 ) -> BenchDiffOut {
-    bench_diff_x(unit, f1, f2, exec_count, || (), |_| ())
+    bench_diff_x(unit, f1, f2, exec_count, |_, _, _| {}, || (), |_| ())
 }
 
-pub fn bench_diff_print_verbose(
+pub fn bench_diff_print(
     unit: LatencyUnit,
-    f1: &mut impl FnMut(),
-    f2: &mut impl FnMut(),
+    f1: impl FnMut(),
+    f2: impl FnMut(),
     exec_count: usize,
     print_sub_header: impl Fn(),
     print_stats: impl Fn(BenchDiffOut),
@@ -261,44 +320,60 @@ pub fn bench_diff_print_verbose(
     println!("\nbench_diff: exec_count={exec_count}");
     print_sub_header();
     println!();
-    print!("Warming up ...");
+    print!("Warming up ... ");
     stdout().flush().expect("unexpected I/O error");
 
-    let outer_loop_pre = || {
+    let warm_up_status = {
+        let mut status_len: usize = 0;
+
+        move |_: usize, elapsed_millis: u64, warm_up_millis: u64| {
+            print!("{}", "\u{8}".repeat(status_len));
+            let status = if elapsed_millis.lt(&warm_up_millis) {
+                format!("{elapsed_millis} millis of {warm_up_millis}")
+            } else {
+                format!("done")
+            };
+            status_len = status.len();
+            print!("{status}");
+            stdout().flush().expect("unexpected I/O error");
+        }
+    };
+
+    let pre_exec = || {
         println!(" ready to execute");
         print!("Executing bench_diff: ");
         stdout().flush().expect("unexpected I/O error");
     };
 
-    let outer_loop_tail = |i| {
-        if i % 20 == 0 {
-            print!("{i}/{exec_count}");
-        } else {
-            print!(".");
+    let exec_status = {
+        let mut status_len: usize = 0;
+
+        move |i| {
+            print!("{}", "\u{8}".repeat(status_len));
+            let status = format!("{i}/{exec_count}");
+            status_len = status.len();
+            print!("{status}");
+
+            // if i % 20 == 0 {
+            //     print!("{i}/{exec_count}");
+            // } else {
+            //     print!(".");
+            // }
+            stdout().flush().expect("unexpected I/O error");
         }
-        stdout().flush().expect("unexpected I/O error");
     };
 
-    let diff_out = bench_diff_x(unit, f1, f2, exec_count, outer_loop_pre, outer_loop_tail);
+    let diff_out = bench_diff_x(
+        unit,
+        f1,
+        f2,
+        exec_count,
+        warm_up_status,
+        pre_exec,
+        exec_status,
+    );
 
     println!(" done\n");
-
-    print_stats(diff_out);
-}
-
-pub fn bench_diff_print(
-    unit: LatencyUnit,
-    f1: &mut impl FnMut(),
-    f2: &mut impl FnMut(),
-    exec_count: usize,
-    print_sub_header: impl Fn(),
-    print_stats: impl Fn(BenchDiffOut),
-) {
-    println!("\nbench_diff: exec_count={exec_count}");
-    print_sub_header();
-    println!();
-
-    let diff_out = bench_diff_x(unit, f1, f2, exec_count, || {}, |_| {});
 
     print_stats(diff_out);
 }

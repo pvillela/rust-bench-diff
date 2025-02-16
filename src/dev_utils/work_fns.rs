@@ -28,8 +28,13 @@ pub fn real_work(effort: u32) {
 ///
 /// Calls [`calibrate_real_work_x`] with a predefined `calibration_effort`;
 pub fn calibrate_real_work(unit: LatencyUnit, target_latency: u64) -> u32 {
-    const CALIBRATION_EFFORT: u32 = 1000;
-    calibrate_real_work_x(unit, target_latency, CALIBRATION_EFFORT)
+    const NANO_CALIBRATION_EFFORT: u32 = 200;
+    let calibration_effort: u32 = match unit {
+        LatencyUnit::Nano => NANO_CALIBRATION_EFFORT,
+        LatencyUnit::Micro => NANO_CALIBRATION_EFFORT * 1000,
+        LatencyUnit::Milli => NANO_CALIBRATION_EFFORT * 1000 * 1000,
+    };
+    calibrate_real_work_x(unit, target_latency, calibration_effort)
 }
 
 /// Returns an estimate of the number of iterations required for [`real_work`] to have a latency

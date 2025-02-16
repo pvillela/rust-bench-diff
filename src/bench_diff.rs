@@ -11,8 +11,9 @@ use std::{
 const WARMUP_MILLIS: u64 = 3_000;
 const WARMUP_INCREMENT_COUNT: usize = 20;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum LatencyUnit {
+    Milli,
     Micro,
     Nano,
 }
@@ -22,6 +23,7 @@ pub fn latency(unit: LatencyUnit, mut f: impl FnMut()) -> u64 {
     f();
     let duration = Instant::now().duration_since(start);
     match unit {
+        LatencyUnit::Milli => duration.as_millis() as u64,
         LatencyUnit::Micro => duration.as_micros() as u64,
         LatencyUnit::Nano => duration.as_nanos() as u64,
     }
@@ -317,7 +319,7 @@ pub fn bench_diff_print(
     print_sub_header: impl Fn(),
     print_stats: impl Fn(BenchDiffOut),
 ) {
-    println!("\nbench_diff: exec_count={exec_count}");
+    println!("\n>>> bench_diff: unit={unit:?}, exec_count={exec_count}");
     print_sub_header();
     println!();
     print!("Warming up ... ");

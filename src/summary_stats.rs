@@ -5,7 +5,7 @@ pub(crate) type Timing = Histogram<u64>;
 
 /// Constructs a [`Timing`]. The arguments correspond to [Histogram::high] and [Histogram::sigfig].
 pub(crate) fn new_timing(hist_high: u64, hist_sigfig: u8) -> Timing {
-    let mut hist = Histogram::<u64>::new_with_bounds(1, hist_high, hist_sigfig)
+    let mut hist = Histogram::<u64>::new_with_max(hist_high, hist_sigfig)
         .expect("should not happen given histogram construction");
     hist.auto(true);
     hist

@@ -1,9 +1,14 @@
 //! Module to compare the difference in latency between two closures.
 
-use crate::{new_timing, summary_stats, SummaryStats, Timing};
+use crate::{
+    new_timing, sample_mean, sample_stdev, sample_sum2_deviations, statistics, summary_stats,
+    PositionInCi, SummaryStats, Timing,
+};
 use hdrhistogram::Histogram;
 use statrs::distribution::{ContinuousCDF, StudentsT};
 use std::{
+    error::Error,
+    hint,
     io::{stdout, Write},
     time::{Duration, Instant},
 };
@@ -18,6 +23,7 @@ pub enum LatencyUnit {
     Nano,
 }
 
+#[inline(always)]
 pub fn latency(unit: LatencyUnit, mut f: impl FnMut()) -> u64 {
     let start = Instant::now();
     f();
@@ -29,6 +35,7 @@ pub fn latency(unit: LatencyUnit, mut f: impl FnMut()) -> u64 {
     }
 }
 
+#[inline(always)]
 fn quad_exec(unit: LatencyUnit, mut f1: impl FnMut(), mut f2: impl FnMut()) -> [(u64, u64); 4] {
     let l01 = latency(unit, &mut f1);
     let l02 = latency(unit, &mut f2);
@@ -49,14 +56,24 @@ pub struct BenchDiffOut {
     hist_f1: Timing,
     hist_f2: Timing,
     hist_f1_lt_f2: Timing, //todo: replace with count, sum and sum of squares of ratios
-    hist_f1_ge_f2: Timing, //todo: replace with count, sum and sum of squares of ratios
+    count_f1_eq_f2: u64,
+    hist_f1_gt_f2: Timing, //todo: replace with count, sum and sum of squares of ratios
     sum_ln_f1: f64,
     sum2_ln_f1: f64,
     sum_ln_f2: f64,
     sum2_ln_f2: f64,
+    sum_diff_f1_f2: f64,
+    sum2_diff_f1_f2: f64,
+    sum_diff_ln_f1_f2: f64,
+    sum2_diff_ln_f1_f2: f64,
 }
 
 impl BenchDiffOut {
+    #[inline(always)]
+    pub fn n(&self) -> f64 {
+        self.hist_f1.len() as f64
+    }
+
     pub fn summary_f1(&self) -> SummaryStats {
         summary_stats(&self.hist_f1)
     }
@@ -69,26 +86,44 @@ impl BenchDiffOut {
         self.hist_f1_lt_f2.len()
     }
 
-    pub fn count_f1_ge_f2(&self) -> u64 {
-        self.hist_f1_ge_f2.len()
+    pub fn count_f1_eq_f2(&self) -> u64 {
+        self.count_f1_eq_f2
+    }
+
+    pub fn count_f1_gt_f2(&self) -> u64 {
+        self.hist_f1_gt_f2.len()
     }
 
     pub fn mean_ln_f1(&self) -> f64 {
-        self.sum2_ln_f1 / self.hist_f1.len() as f64
+        sample_mean(self.n(), self.sum_ln_f1)
     }
 
     pub fn stdev_ln_f1(&self) -> f64 {
-        let n = self.hist_f1.len() as f64;
-        (self.sum2_ln_f1 - self.sum_ln_f1.powi(2) / n) / (n - 1.0)
+        sample_stdev(self.n(), self.sum_ln_f1, self.sum2_ln_f1)
     }
 
     pub fn mean_ln_f2(&self) -> f64 {
-        self.sum2_ln_f2 / self.hist_f2.len() as f64
+        sample_mean(self.n(), self.sum_ln_f2)
     }
 
     pub fn stdev_ln_f2(&self) -> f64 {
-        let n = self.hist_f2.len() as f64;
-        (self.sum2_ln_f2 - self.sum_ln_f2.powi(2) / n) / (n - 1.0)
+        sample_stdev(self.n(), self.sum_ln_f2, self.sum2_ln_f2)
+    }
+
+    pub fn mean_diff_f1_f2(&self) -> f64 {
+        sample_mean(self.n(), self.sum_diff_f1_f2)
+    }
+
+    pub fn stdev_diff_f1_f2(&self) -> f64 {
+        sample_stdev(self.n(), self.sum_diff_f1_f2, self.sum2_diff_f1_f2)
+    }
+
+    pub fn mean_diff_ln_f1_f2(&self) -> f64 {
+        sample_mean(self.n(), self.sum_diff_ln_f1_f2)
+    }
+
+    pub fn stdev_diff_ln_f1_f2(&self) -> f64 {
+        sample_stdev(self.n(), self.sum_diff_ln_f1_f2, self.sum2_diff_ln_f1_f2)
     }
 
     /// Welch's t statistic for
@@ -96,7 +131,7 @@ impl BenchDiffOut {
     ///
     /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
     pub fn welch_ln_t(&self) -> f64 {
-        let n = self.hist_f1.len() as f64;
+        let n = self.n();
         let dx = self.mean_ln_f1() - self.mean_ln_f2();
         let s2_x1 = self.stdev_ln_f1().powi(2) / n;
         let s2_x2 = self.stdev_ln_f2().powi(2) / n;
@@ -109,7 +144,7 @@ impl BenchDiffOut {
     ///
     /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
     pub fn welch_ln_deg_freedom(&self) -> f64 {
-        let n = self.hist_f1.len() as f64;
+        let n = self.n();
         let s2_x1 = self.stdev_ln_f1().powi(2) / n;
         let s2_x2 = self.stdev_ln_f2().powi(2) / n;
         let s2_dx = s2_x1 + s2_x2;
@@ -125,7 +160,7 @@ impl BenchDiffOut {
     ///
     /// This is also the confidence interval for the difference of medians of logarithms under the above assumption.
     pub fn welch_ln_ci(&self, alpha: f64) -> (f64, f64) {
-        let n = self.hist_f1.len() as f64;
+        let n = self.n();
         let dx = self.mean_ln_f1() - self.mean_ln_f2();
         let s2_x1 = self.stdev_ln_f1().powi(2) / n;
         let s2_x2 = self.stdev_ln_f2().powi(2) / n;
@@ -153,42 +188,122 @@ impl BenchDiffOut {
         let high = log_high.exp();
         (low, high)
     }
+
+    pub fn welch_position_in_ci_ratio_1(&self, alpha: f64) -> PositionInCi {
+        let (low, high) = self.welch_ratio_ci(alpha);
+        PositionInCi::position_of_value(1.0, low, high)
+    }
+
+    pub fn student_diff_t(&self) -> f64 {
+        let n = self.n();
+        let dx = self.mean_diff_f1_f2();
+        let s_dx = self.stdev_diff_f1_f2();
+        dx / s_dx * n.sqrt()
+    }
+
+    pub fn student_diff_deg_freedom(&self) -> f64 {
+        self.n() - 1.0
+    }
+
+    pub fn student_diff_ci(&self, alpha: f64) -> (f64, f64) {
+        let nu = self.student_diff_deg_freedom();
+        let stud = StudentsT::new(0.0, 1.0, nu)
+            .expect("can't happen: degrees of freedom is always >= 3 by construction");
+        let t = -stud.inverse_cdf(alpha / 2.0);
+
+        let mid = self.mean_diff_f1_f2();
+        let radius = (self.stdev_diff_f1_f2() / self.n().sqrt()) * t;
+
+        (mid - radius, mid + radius)
+    }
+
+    pub fn student_position_in_ci_diff_0(&self, alpha: f64) -> PositionInCi {
+        let (low, high) = self.student_diff_ci(alpha);
+        PositionInCi::position_of_value(0.0, low, high)
+    }
+
+    pub fn wilcoxon_rank_sum_z(&self) -> f64 {
+        statistics::wilcoxon_rank_sum_z(&self.hist_f1, &self.hist_f2)
+    }
+
+    pub fn wilcoxon_rank_sum_p(&self) -> f64 {
+        statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2)
+    }
+
+    pub fn wilcoxon_signed_rank_z(&self) -> f64 {
+        todo!()
+    }
+
+    pub fn wilcoxon_signed_rank_one_tailed_p(&self) -> f64 {
+        todo!()
+    }
+
+    pub fn wilcoxon_signed_rank_two_tailed_p(&self) -> f64 {
+        todo!()
+    }
+
+    pub fn mood_median_z(&self) -> f64 {
+        todo!()
+    }
+
+    pub fn mood_median_one_tailed_p(&self) -> f64 {
+        todo!()
+    }
+
+    pub fn mood_median_two_tailed_p(&self) -> f64 {
+        todo!()
+    }
 }
 
 type BenchDiffState = BenchDiffOut;
 
 impl BenchDiffState {
     fn new() -> BenchDiffState {
-        let hist_f1_lt_f2 = new_timing(20 * 1000 * 1000, 2);
-        let hist_f1_ge_f2 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
+        let hist_f1_lt_f2 = new_timing(20 * 1000 * 1000, 5);
+        let count_f1_eq_f2 = 0;
+        let hist_f1_gt_f2 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
         let hist_f1 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
         let hist_f2 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
         let sum_ln_f1 = 0.0_f64;
         let sum2_ln_f1 = 0.0_f64;
         let sum_ln_f2 = 0.0_f64;
         let sum2_ln_f2 = 0.0_f64;
+        let sum_diff_f1_f2 = 0.0_f64;
+        let sum2_diff_f1_f2 = 0.0_f64;
+        let sum_diff_ln_f1_f2 = 0.0_f64;
+        let sum2_diff_ln_f1_f2 = 0.0_f64;
 
         Self {
             hist_f1,
             hist_f2,
             hist_f1_lt_f2,
-            hist_f1_ge_f2,
+            count_f1_eq_f2,
+            hist_f1_gt_f2,
             sum_ln_f1,
             sum2_ln_f1,
             sum_ln_f2,
             sum2_ln_f2,
+            sum_diff_f1_f2,
+            sum2_diff_f1_f2,
+            sum_diff_ln_f1_f2,
+            sum2_diff_ln_f1_f2,
         }
     }
 
     fn reset(&mut self) {
-        self.hist_f1_lt_f2.clear();
-        self.hist_f1_ge_f2.clear();
-        self.hist_f1.clear();
-        self.hist_f2.clear();
+        self.hist_f1.reset();
+        self.hist_f2.reset();
+        self.hist_f1_lt_f2.reset();
+        self.count_f1_eq_f2 = 0;
+        self.hist_f1_gt_f2.reset();
         self.sum_ln_f1 = 0.0;
         self.sum2_ln_f1 = 0.0;
         self.sum_ln_f2 = 0.0;
         self.sum2_ln_f2 = 0.0;
+        self.sum_diff_f1_f2 = 0.0;
+        self.sum2_diff_f1_f2 = 0.0;
+        self.sum_diff_ln_f1_f2 = 0.0;
+        self.sum2_diff_ln_f1_f2 = 0.0;
     }
 
     fn execute(
@@ -215,23 +330,35 @@ impl BenchDiffState {
 
                 let diff = elapsed1 as i64 - elapsed2 as i64;
 
-                if diff >= 0 {
-                    self.hist_f1_ge_f2
+                if diff < 0 {
+                    self.hist_f1_lt_f2
                         .record(diff as u64)
                         .expect("can't happen: histogram is auto-resizable");
-                } else {
-                    self.hist_f1_lt_f2
+                } else if diff > 0 {
+                    self.hist_f1_gt_f2
                         .record(-diff as u64)
                         .expect("can't happen: histogram is auto-resizable");
+                } else {
+                    self.count_f1_eq_f2 += 1;
                 }
 
+                assert!(elapsed1 > 0, "f1 latency must be > 0");
                 let ln_f1 = (elapsed1 as f64).ln();
                 self.sum_ln_f1 += ln_f1;
-                self.sum2_ln_f1 += ln_f1 * ln_f1;
+                self.sum2_ln_f1 += ln_f1.powi(2);
 
-                let ln_f2 = (elapsed1 as f64).ln();
+                assert!(elapsed2 > 0, "f2 latency must be > 0");
+                let ln_f2 = (elapsed2 as f64).ln();
                 self.sum_ln_f2 += ln_f2;
-                self.sum2_ln_f2 += ln_f2 * ln_f2;
+                self.sum2_ln_f2 += ln_f2.powi(2);
+
+                let diff_f1_f2 = elapsed1 as f64 - elapsed2 as f64;
+                self.sum_diff_f1_f2 += diff_f1_f2;
+                self.sum2_diff_f1_f2 += diff_f1_f2.powi(2);
+
+                let diff_ln_f1_f2 = ln_f1 - ln_f2;
+                self.sum_diff_ln_f1_f2 += diff_ln_f1_f2;
+                self.sum2_diff_ln_f1_f2 += diff_ln_f1_f2.powi(2);
             }
 
             exec_status(i * 4);
@@ -262,6 +389,20 @@ impl BenchDiffState {
             }
         }
     }
+
+    fn merge_reversed(&mut self, other: BenchDiffState) -> Result<(), Box<dyn Error>> {
+        self.hist_f1.add(other.hist_f2)?;
+        self.hist_f2.add(other.hist_f1)?;
+        self.hist_f1_lt_f2.add(other.hist_f1_gt_f2)?;
+        self.count_f1_eq_f2 += other.count_f1_eq_f2;
+        self.hist_f1_gt_f2.add(other.hist_f1_lt_f2)?;
+        self.sum_ln_f1 += other.sum_ln_f2;
+        self.sum2_ln_f1 += other.sum2_ln_f2;
+        self.sum_ln_f2 += other.sum_ln_f1;
+        self.sum2_ln_f2 += other.sum2_ln_f1;
+
+        Ok(())
+    }
 }
 
 /// Compares the difference of total latency for two closures `f1` and `f2` in ***microseconds***.
@@ -287,19 +428,40 @@ pub fn bench_diff_x(
     mut f1: impl FnMut(),
     mut f2: impl FnMut(),
     exec_count: usize,
-    warm_up_status: impl FnMut(usize, u64, u64),
+    mut warm_up_status: impl FnMut(usize, u64, u64),
     pre_exec: impl Fn(),
-    exec_status: impl FnMut(usize),
+    mut exec_status: impl FnMut(usize),
 ) -> BenchDiffOut {
+    let exec_count2 = exec_count / 2;
+
     let mut state = BenchDiffState::new();
-
-    state.warm_up(unit, &mut f1, &mut f2, warm_up_status);
+    state.warm_up(unit, &mut f1, &mut f2, &mut warm_up_status);
     state.reset();
+    state.execute(
+        unit,
+        &mut f1,
+        &mut f2,
+        exec_count2,
+        &pre_exec,
+        &mut exec_status,
+    );
 
-    state.execute(unit, f1, f2, exec_count, pre_exec, exec_status);
+    let mut state_rev = BenchDiffState::new();
+    // state_rev.warm_up(unit, &mut f2, &mut f1, &mut warm_up_status);
+    // state_rev.reset();
+    state_rev.execute(
+        unit,
+        &mut f2,
+        &mut f1,
+        exec_count2,
+        &pre_exec,
+        &mut exec_status,
+    );
 
-    let out: BenchDiffOut = state;
-    out
+    state
+        .merge_reversed(state_rev)
+        .expect("state merger cannot fail");
+    state
 }
 
 pub fn bench_diff(
@@ -317,51 +479,53 @@ pub fn bench_diff_print(
     f2: impl FnMut(),
     exec_count: usize,
     print_sub_header: impl Fn(),
-    print_stats: impl Fn(BenchDiffOut),
-) {
+    print_stats: impl Fn(&BenchDiffOut),
+) -> BenchDiffOut {
     println!("\n>>> bench_diff: unit={unit:?}, exec_count={exec_count}");
     print_sub_header();
     println!();
-    print!("Warming up ... ");
-    stdout().flush().expect("unexpected I/O error");
 
     let warm_up_status = {
         let mut status_len: usize = 0;
+        let mut phase = 1;
 
         move |_: usize, elapsed_millis: u64, warm_up_millis: u64| {
+            if status_len == 0 {
+                print!("Phase {phase}: Warming up ... ");
+                phase += 1;
+                stdout().flush().expect("unexpected I/O error");
+            }
             print!("{}", "\u{8}".repeat(status_len));
-            let status = if elapsed_millis.lt(&warm_up_millis) {
-                format!("{elapsed_millis} millis of {warm_up_millis}")
+            let status = format!("{elapsed_millis} millis of {warm_up_millis}.");
+            if elapsed_millis.lt(&warm_up_millis) {
+                status_len = status.len();
             } else {
-                format!("done")
+                status_len = 0;
             };
-            status_len = status.len();
             print!("{status}");
             stdout().flush().expect("unexpected I/O error");
         }
     };
 
     let pre_exec = || {
-        println!(" ready to execute");
-        print!("Executing bench_diff: ");
+        print!(" Executing bench_diff: ");
         stdout().flush().expect("unexpected I/O error");
     };
 
     let exec_status = {
+        let exec_count2 = exec_count / 2;
         let mut status_len: usize = 0;
 
         move |i| {
             print!("{}", "\u{8}".repeat(status_len));
-            let status = format!("{i}/{exec_count}");
+            let status = format!("{i}/{exec_count2}.");
             status_len = status.len();
             print!("{status}");
-
-            // if i % 20 == 0 {
-            //     print!("{i}/{exec_count}");
-            // } else {
-            //     print!(".");
-            // }
             stdout().flush().expect("unexpected I/O error");
+            if i >= exec_count2 {
+                status_len = 0;
+                println!();
+            }
         }
     };
 
@@ -375,7 +539,7 @@ pub fn bench_diff_print(
         exec_status,
     );
 
-    println!(" done\n");
+    print_stats(&diff_out);
 
-    print_stats(diff_out);
+    diff_out
 }

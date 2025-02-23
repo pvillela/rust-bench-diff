@@ -4,7 +4,7 @@ use hdrhistogram::{
 };
 use statrs::distribution::{ContinuousCDF, Normal};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PositionInCi {
     Below,
     In,

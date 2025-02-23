@@ -55,19 +55,21 @@ impl TestResult {
     }
 }
 
-pub struct TestResults(Vec<(TestResult, bool)>);
+pub struct TestFailures(Vec<(TestResult, bool)>);
 
-impl TestResults {
+impl TestFailures {
     pub fn new() -> Self {
         Self(Vec::new())
     }
 
-    pub fn push(&mut self, result: TestResult, must_pass: bool) {
-        self.0.push((result, must_pass));
+    pub fn push_failure(&mut self, result: TestResult, must_pass: bool) {
+        if !result.passed {
+            self.0.push((result, must_pass))
+        };
     }
 
     pub fn failures(&self) -> Vec<&TestResult> {
-        self.0.iter().map(|p| &p.0).filter(|x| !x.passed).collect()
+        self.0.iter().map(|p| &p.0).collect()
     }
 
     pub fn failed_must_pass(&self) -> Vec<&TestResult> {
@@ -77,6 +79,37 @@ impl TestResults {
             .map(|x| &x.0)
             .collect()
     }
+}
+
+pub const ALPHA: f64 = 0.05;
+
+pub fn all_tests(
+    diff_out: &BenchDiffOut,
+    test_failures: &mut TestFailures,
+    scenario: &'static str,
+    expected: PositionInCi,
+    must_pass1: bool,
+    must_pass2: bool,
+) {
+    test_failures.push_failure(
+        TestResult::check_eq(
+            scenario,
+            "welch_position_in_ci_ratio_1",
+            expected,
+            diff_out.welch_position_in_ci_ratio_1(ALPHA),
+        ),
+        must_pass1,
+    );
+
+    test_failures.push_failure(
+        TestResult::check_eq(
+            scenario,
+            "student_position_in_ci_diff_0",
+            expected,
+            diff_out.student_position_in_ci_diff_0(ALPHA),
+        ),
+        must_pass2,
+    );
 }
 
 pub fn default_hi_median_ratio() -> f64 {
@@ -92,8 +125,6 @@ pub fn default_hi_stdev_log() -> f64 {
 }
 
 fn print_diff_out(diff_out: &BenchDiffOut) {
-    const ALPHA: f64 = 0.1;
-
     let ratio_median_f1_f2 =
         diff_out.summary_f1().median as f64 / diff_out.summary_f2().median as f64;
     let ratio_ci = diff_out.welch_ratio_ci(ALPHA);
@@ -176,7 +207,6 @@ fn cmd_line_args() -> Option<usize> {
 }
 
 pub fn bench(params: Params) {
-    const ALPHA: f64 = 0.05;
     let nrepeats = cmd_line_args().unwrap_or(1);
 
     let base_effort = calibrate_real_work(params.unit, params.base_median as u64);
@@ -198,7 +228,7 @@ pub fn bench(params: Params) {
         real_work(effort);
     };
 
-    let mut test_results = TestResults::new();
+    let mut test_failures = TestFailures::new();
 
     for i in 1..=nrepeats {
         println!("*** iteration = {i} ***");
@@ -215,23 +245,12 @@ pub fn bench(params: Params) {
                 print_diff_out,
             );
 
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "welch_position_in_ci_ratio_1",
-                    PositionInCi::In,
-                    diff_out.welch_position_in_ci_ratio_1(ALPHA),
-                ),
+            all_tests(
+                &diff_out,
+                &mut test_failures,
+                scenario,
+                PositionInCi::In,
                 true,
-            );
-
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "student_position_in_ci_diff_0",
-                    PositionInCi::In,
-                    diff_out.student_position_in_ci_diff_0(ALPHA),
-                ),
                 false,
             );
         }
@@ -248,23 +267,12 @@ pub fn bench(params: Params) {
                 print_diff_out,
             );
 
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "welch_position_in_ci_ratio_1",
-                    PositionInCi::Above,
-                    diff_out.welch_position_in_ci_ratio_1(ALPHA),
-                ),
+            all_tests(
+                &diff_out,
+                &mut test_failures,
+                scenario,
+                PositionInCi::Above,
                 true,
-            );
-
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "student_position_in_ci_diff_0",
-                    PositionInCi::Above,
-                    diff_out.student_position_in_ci_diff_0(ALPHA),
-                ),
                 true,
             );
         }
@@ -281,23 +289,12 @@ pub fn bench(params: Params) {
                 print_diff_out,
             );
 
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "welch_position_in_ci_ratio_1",
-                    PositionInCi::Below,
-                    diff_out.welch_position_in_ci_ratio_1(ALPHA),
-                ),
+            all_tests(
+                &diff_out,
+                &mut test_failures,
+                scenario,
+                PositionInCi::Below,
                 true,
-            );
-
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "student_position_in_ci_diff_0",
-                    PositionInCi::Below,
-                    diff_out.student_position_in_ci_diff_0(ALPHA),
-                ),
                 true,
             );
         }
@@ -314,23 +311,12 @@ pub fn bench(params: Params) {
                 print_diff_out,
             );
 
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "welch_position_in_ci_ratio_1",
-                    PositionInCi::In,
-                    diff_out.welch_position_in_ci_ratio_1(ALPHA),
-                ),
+            all_tests(
+                &diff_out,
+                &mut test_failures,
+                scenario,
+                PositionInCi::In,
                 false,
-            );
-
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "student_position_in_ci_diff_0",
-                    PositionInCi::In,
-                    diff_out.student_position_in_ci_diff_0(ALPHA),
-                ),
                 false,
             );
         }
@@ -347,23 +333,12 @@ pub fn bench(params: Params) {
                 print_diff_out,
             );
 
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "welch_position_in_ci_ratio_1",
-                    PositionInCi::In,
-                    diff_out.welch_position_in_ci_ratio_1(ALPHA),
-                ),
+            all_tests(
+                &diff_out,
+                &mut test_failures,
+                scenario,
+                PositionInCi::In,
                 false,
-            );
-
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "student_position_in_ci_diff_0",
-                    PositionInCi::In,
-                    diff_out.student_position_in_ci_diff_0(ALPHA),
-                ),
                 false,
             );
         }
@@ -380,23 +355,12 @@ pub fn bench(params: Params) {
                 print_diff_out,
             );
 
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "welch_position_in_ci_ratio_1",
-                    PositionInCi::In,
-                    diff_out.welch_position_in_ci_ratio_1(ALPHA),
-                ),
+            all_tests(
+                &diff_out,
+                &mut test_failures,
+                scenario,
+                PositionInCi::In,
                 false,
-            );
-
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "student_position_in_ci_diff_0",
-                    PositionInCi::In,
-                    diff_out.student_position_in_ci_diff_0(ALPHA),
-                ),
                 false,
             );
         }
@@ -413,23 +377,12 @@ pub fn bench(params: Params) {
                 print_diff_out,
             );
 
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "welch_position_in_ci_ratio_1",
-                    PositionInCi::Above,
-                    diff_out.welch_position_in_ci_ratio_1(ALPHA),
-                ),
+            all_tests(
+                &diff_out,
+                &mut test_failures,
+                scenario,
+                PositionInCi::Above,
                 true,
-            );
-
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "student_position_in_ci_diff_0",
-                    PositionInCi::Above,
-                    diff_out.student_position_in_ci_diff_0(ALPHA),
-                ),
                 true,
             );
         }
@@ -446,30 +399,19 @@ pub fn bench(params: Params) {
                 print_diff_out,
             );
 
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "welch_position_in_ci_ratio_1",
-                    PositionInCi::Above,
-                    diff_out.welch_position_in_ci_ratio_1(ALPHA),
-                ),
+            all_tests(
+                &diff_out,
+                &mut test_failures,
+                scenario,
+                PositionInCi::Above,
                 false,
-            );
-
-            test_results.push(
-                TestResult::check_eq(
-                    scenario,
-                    "student_position_in_ci_diff_0",
-                    PositionInCi::Above,
-                    diff_out.student_position_in_ci_diff_0(ALPHA),
-                ),
                 true,
             );
         }
     }
 
-    let failures = test_results.failures();
-    let failed_must_pass = test_results.failed_must_pass();
+    let failures = test_failures.failures();
+    let failed_must_pass = test_failures.failed_must_pass();
     let mut failures_summary = HashMap::<(&'static str, &'static str), u32>::new();
 
     {

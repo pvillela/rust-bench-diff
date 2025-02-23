@@ -222,6 +222,40 @@ impl BenchDiffOut {
         PositionInCi::position_of_value(0.0, low, high)
     }
 
+    pub fn student_diff_ln_t(&self) -> f64 {
+        let n = self.n();
+        let dx = self.mean_diff_ln_f1_f2();
+        let s_dx = self.stdev_diff_ln_f1_f2();
+        dx / s_dx * n.sqrt()
+    }
+
+    pub fn student_diff_ln_deg_freedom(&self) -> f64 {
+        self.n() - 1.0
+    }
+
+    pub fn student_diff_ln_ci(&self, alpha: f64) -> (f64, f64) {
+        let nu = self.student_diff_ln_deg_freedom();
+        let stud = StudentsT::new(0.0, 1.0, nu)
+            .expect("can't happen: degrees of freedom is always >= 3 by construction");
+        let t = -stud.inverse_cdf(alpha / 2.0);
+
+        let mid = self.mean_diff_ln_f1_f2();
+        let radius = (self.stdev_diff_ln_f1_f2() / self.n().sqrt()) * t;
+
+        (mid - radius, mid + radius)
+    }
+    pub fn student_ratio_ci(&self, alpha: f64) -> (f64, f64) {
+        let (log_low, log_high) = self.student_diff_ln_ci(alpha);
+        let low = log_low.exp();
+        let high = log_high.exp();
+        (low, high)
+    }
+
+    pub fn student_position_in_ci_ratio_1(&self, alpha: f64) -> PositionInCi {
+        let (low, high) = self.student_ratio_ci(alpha);
+        PositionInCi::position_of_value(1.0, low, high)
+    }
+
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
         statistics::wilcoxon_rank_sum_z(&self.hist_f1, &self.hist_f2)
     }

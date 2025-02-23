@@ -90,6 +90,7 @@ pub fn all_tests(
     expected: PositionInCi,
     must_pass1: bool,
     must_pass2: bool,
+    must_pass3: bool,
 ) {
     test_failures.push_failure(
         TestResult::check_eq(
@@ -109,6 +110,16 @@ pub fn all_tests(
             diff_out.student_position_in_ci_diff_0(ALPHA),
         ),
         must_pass2,
+    );
+
+    test_failures.push_failure(
+        TestResult::check_eq(
+            scenario,
+            "student_position_in_ci_ratio_1",
+            expected,
+            diff_out.student_position_in_ci_ratio_1(ALPHA),
+        ),
+        must_pass3,
     );
 }
 
@@ -252,6 +263,7 @@ pub fn bench(params: Params) {
                 PositionInCi::In,
                 true,
                 false,
+                true,
             );
         }
 
@@ -272,6 +284,7 @@ pub fn bench(params: Params) {
                 &mut test_failures,
                 scenario,
                 PositionInCi::Above,
+                true,
                 true,
                 true,
             );
@@ -296,6 +309,7 @@ pub fn bench(params: Params) {
                 PositionInCi::Below,
                 true,
                 true,
+                true,
             );
         }
 
@@ -318,6 +332,7 @@ pub fn bench(params: Params) {
                 PositionInCi::In,
                 false,
                 false,
+                true,
             );
         }
 
@@ -340,6 +355,7 @@ pub fn bench(params: Params) {
                 PositionInCi::In,
                 false,
                 false,
+                true,
             );
         }
 
@@ -362,6 +378,7 @@ pub fn bench(params: Params) {
                 PositionInCi::In,
                 false,
                 false,
+                true,
             );
         }
 
@@ -382,6 +399,7 @@ pub fn bench(params: Params) {
                 &mut test_failures,
                 scenario,
                 PositionInCi::Above,
+                true,
                 true,
                 true,
             );
@@ -406,6 +424,7 @@ pub fn bench(params: Params) {
                 PositionInCi::Above,
                 false,
                 true,
+                false,
             );
         }
     }

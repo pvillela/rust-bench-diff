@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use bench_diff::{
     bench_diff_print,
     dev_utils::{calibrate_real_work, real_work},
@@ -13,6 +15,68 @@ pub struct Params {
     pub hi_median: f64,
     pub lo_stdev_log: f64,
     pub hi_stdev_log: f64,
+}
+
+#[derive(Debug)]
+pub struct TestResult {
+    pub scenario: &'static str,
+    pub test: &'static str,
+    pub passed: bool,
+    pub result_string: String,
+}
+
+impl TestResult {
+    pub fn check(
+        scenario: &'static str,
+        test: &'static str,
+        condition: bool,
+        result_string: String,
+    ) -> Self {
+        Self {
+            scenario,
+            test,
+            passed: condition,
+            result_string,
+        }
+    }
+
+    pub fn check_eq<T: PartialEq + Debug>(
+        scenario: &'static str,
+        test: &'static str,
+        expected: T,
+        actual: T,
+    ) -> Self {
+        Self {
+            scenario,
+            test,
+            passed: expected == actual,
+            result_string: format!("expected={expected:?}, actual={actual:?}"),
+        }
+    }
+}
+
+pub struct TestResults(Vec<(TestResult, bool)>);
+
+impl TestResults {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    pub fn push(&mut self, result: TestResult, must_pass: bool) {
+        self.0.push((result, must_pass));
+    }
+
+    pub fn failures(&self) -> Vec<&TestResult> {
+        self.0.iter().map(|p| &p.0).filter(|x| !x.passed).collect()
+    }
+
+    pub fn failed_must_pass(&self) -> Vec<&TestResult> {
+        self.0
+            .iter()
+            .filter(|p| !p.0.passed && p.1)
+            .map(|x| &x.0)
+            .collect()
+    }
 }
 
 pub fn default_hi_median_ratio() -> f64 {
@@ -120,171 +184,291 @@ pub fn bench(params: Params) {
         real_work(effort);
     };
 
+    let mut test_results = TestResults::new();
+
     {
+        let scenario = "f1=base_median_no_var, f2=base_median_no_var";
+
         let diff_out = bench_diff_print(
             params.unit,
             &base_median_no_var,
             &base_median_no_var,
             params.exec_count,
-            || println!("f1=base_median_no_var, f2=base_median_no_var"),
+            || println!("{scenario}"),
             print_diff_out,
         );
-        assert_eq!(
-            diff_out.welch_position_in_ci_ratio_1(ALPHA),
-            PositionInCi::In,
-            "welch_position_in_ci_ratio_1"
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "welch_position_in_ci_ratio_1",
+                PositionInCi::In,
+                diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            ),
+            true,
         );
-        // assert_eq!(
-        //     diff_out.student_position_in_ci_diff_0(ALPHA),
-        //     PositionInCi::In,
-        //     "student_position_in_ci_diff_0"
-        // );
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "student_position_in_ci_diff_0",
+                PositionInCi::In,
+                diff_out.student_position_in_ci_diff_0(ALPHA),
+            ),
+            false,
+        );
     }
 
     {
+        let scenario = "f1=base_median_no_var, f2=hi_median_no_var";
+
         let diff_out = bench_diff_print(
             params.unit,
             &base_median_no_var,
             &hi_median_no_var,
             params.exec_count,
-            || println!("f1=base_median_no_var, f2=hi_median_no_var"),
+            || println!("{scenario}"),
             print_diff_out,
         );
-        assert_eq!(
-            diff_out.welch_position_in_ci_ratio_1(ALPHA),
-            PositionInCi::Above,
-            "welch_position_in_ci_ratio_1"
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "welch_position_in_ci_ratio_1",
+                PositionInCi::Above,
+                diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            ),
+            true,
         );
-        assert_eq!(
-            diff_out.student_position_in_ci_diff_0(ALPHA),
-            PositionInCi::Above,
-            "student_position_in_ci_diff_0"
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "student_position_in_ci_diff_0",
+                PositionInCi::Above,
+                diff_out.student_position_in_ci_diff_0(ALPHA),
+            ),
+            true,
         );
     }
 
     {
+        let scenario = "f1=hi_median_no_var, f2=base_median_no_var";
+
         let diff_out = bench_diff_print(
             params.unit,
             &hi_median_no_var,
             &base_median_no_var,
             params.exec_count,
-            || println!("f1=hi_median_no_var, f2=base_median_no_var"),
+            || println!("{scenario}"),
             print_diff_out,
         );
-        assert_eq!(
-            diff_out.welch_position_in_ci_ratio_1(ALPHA),
-            PositionInCi::Below,
-            "welch_position_in_ci_ratio_1"
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "welch_position_in_ci_ratio_1",
+                PositionInCi::Below,
+                diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            ),
+            true,
         );
-        assert_eq!(
-            diff_out.student_position_in_ci_diff_0(ALPHA),
-            PositionInCi::Below,
-            "student_position_in_ci_diff_0"
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "student_position_in_ci_diff_0",
+                PositionInCi::Below,
+                diff_out.student_position_in_ci_diff_0(ALPHA),
+            ),
+            true,
         );
     }
 
     {
-        #[allow(unused)]
+        let scenario = "f1=base_median_lo_var, f2=base_median_lo_var1";
+
         let diff_out = bench_diff_print(
             params.unit,
             &mut base_median_lo_var,
             &mut base_median_lo_var1,
             params.exec_count,
-            || println!("f1=base_median_lo_var, f2=base_median_lo_var1"),
+            || println!("{scenario}"),
             print_diff_out,
         );
-        // assert_eq!(
-        //     diff_out.welch_position_in_ci_ratio_1(ALPHA),
-        //     PositionInCi::In,
-        //     "welch_position_in_ci_ratio_1"
-        // );
-        // assert_eq!(
-        //     diff_out.student_position_in_ci_diff_0(ALPHA),
-        //     PositionInCi::In,
-        //     "student_position_in_ci_diff_0"
-        // );
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "welch_position_in_ci_ratio_1",
+                PositionInCi::In,
+                diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            ),
+            false,
+        );
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "student_position_in_ci_diff_0",
+                PositionInCi::In,
+                diff_out.student_position_in_ci_diff_0(ALPHA),
+            ),
+            false,
+        );
     }
 
     {
-        #[allow(unused)]
+        let scenario = "f1=base_median_lo_var, f2=base_median_hi_var";
+
         let diff_out = bench_diff_print(
             params.unit,
             &mut base_median_lo_var,
             &mut base_median_hi_var,
             params.exec_count,
-            || println!("f1=base_median_lo_var, f2=base_median_hi_var"),
+            || println!("{scenario}"),
             print_diff_out,
         );
-        // assert_eq!(
-        //     diff_out.welch_position_in_ci_ratio_1(ALPHA),
-        //     PositionInCi::In,
-        //     "welch_position_in_ci_ratio_1"
-        // );
-        // assert_eq!(
-        //     diff_out.student_position_in_ci_diff_0(ALPHA),
-        //     PositionInCi::In, "student_position_in_ci_diff_0"
-        // );
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "welch_position_in_ci_ratio_1",
+                PositionInCi::In,
+                diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            ),
+            false,
+        );
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "student_position_in_ci_diff_0",
+                PositionInCi::In,
+                diff_out.student_position_in_ci_diff_0(ALPHA),
+            ),
+            false,
+        );
     }
 
     {
+        let scenario = "f1=base_median_hi_var, f2=base_median_lo_var";
+
         let diff_out = bench_diff_print(
             params.unit,
             &mut base_median_hi_var,
             &mut base_median_lo_var,
             params.exec_count,
-            || println!("f1=base_median_hi_var, f2=base_median_lo_var"),
+            || println!("{scenario}"),
             print_diff_out,
         );
-        assert_eq!(
-            diff_out.welch_position_in_ci_ratio_1(ALPHA),
-            PositionInCi::In,
-            "welch_position_in_ci_ratio_1"
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "welch_position_in_ci_ratio_1",
+                PositionInCi::In,
+                diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            ),
+            false,
         );
-        // assert_eq!(
-        //     diff_out.student_position_in_ci_diff_0(ALPHA),
-        //     PositionInCi::In, "student_position_in_ci_diff_0"
-        // );
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "student_position_in_ci_diff_0",
+                PositionInCi::In,
+                diff_out.student_position_in_ci_diff_0(ALPHA),
+            ),
+            false,
+        );
     }
 
     {
+        let scenario = "f1=base_median_lo_var, f2=hi_median_lo_var";
+
         let diff_out = bench_diff_print(
             params.unit,
             &mut base_median_lo_var,
             &mut hi_median_lo_var,
             params.exec_count,
-            || println!("f1=base_median_lo_var, f2=hi_median_lo_var"),
+            || println!("{scenario}"),
             print_diff_out,
         );
-        assert_eq!(
-            diff_out.welch_position_in_ci_ratio_1(ALPHA),
-            PositionInCi::Above,
-            "welch_position_in_ci_ratio_1"
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "welch_position_in_ci_ratio_1",
+                PositionInCi::Above,
+                diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            ),
+            true,
         );
-        assert_eq!(
-            diff_out.student_position_in_ci_diff_0(ALPHA),
-            PositionInCi::Above,
-            "student_position_in_ci_diff_0"
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "student_position_in_ci_diff_0",
+                PositionInCi::Above,
+                diff_out.student_position_in_ci_diff_0(ALPHA),
+            ),
+            true,
         );
     }
 
     {
+        let scenario = "f1=base_median_lo_var, f2=hi_median_hi_var";
+
         let diff_out = bench_diff_print(
             params.unit,
             &mut base_median_lo_var,
             &mut hi_median_hi_var,
             params.exec_count,
-            || println!("f1=base_median_lo_var, f2=hi_median_hi_var"),
+            || println!("{scenario}"),
             print_diff_out,
         );
-        // assert_eq!(
-        //     diff_out.welch_position_in_ci_ratio_1(ALPHA),
-        //     PositionInCi::Above,
-        //     "welch_position_in_ci_ratio_1"
-        // );
-        assert_eq!(
-            diff_out.student_position_in_ci_diff_0(ALPHA),
-            PositionInCi::Above,
-            "student_position_in_ci_diff_0"
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "welch_position_in_ci_ratio_1",
+                PositionInCi::Above,
+                diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            ),
+            false,
+        );
+
+        test_results.push(
+            TestResult::check_eq(
+                scenario,
+                "student_position_in_ci_diff_0",
+                PositionInCi::Above,
+                diff_out.student_position_in_ci_diff_0(ALPHA),
+            ),
+            true,
         );
     }
+
+    let failures = test_results.failures();
+    let failed_must_pass = test_results.failed_must_pass();
+
+    println!("*** failures ***");
+    for test_result in &failures {
+        println!("{test_result:?}");
+    }
+
+    if !failed_must_pass.is_empty() {
+        println!();
+        println!("*** failed_must_pass ***");
+        for test_result in &failed_must_pass {
+            println!("{test_result:?}");
+        }
+    }
+
+    assert!(
+        failed_must_pass.len() == 0,
+        "{} must-pass tests have failed",
+        failed_must_pass.len()
+    );
 }

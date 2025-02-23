@@ -1,7 +1,7 @@
 use bench_diff::{
     bench_diff_print,
     dev_utils::{calibrate_real_work, real_work},
-    BenchDiffOut, LatencyUnit,
+    BenchDiffOut, LatencyUnit, PositionInCi,
 };
 use rand::{rngs::StdRng, SeedableRng};
 use rand_distr::{Distribution, LogNormal};
@@ -13,6 +13,18 @@ pub struct Params {
     pub hi_median: f64,
     pub lo_stdev_log: f64,
     pub hi_stdev_log: f64,
+}
+
+pub fn default_hi_median_ratio() -> f64 {
+    1.01
+}
+
+pub fn default_lo_stdev_log() -> f64 {
+    1.2_f64.ln() / 2.0
+}
+
+pub fn default_hi_stdev_log() -> f64 {
+    2.4_f64.ln() / 2.0
 }
 
 fn print_diff_out(diff_out: &BenchDiffOut) {
@@ -87,6 +99,8 @@ fn make_fn_tuple(
 }
 
 pub fn bench(params: Params) {
+    const ALPHA: f64 = 0.05;
+
     let base_effort = calibrate_real_work(params.unit, params.base_median as u64);
 
     let (
@@ -101,6 +115,11 @@ pub fn bench(params: Params) {
         real_work(base_effort);
     };
 
+    let hi_median_no_var = || {
+        let effort = (base_effort as f64 * default_hi_median_ratio()) as u32;
+        real_work(effort);
+    };
+
     {
         let diff_out = bench_diff_print(
             params.unit,
@@ -110,58 +129,162 @@ pub fn bench(params: Params) {
             || println!("f1=base_median_no_var, f2=base_median_no_var"),
             print_diff_out,
         );
+        assert_eq!(
+            diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            PositionInCi::In,
+            "welch_position_in_ci_ratio_1"
+        );
+        // assert_eq!(
+        //     diff_out.student_position_in_ci_diff_0(ALPHA),
+        //     PositionInCi::In,
+        //     "student_position_in_ci_diff_0"
+        // );
+    }
 
-        let ratio_median_f1_f2 =
-            diff_out.summary_f1().median as f64 / diff_out.summary_f2().median as f64;
-        let ratio_ci = diff_out.welch_ratio_ci(0.1);
-        assert!(
-            ratio_median_f1_f2 > ratio_ci.0 && ratio_median_f1_f2 < ratio_ci.1,
-            "median in ci"
+    {
+        let diff_out = bench_diff_print(
+            params.unit,
+            &base_median_no_var,
+            &hi_median_no_var,
+            params.exec_count,
+            || println!("f1=base_median_no_var, f2=hi_median_no_var"),
+            print_diff_out,
+        );
+        assert_eq!(
+            diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            PositionInCi::Above,
+            "welch_position_in_ci_ratio_1"
+        );
+        assert_eq!(
+            diff_out.student_position_in_ci_diff_0(ALPHA),
+            PositionInCi::Above,
+            "student_position_in_ci_diff_0"
         );
     }
 
-    // bench_diff_print(
-    //     params.unit,
-    //     &mut base_median_lo_var,
-    //     &mut base_median_lo_var1,
-    //     params.exec_count,
-    //     || println!("f1=base_median_lo_var, f2=base_median_lo_var1"),
-    //     print_diff_out,
-    // );
+    {
+        let diff_out = bench_diff_print(
+            params.unit,
+            &hi_median_no_var,
+            &base_median_no_var,
+            params.exec_count,
+            || println!("f1=hi_median_no_var, f2=base_median_no_var"),
+            print_diff_out,
+        );
+        assert_eq!(
+            diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            PositionInCi::Below,
+            "welch_position_in_ci_ratio_1"
+        );
+        assert_eq!(
+            diff_out.student_position_in_ci_diff_0(ALPHA),
+            PositionInCi::Below,
+            "student_position_in_ci_diff_0"
+        );
+    }
 
-    // bench_diff_print(
-    //     params.unit,
-    //     &mut base_median_lo_var,
-    //     &mut base_median_hi_var,
-    //     params.exec_count,
-    //     || println!("f1=base_median_lo_var, f2=base_median_hi_var"),
-    //     print_diff_out,
-    // );
+    {
+        #[allow(unused)]
+        let diff_out = bench_diff_print(
+            params.unit,
+            &mut base_median_lo_var,
+            &mut base_median_lo_var1,
+            params.exec_count,
+            || println!("f1=base_median_lo_var, f2=base_median_lo_var1"),
+            print_diff_out,
+        );
+        // assert_eq!(
+        //     diff_out.welch_position_in_ci_ratio_1(ALPHA),
+        //     PositionInCi::In,
+        //     "welch_position_in_ci_ratio_1"
+        // );
+        // assert_eq!(
+        //     diff_out.student_position_in_ci_diff_0(ALPHA),
+        //     PositionInCi::In,
+        //     "student_position_in_ci_diff_0"
+        // );
+    }
 
-    // bench_diff_print(
-    //     params.unit,
-    //     &mut base_median_hi_var,
-    //     &mut base_median_lo_var,
-    //     params.exec_count,
-    //     || println!("f1=base_median_hi_var, f2=base_median_lo_var"),
-    //     print_diff_out,
-    // );
+    {
+        #[allow(unused)]
+        let diff_out = bench_diff_print(
+            params.unit,
+            &mut base_median_lo_var,
+            &mut base_median_hi_var,
+            params.exec_count,
+            || println!("f1=base_median_lo_var, f2=base_median_hi_var"),
+            print_diff_out,
+        );
+        // assert_eq!(
+        //     diff_out.welch_position_in_ci_ratio_1(ALPHA),
+        //     PositionInCi::In,
+        //     "welch_position_in_ci_ratio_1"
+        // );
+        // assert_eq!(
+        //     diff_out.student_position_in_ci_diff_0(ALPHA),
+        //     PositionInCi::In, "student_position_in_ci_diff_0"
+        // );
+    }
 
-    bench_diff_print(
-        params.unit,
-        &mut base_median_lo_var,
-        &mut hi_median_lo_var,
-        params.exec_count,
-        || println!("f1=base_median_lo_var, f2=hi_median_lo_var"),
-        print_diff_out,
-    );
+    {
+        let diff_out = bench_diff_print(
+            params.unit,
+            &mut base_median_hi_var,
+            &mut base_median_lo_var,
+            params.exec_count,
+            || println!("f1=base_median_hi_var, f2=base_median_lo_var"),
+            print_diff_out,
+        );
+        assert_eq!(
+            diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            PositionInCi::In,
+            "welch_position_in_ci_ratio_1"
+        );
+        // assert_eq!(
+        //     diff_out.student_position_in_ci_diff_0(ALPHA),
+        //     PositionInCi::In, "student_position_in_ci_diff_0"
+        // );
+    }
 
-    // bench_diff_print(
-    //     params.unit,
-    //     &mut base_median_lo_var,
-    //     &mut hi_median_hi_var,
-    //     params.exec_count,
-    //     || println!("f1=base_median_lo_var, f2=hi_median_hi_var"),
-    //     print_diff_out,
-    // );
+    {
+        let diff_out = bench_diff_print(
+            params.unit,
+            &mut base_median_lo_var,
+            &mut hi_median_lo_var,
+            params.exec_count,
+            || println!("f1=base_median_lo_var, f2=hi_median_lo_var"),
+            print_diff_out,
+        );
+        assert_eq!(
+            diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            PositionInCi::Above,
+            "welch_position_in_ci_ratio_1"
+        );
+        assert_eq!(
+            diff_out.student_position_in_ci_diff_0(ALPHA),
+            PositionInCi::Above,
+            "student_position_in_ci_diff_0"
+        );
+    }
+
+    {
+        let diff_out = bench_diff_print(
+            params.unit,
+            &mut base_median_lo_var,
+            &mut hi_median_hi_var,
+            params.exec_count,
+            || println!("f1=base_median_lo_var, f2=hi_median_hi_var"),
+            print_diff_out,
+        );
+        // assert_eq!(
+        //     diff_out.welch_position_in_ci_ratio_1(ALPHA),
+        //     PositionInCi::Above,
+        //     "welch_position_in_ci_ratio_1"
+        // );
+        assert_eq!(
+            diff_out.student_position_in_ci_diff_0(ALPHA),
+            PositionInCi::Above,
+            "student_position_in_ci_diff_0"
+        );
+    }
 }

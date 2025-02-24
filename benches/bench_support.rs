@@ -95,9 +95,9 @@ pub fn all_tests(
     test_failures.push_failure(
         TestResult::check_eq(
             scenario,
-            "welch_position_in_ci_ratio_1",
+            "welch_position_of_1_in_ratio_ci",
             expected,
-            diff_out.welch_position_in_ci_ratio_1(ALPHA),
+            diff_out.welch_position_of_1_in_ratio_ci(ALPHA),
         ),
         must_pass1,
     );
@@ -105,9 +105,9 @@ pub fn all_tests(
     test_failures.push_failure(
         TestResult::check_eq(
             scenario,
-            "student_position_in_ci_diff_0",
+            "student_position_of_0_in_diff_ci",
             expected,
-            diff_out.student_position_in_ci_diff_0(ALPHA),
+            diff_out.student_position_of_0_in_diff_ci(ALPHA),
         ),
         must_pass2,
     );
@@ -115,9 +115,9 @@ pub fn all_tests(
     test_failures.push_failure(
         TestResult::check_eq(
             scenario,
-            "student_position_in_ci_ratio_1",
+            "student_position_of_1_in_ratio_ci",
             expected,
-            diff_out.student_position_in_ci_ratio_1(ALPHA),
+            diff_out.student_position_of_1_in_ratio_ci(ALPHA),
         ),
         must_pass3,
     );
@@ -138,11 +138,11 @@ pub fn default_hi_stdev_log() -> f64 {
 fn print_diff_out(diff_out: &BenchDiffOut) {
     let ratio_median_f1_f2 =
         diff_out.summary_f1().median as f64 / diff_out.summary_f2().median as f64;
-    let ratio_ci = diff_out.welch_ratio_ci(ALPHA);
-    let position_in_ci_ratio_1 = diff_out.welch_position_in_ci_ratio_1(ALPHA);
+    let welch_ratio_ci = diff_out.welch_ratio_ci(ALPHA);
+    let welch_position_of_1_in_ratio_ci = diff_out.welch_position_of_1_in_ratio_ci(ALPHA);
     let mean_diff_f1_f2 = diff_out.mean_diff_f1_f2();
-    let diff_ci = diff_out.student_diff_ci(ALPHA);
-    let position_in_ci_diff_0 = diff_out.student_position_in_ci_diff_0(ALPHA);
+    let student_diff_ci = diff_out.student_diff_ci(ALPHA);
+    let student_position_of_0_in_diff_ci = diff_out.student_position_of_0_in_diff_ci(ALPHA);
 
     let wilcoxon_rank_sum_z = diff_out.wilcoxon_rank_sum_z();
     let wilcoxon_rank_sum_p = diff_out.wilcoxon_rank_sum_p();
@@ -153,11 +153,17 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
     println!("count_f1_eq_f2={}", diff_out.count_f1_eq_f2());
     println!("count_f1_gt_f2={}", diff_out.count_f1_gt_f2());
     println!("ratio_median_f1_f2={}", ratio_median_f1_f2);
-    println!("ratio_ci={:?}", ratio_ci);
-    println!("position_in_ci_ratio_1={:?}", position_in_ci_ratio_1);
+    println!("welch_ratio_ci={:?}", welch_ratio_ci);
+    println!(
+        "position_in_ci_ratio_1={:?}",
+        welch_position_of_1_in_ratio_ci
+    );
     println!("mean_diff_f1_f2={}", mean_diff_f1_f2);
-    println!("diff_ci={:?}", diff_ci);
-    println!("position_in_ci_diff_0={:?}", position_in_ci_diff_0);
+    println!("diff_ci={:?}", student_diff_ci);
+    println!(
+        "position_in_ci_diff_0={:?}",
+        student_position_of_0_in_diff_ci
+    );
     println!("wilcoxon_rank_sum_z={:?}", wilcoxon_rank_sum_z);
     println!("wilcoxon_rank_sum_p={:?}", wilcoxon_rank_sum_p);
     println!();

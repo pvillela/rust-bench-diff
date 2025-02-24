@@ -189,7 +189,7 @@ impl BenchDiffOut {
         (low, high)
     }
 
-    pub fn welch_position_in_ci_ratio_1(&self, alpha: f64) -> PositionInCi {
+    pub fn welch_position_of_1_in_ratio_ci(&self, alpha: f64) -> PositionInCi {
         let (low, high) = self.welch_ratio_ci(alpha);
         PositionInCi::position_of_value(1.0, low, high)
     }
@@ -217,7 +217,7 @@ impl BenchDiffOut {
         (mid - radius, mid + radius)
     }
 
-    pub fn student_position_in_ci_diff_0(&self, alpha: f64) -> PositionInCi {
+    pub fn student_position_of_0_in_diff_ci(&self, alpha: f64) -> PositionInCi {
         let (low, high) = self.student_diff_ci(alpha);
         PositionInCi::position_of_value(0.0, low, high)
     }
@@ -251,7 +251,7 @@ impl BenchDiffOut {
         (low, high)
     }
 
-    pub fn student_position_in_ci_ratio_1(&self, alpha: f64) -> PositionInCi {
+    pub fn student_position_of_1_in_ratio_ci(&self, alpha: f64) -> PositionInCi {
         let (low, high) = self.student_ratio_ci(alpha);
         PositionInCi::position_of_value(1.0, low, high)
     }
@@ -262,30 +262,6 @@ impl BenchDiffOut {
 
     pub fn wilcoxon_rank_sum_p(&self) -> f64 {
         statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2)
-    }
-
-    pub fn wilcoxon_signed_rank_z(&self) -> f64 {
-        todo!()
-    }
-
-    pub fn wilcoxon_signed_rank_one_tailed_p(&self) -> f64 {
-        todo!()
-    }
-
-    pub fn wilcoxon_signed_rank_two_tailed_p(&self) -> f64 {
-        todo!()
-    }
-
-    pub fn mood_median_z(&self) -> f64 {
-        todo!()
-    }
-
-    pub fn mood_median_one_tailed_p(&self) -> f64 {
-        todo!()
-    }
-
-    pub fn mood_median_two_tailed_p(&self) -> f64 {
-        todo!()
     }
 }
 

@@ -1,5 +1,3 @@
-use std::{collections::HashMap, fmt::Debug};
-
 use bench_diff::{
     bench_diff_print,
     dev_utils::{calibrate_real_work, real_work},
@@ -7,6 +5,7 @@ use bench_diff::{
 };
 use rand::{rngs::StdRng, SeedableRng};
 use rand_distr::{Distribution, LogNormal};
+use std::{collections::BTreeMap, fmt::Debug};
 
 pub struct Params {
     pub unit: LatencyUnit,
@@ -143,9 +142,10 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
     let mean_diff_f1_f2 = diff_out.mean_diff_f1_f2();
     let student_diff_ci = diff_out.student_diff_ci(ALPHA);
     let student_position_of_0_in_diff_ci = diff_out.student_position_of_0_in_diff_ci(ALPHA);
+    let student_position_of_1_in_ratio_ci = diff_out.student_position_of_1_in_ratio_ci(ALPHA);
 
-    let wilcoxon_rank_sum_z = diff_out.wilcoxon_rank_sum_z();
-    let wilcoxon_rank_sum_p = diff_out.wilcoxon_rank_sum_p();
+    let wilcoxon_rank_sum_f1_lt_f2_p = diff_out.wilcoxon_rank_sum_f1_lt_f2_p();
+    let wilcoxon_rank_sum_f1_gt_f2_p = diff_out.wilcoxon_rank_sum_f1_gt_f2_p();
 
     println!("summary_f1={:?}", diff_out.summary_f1());
     println!("\nsummary_f2={:?}", diff_out.summary_f2());
@@ -155,17 +155,28 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
     println!("ratio_median_f1_f2={}", ratio_median_f1_f2);
     println!("welch_ratio_ci={:?}", welch_ratio_ci);
     println!(
-        "position_in_ci_ratio_1={:?}",
+        "welch_position_of_1_in_ratio_ci={:?}",
         welch_position_of_1_in_ratio_ci
     );
     println!("mean_diff_f1_f2={}", mean_diff_f1_f2);
     println!("diff_ci={:?}", student_diff_ci);
     println!(
-        "position_in_ci_diff_0={:?}",
+        "student_position_of_0_in_diff_ci={:?}",
         student_position_of_0_in_diff_ci
     );
-    println!("wilcoxon_rank_sum_z={:?}", wilcoxon_rank_sum_z);
-    println!("wilcoxon_rank_sum_p={:?}", wilcoxon_rank_sum_p);
+    println!(
+        "student_position_of_1_in_ratio_ci={:?}",
+        student_position_of_1_in_ratio_ci
+    );
+
+    println!(
+        "wilcoxon_rank_sum_f1_lt_f2_p={:?}",
+        wilcoxon_rank_sum_f1_lt_f2_p
+    );
+    println!(
+        "wilcoxon_rank_sum_f1_gt_f2_p={:?}",
+        wilcoxon_rank_sum_f1_gt_f2_p
+    );
     println!();
 }
 
@@ -437,7 +448,7 @@ pub fn bench(params: Params) {
 
     let failures = test_failures.failures();
     let failed_must_pass = test_failures.failed_must_pass();
-    let mut failures_summary = HashMap::<(&'static str, &'static str), u32>::new();
+    let mut failures_summary = BTreeMap::<(&'static str, &'static str), u32>::new();
 
     {
         println!("*** failures ***");

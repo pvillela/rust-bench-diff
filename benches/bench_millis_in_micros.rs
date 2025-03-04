@@ -1,10 +1,8 @@
 //! Tests this crate for the case of millisecond-scale functions.
 
-mod bench_support;
-
 use bench_diff::LatencyUnit;
-use bench_support::{
-    bench, default_hi_median_ratio, default_hi_stdev_log, default_lo_stdev_log, Params,
+use bench_diff::bench_support::{
+    Params, bench_t, default_hi_median_ratio, default_hi_stdev_log, default_lo_stdev_log,
 };
 
 fn main() {
@@ -19,5 +17,5 @@ fn main() {
         hi_stdev_log: default_hi_stdev_log(),
     };
 
-    bench(params);
+    bench_t(params);
 }

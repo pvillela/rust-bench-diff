@@ -1,15 +1,15 @@
 //! Module to compare the difference in latency between two closures.
 
 use crate::{
-    new_timing, sample_mean, sample_stdev, sample_sum2_deviations, statistics, summary_stats,
-    PositionInCi, SummaryStats, Timing,
+    PositionInCi, SummaryStats, Timing, new_timing, sample_mean, sample_stdev,
+    sample_sum2_deviations, statistics, summary_stats,
 };
 use hdrhistogram::Histogram;
 use statrs::distribution::{ContinuousCDF, StudentsT};
 use std::{
     error::Error,
     hint,
-    io::{stdout, Write},
+    io::{Write, stdout},
     time::{Duration, Instant},
 };
 
@@ -273,11 +273,11 @@ type BenchDiffState = BenchDiffOut;
 
 impl BenchDiffState {
     fn new() -> BenchDiffState {
-        let hist_f1_lt_f2 = new_timing(20 * 1000 * 1000, 5);
+        let hist_f1 = new_timing(20 * 1000 * 1000, 5);
+        let hist_f2 = Histogram::<u64>::new_from(&hist_f1);
+        let hist_f1_lt_f2 = Histogram::<u64>::new_from(&hist_f1);
         let count_f1_eq_f2 = 0;
-        let hist_f1_gt_f2 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
-        let hist_f1 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
-        let hist_f2 = Histogram::<u64>::new_from(&hist_f1_lt_f2);
+        let hist_f1_gt_f2 = Histogram::<u64>::new_from(&hist_f1);
         let sum_ln_f1 = 0.0_f64;
         let sum2_ln_f1 = 0.0_f64;
         let sum_ln_f2 = 0.0_f64;
@@ -373,6 +373,18 @@ impl BenchDiffState {
                 let diff_ln_f1_f2 = ln_f1 - ln_f2;
                 self.sum_diff_ln_f1_f2 += diff_ln_f1_f2;
                 self.sum2_diff_ln_f1_f2 += diff_ln_f1_f2.powi(2);
+
+                // println!("exec i={i}");
+                // println!("self.mean_diff_ln_f1_f2()={}", self.mean_diff_ln_f1_f2());
+                // println!(
+                //     "self.mean_ln_f1() - self.mean_ln_f2()={}",
+                //     self.mean_ln_f1() - self.mean_ln_f2()
+                // );
+                // assert!(
+                //     (self.mean_diff_ln_f1_f2() - (self.mean_ln_f1() - self.mean_ln_f2())).abs()
+                //         < 0.000001,
+                //     "execute: two different ways to compute mean_diff_ln_f1_f2"
+                // );
             }
 
             exec_status(i * 4);
@@ -414,6 +426,10 @@ impl BenchDiffState {
         self.sum2_ln_f1 += other.sum2_ln_f2;
         self.sum_ln_f2 += other.sum_ln_f1;
         self.sum2_ln_f2 += other.sum2_ln_f1;
+        self.sum_diff_f1_f2 -= other.sum_diff_f1_f2;
+        self.sum2_diff_f1_f2 += other.sum2_diff_f1_f2;
+        self.sum_diff_ln_f1_f2 -= other.sum_diff_ln_f1_f2;
+        self.sum2_diff_ln_f1_f2 += other.sum2_diff_ln_f1_f2;
 
         Ok(())
     }
@@ -475,6 +491,10 @@ pub fn bench_diff_x(
     state
         .merge_reversed(state_rev)
         .expect("state merger cannot fail");
+    // assert!(
+    //     (state.mean_diff_ln_f1_f2() - (state.mean_ln_f1() - state.mean_ln_f2())).abs() < 0.000001,
+    //     "bench_diff_x after merge_reversed: two different ways to compute mean_diff_ln_f1_f2"
+    // );
     state
 }
 

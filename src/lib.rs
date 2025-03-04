@@ -12,3 +12,7 @@ pub use statistics::*;
 
 #[cfg(feature = "dev_utils")]
 pub mod dev_utils;
+
+// intended only to be used by benches
+#[cfg(feature = "bench")]
+pub mod bench_support;

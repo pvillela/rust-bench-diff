@@ -1,11 +1,11 @@
 //! Module that provides functions to simulate work, used to support creation of synthetic benchmarks.
 
-use crate::{latency, LatencyUnit};
+use crate::{LatencyUnit, latency};
 use sha2::{Digest, Sha256};
 use std::{hint::black_box, thread, time::Duration};
 
 /// Function that sleeps to simulate work to support benchmarks.
-pub fn lazy_work(micros: u64) {
+pub fn fake_work(micros: u64) {
     thread::sleep(Duration::from_micros(micros));
 }
 

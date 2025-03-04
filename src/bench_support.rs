@@ -4,7 +4,10 @@ use crate::{
 };
 use rand::{SeedableRng, rngs::StdRng};
 use rand_distr::{Distribution, LogNormal};
-use std::{collections::BTreeMap, fmt::Debug};
+use std::{
+    collections::BTreeMap,
+    fmt::{Debug, Display},
+};
 
 pub struct Params {
     pub unit: LatencyUnit,
@@ -17,7 +20,7 @@ pub struct Params {
 
 #[derive(Debug)]
 pub struct TestResult {
-    pub scenario: &'static str,
+    pub scenario: String,
     pub test: &'static str,
     pub passed: bool,
     pub result_string: String,
@@ -25,13 +28,13 @@ pub struct TestResult {
 
 impl TestResult {
     pub fn check(
-        scenario: &'static str,
+        scenario: &str,
         test: &'static str,
         condition: bool,
         result_string: String,
     ) -> Self {
         Self {
-            scenario,
+            scenario: scenario.to_owned(),
             test,
             passed: condition,
             result_string,
@@ -39,13 +42,13 @@ impl TestResult {
     }
 
     pub fn check_eq<T: PartialEq + Debug>(
-        scenario: &'static str,
+        scenario: &str,
         test: &'static str,
         expected: T,
         actual: T,
     ) -> Self {
         Self {
-            scenario,
+            scenario: scenario.to_owned(),
             test,
             passed: expected == actual,
             result_string: format!("expected={expected:?}, actual={actual:?}"),
@@ -81,10 +84,10 @@ impl TestFailures {
 
 pub const ALPHA: f64 = 0.05;
 
-pub fn all_tests(
+pub fn all_tests<'a>(
     diff_out: &BenchDiffOut,
     test_failures: &mut TestFailures,
-    scenario: &'static str,
+    scenario: String,
     expected: PositionInCi,
     must_pass1: bool,
     must_pass2: bool,
@@ -92,7 +95,7 @@ pub fn all_tests(
 ) {
     test_failures.push_failure(
         TestResult::check_eq(
-            scenario,
+            &scenario,
             "welch_position_of_1_in_ratio_ci",
             expected,
             diff_out.welch_position_of_1_in_ratio_ci(ALPHA),
@@ -102,7 +105,7 @@ pub fn all_tests(
 
     test_failures.push_failure(
         TestResult::check_eq(
-            scenario,
+            &scenario,
             "student_position_of_0_in_diff_ci",
             expected,
             diff_out.student_position_of_0_in_diff_ci(ALPHA),
@@ -112,7 +115,7 @@ pub fn all_tests(
 
     test_failures.push_failure(
         TestResult::check_eq(
-            scenario,
+            &scenario,
             "student_position_of_1_in_ratio_ci",
             expected,
             diff_out.student_position_of_1_in_ratio_ci(ALPHA),
@@ -179,45 +182,80 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
     println!();
 }
 
-fn synth(median_effort: u32, stdev_log: f64) -> impl FnMut() {
-    let mu = 0.0_f64;
-    let sigma = stdev_log;
-    let lognormal = LogNormal::new(mu, sigma).expect("stdev_log must be > 0");
-    let mut rng = StdRng::from_rng(&mut rand::rng());
+enum MyFnMut {
+    Constant {
+        median_effort: u32,
+    },
 
-    move || {
-        let factor = lognormal.sample(&mut rng);
-        let effort = (median_effort as f64) * factor;
-        real_work(effort as u32);
+    Variable {
+        median_effort: u32,
+        lognormal: LogNormal<f64>,
+        rng: StdRng,
+    },
+}
+
+impl MyFnMut {
+    fn new_constant(median_effort: u32) -> Self {
+        Self::Constant { median_effort }
+    }
+
+    fn new_variable(median_effort: u32, stdev_log: f64) -> Self {
+        let mu = 0.0_f64;
+        let sigma = stdev_log;
+        Self::Variable {
+            median_effort,
+            lognormal: LogNormal::new(mu, sigma).expect("stdev_log must be > 0"),
+            rng: StdRng::from_rng(&mut rand::rng()),
+        }
+    }
+
+    fn invoke(&mut self) {
+        match self {
+            Self::Constant { median_effort } => {
+                real_work(*median_effort);
+            }
+
+            Self::Variable {
+                median_effort,
+                lognormal,
+                rng,
+            } => {
+                let factor = lognormal.sample(rng);
+                let effort = (*median_effort as f64) * factor;
+                real_work(effort as u32);
+            }
+        }
     }
 }
 
-fn make_fn_tuple(
-    base_effort: u32,
-    params: &Params,
-) -> (
-    impl FnMut(),
-    impl FnMut(),
-    impl FnMut(),
-    impl FnMut(),
-    impl FnMut(),
-) {
-    let hi_effort = (base_effort as f64 * params.hi_median / params.base_median) as u32;
+fn make_base_median_no_var(base_effort: u32, _: &Params) -> MyFnMut {
+    let effort = base_effort;
+    MyFnMut::new_constant(effort)
+}
 
-    let base_median_lo_var = synth(base_effort, params.lo_stdev_log);
-    let base_median_lo_var1 = synth(base_effort, params.lo_stdev_log);
-    let base_median_hi_var = synth(base_effort, params.hi_stdev_log);
-    // let base_median_hi_var = synth(base_effort * 3 / 4, params.lo_stdev_log * 0.5);
-    let hi_median_lo_var = synth(hi_effort, params.lo_stdev_log);
-    let hi_median_hi_var = synth(hi_effort, params.hi_stdev_log);
+fn make_hi_median_no_var(base_effort: u32, params: &Params) -> MyFnMut {
+    let effort = (base_effort as f64 * params.hi_median / params.base_median) as u32;
+    MyFnMut::new_constant(effort)
+}
 
-    (
-        base_median_lo_var,
-        base_median_lo_var1,
-        base_median_hi_var,
-        hi_median_lo_var,
-        hi_median_hi_var,
-    )
+fn make_base_median_lo_var(base_effort: u32, params: &Params) -> MyFnMut {
+    let effort = base_effort;
+    MyFnMut::new_variable(effort, params.lo_stdev_log)
+}
+
+fn make_hi_median_lo_var(base_effort: u32, params: &Params) -> MyFnMut {
+    let effort = (base_effort as f64 * params.hi_median / params.base_median) as u32;
+    MyFnMut::new_variable(effort, params.lo_stdev_log)
+}
+
+fn make_base_median_hi_var(base_effort: u32, params: &Params) -> MyFnMut {
+    let effort = base_effort;
+    MyFnMut::new_variable(effort, params.hi_stdev_log)
+}
+
+fn make_hi_median_hi_var(base_effort: u32, params: &Params) -> MyFnMut {
+    let effort = (base_effort as f64 * params.hi_median / params.base_median) as u32;
+    MyFnMut::new_variable(effort, params.hi_stdev_log)
 }
 
 fn cmd_line_args() -> Option<usize> {
@@ -233,31 +271,79 @@ fn cmd_line_args() -> Option<usize> {
     Some(nrepeats)
 }
 
-pub fn bench_t(params: Params) {
+pub static SCENARIO_SPECS: [ScenarioSpec; 2] = [
+    ScenarioSpec::new(
+        "base_median_no_var",
+        "base_median_no_var",
+        PositionInCi::In,
+        true,
+        false,
+        true,
+    ),
+    ScenarioSpec::new(
+        "base_median_no_var",
+        "hi_median_no_var",
+        PositionInCi::Above,
+        true,
+        true,
+        true,
+    ),
+];
+
+pub struct ScenarioSpec {
+    pub name1: &'static str,
+    pub name2: &'static str,
+    pub position_in_ci: PositionInCi,
+    pub must_pass1: bool,
+    pub must_pass2: bool,
+    pub must_pass3: bool,
+}
+
+impl ScenarioSpec {
+    pub const fn new(
+        name1: &'static str,
+        name2: &'static str,
+        position_in_ci: PositionInCi,
+        must_pass1: bool,
+        must_pass2: bool,
+        must_pass3: bool,
+    ) -> Self {
+        Self {
+            name1,
+            name2,
+            position_in_ci,
+            must_pass1,
+            must_pass2,
+            must_pass3,
+        }
+    }
+}
+
+pub fn bench_t(params: Params, scenario_specs: &[ScenarioSpec]) {
     let nrepeats = cmd_line_args().unwrap_or(1);
 
     let base_effort = calibrate_real_work(params.unit, params.base_median as u64);
 
-    let (
-        mut base_median_lo_var,
-        mut base_median_lo_var1,
-        mut base_median_hi_var,
-        mut hi_median_lo_var,
-        mut hi_median_hi_var,
-    ) = make_fn_tuple(base_effort, &params);
+    let named_fns: Vec<(&str, fn(u32, &Params) -> MyFnMut)> = vec![
+        ("base_median_no_var", make_base_median_no_var),
+        ("hi_median_no_var", make_hi_median_no_var),
+        ("base_median_lo_var", make_base_median_lo_var),
+        ("hi_median_lo_var", make_hi_median_lo_var),
+        ("base_median_hi_var", make_base_median_hi_var),
+        ("hi_median_hi_var", make_hi_median_hi_var),
+    ];
 
-    let base_median_no_var = || {
-        real_work(base_effort);
-    };
-
-    let hi_median_no_var = || {
-        let effort = (base_effort as f64 * default_hi_median_ratio()) as u32;
-        real_work(effort);
+    let get_fn = |name: &'static str| -> fn(u32, &Params) -> MyFnMut {
+        named_fns
+            .iter()
+            .find(|pair| pair.0 == name)
+            .expect("invalid fn name")
+            .1
     };
 
     let mut test_failures = TestFailures::new();
-    let mut ratio_medians_noise = Moments::new();
-    let mut diff_ln_stdev_noise = Moments::new();
+    let mut ratio_medians_noises = BTreeMap::<(&'static str, &'static str), Moments>::new();
+    let mut diff_ln_stdev_noises = BTreeMap::<(&'static str, &'static str), Moments>::new();
 
     for i in 1..=nrepeats {
         println!("*** iteration = {i} ***");
@@ -288,22 +374,40 @@ pub fn bench_t(params: Params) {
         //     );
         // }
 
+        for ScenarioSpec {
+            name1,
+            name2,
+            position_in_ci,
+            must_pass1,
+            must_pass2,
+            must_pass3,
+        } in scenario_specs
         {
-            let scenario = "f1=base_median_no_var, f2=hi_median_no_var";
+            let scenario = format!("f1={name1}, f2={name2}");
+
+            let f1 = {
+                let mut my_fn = get_fn(name1)(base_effort, &params);
+                move || my_fn.invoke()
+            };
+
+            let f2 = {
+                let mut my_fn = get_fn(name2)(base_effort, &params);
+                move || my_fn.invoke()
+            };
 
             let diff_out = bench_diff_print(
                 params.unit,
-                &base_median_no_var,
-                &hi_median_no_var,
+                f1,
+                f2,
                 params.exec_count,
                 || println!("{scenario}"),
                 print_diff_out,
             );
 
-            collect_moments(
-                &mut ratio_medians_noise,
-                diff_out.mean_diff_ln_f1_f2().exp(),
-            );
+            let ratio_medians_noise = ratio_medians_noises
+                .entry((name1, name2))
+                .or_insert_with(|| Moments::new());
+            collect_moments(ratio_medians_noise, diff_out.mean_diff_ln_f1_f2().exp());
             // println!(
             //     ">>>>> mean_diff_ln_f1_f2.exp()={}",
             //     diff_out.mean_diff_ln_f1_f2().exp()
@@ -320,16 +424,19 @@ pub fn bench_t(params: Params) {
             //     "bench_t: two different ways to compute mean_diff_ln_f1_f2"
             // );
 
-            collect_moments(&mut diff_ln_stdev_noise, diff_out.stdev_diff_ln_f1_f2());
+            let diff_ln_stdev_noise = diff_ln_stdev_noises
+                .entry((name1, name2))
+                .or_insert_with(|| Moments::new());
+            collect_moments(diff_ln_stdev_noise, diff_out.stdev_diff_ln_f1_f2());
 
             all_tests(
                 &diff_out,
                 &mut test_failures,
                 scenario,
-                PositionInCi::Above,
-                true,
-                true,
-                true,
+                *position_in_ci,
+                *must_pass1,
+                *must_pass2,
+                *must_pass3,
             );
         }
 
@@ -482,7 +589,7 @@ pub fn bench_t(params: Params) {
             for test_result in &failures {
                 println!("{test_result:?}");
                 let count = failures_summary
-                    .entry((test_result.scenario, test_result.test))
+                    .entry((&test_result.scenario, test_result.test))
                     .or_insert(0);
                 *count += 1;
             }
@@ -506,16 +613,21 @@ pub fn bench_t(params: Params) {
     }
 
     println!();
-    println!(
-        "ratio_medians_noise_mean={}, ratio_medians_noise_stdev={}",
-        ratio_medians_noise.mean(),
-        ratio_medians_noise.stdev()
-    );
-    println!(
-        "diff_ln_stdev_noise_mean={}, diff_ln_stdev_noise_stdev={}",
-        diff_ln_stdev_noise.mean(),
-        diff_ln_stdev_noise.stdev()
-    );
+    println!("*** noise ***");
+    for ScenarioSpec { name1, name2, .. } in scenario_specs {
+        println!();
+        println!("scenario: fn1={name1}, fn2={name2}");
+        println!(
+            "ratio_medians_noise_mean={}, ratio_medians_noise_stdev={}",
+            ratio_medians_noises.get(&(name1, name2)).unwrap().mean(),
+            ratio_medians_noises.get(&(name1, name2)).unwrap().stdev()
+        );
+        println!(
+            "diff_ln_stdev_noise_mean={}, diff_ln_stdev_noise_stdev={}",
+            diff_ln_stdev_noises.get(&(name1, name2)).unwrap().mean(),
+            diff_ln_stdev_noises.get(&(name1, name2)).unwrap().stdev()
+        );
+    }
 
     assert!(
         failed_must_pass.len() == 0,

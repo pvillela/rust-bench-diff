@@ -1,14 +1,13 @@
 //! Module to compare the difference in latency between two closures.
 
 use crate::{
-    PositionInCi, SummaryStats, Timing, new_timing, sample_mean, sample_stdev,
-    sample_sum2_deviations, statistics, summary_stats,
+    PositionInCi, SampleMoments, SummaryStats, Timing, new_timing, sample_mean, sample_stdev,
+    statistics, summary_stats, welch_ci, welch_deg_freedom, welch_t,
 };
 use hdrhistogram::Histogram;
 use statrs::distribution::{ContinuousCDF, StudentsT};
 use std::{
     error::Error,
-    hint,
     io::{Write, stdout},
     time::{Duration, Instant},
 };
@@ -131,12 +130,9 @@ impl BenchDiffOut {
     ///
     /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
     pub fn welch_ln_t(&self) -> f64 {
-        let n = self.n();
-        let dx = self.mean_ln_f1() - self.mean_ln_f2();
-        let s2_x1 = self.stdev_ln_f1().powi(2) / n;
-        let s2_x2 = self.stdev_ln_f2().powi(2) / n;
-        let s_dx = (s2_x1 + s2_x2).sqrt();
-        dx / s_dx
+        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
+        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
+        welch_t(&moments1, &moments2)
     }
 
     /// Degrees of freedom for Welch's t-test for
@@ -144,11 +140,9 @@ impl BenchDiffOut {
     ///
     /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
     pub fn welch_ln_deg_freedom(&self) -> f64 {
-        let n = self.n();
-        let s2_x1 = self.stdev_ln_f1().powi(2) / n;
-        let s2_x2 = self.stdev_ln_f2().powi(2) / n;
-        let s2_dx = s2_x1 + s2_x2;
-        (n - 1.0) * s2_dx.powi(2) / (s2_x1.powi(2) + s2_x2.powi(2))
+        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
+        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
+        welch_deg_freedom(&moments1, &moments2)
     }
 
     /// Confidence interval for
@@ -160,20 +154,9 @@ impl BenchDiffOut {
     ///
     /// This is also the confidence interval for the difference of medians of logarithms under the above assumption.
     pub fn welch_ln_ci(&self, alpha: f64) -> (f64, f64) {
-        let n = self.n();
-        let dx = self.mean_ln_f1() - self.mean_ln_f2();
-        let s2_x1 = self.stdev_ln_f1().powi(2) / n;
-        let s2_x2 = self.stdev_ln_f2().powi(2) / n;
-        let nu = self.welch_ln_deg_freedom();
-
-        let stud = StudentsT::new(0.0, 1.0, nu)
-            .expect("can't happen: degrees of freedom is always >= 3 by construction");
-        let t = -stud.inverse_cdf(alpha / 2.0);
-
-        let mid = dx;
-        let radius = (s2_x1 + s2_x2).sqrt() * t;
-
-        (mid - radius, mid + radius)
+        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
+        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
+        welch_ci(&moments1, &moments2, alpha)
     }
 
     /// Confidence interval for
@@ -373,18 +356,6 @@ impl BenchDiffState {
                 let diff_ln_f1_f2 = ln_f1 - ln_f2;
                 self.sum_diff_ln_f1_f2 += diff_ln_f1_f2;
                 self.sum2_diff_ln_f1_f2 += diff_ln_f1_f2.powi(2);
-
-                // println!("exec i={i}");
-                // println!("self.mean_diff_ln_f1_f2()={}", self.mean_diff_ln_f1_f2());
-                // println!(
-                //     "self.mean_ln_f1() - self.mean_ln_f2()={}",
-                //     self.mean_ln_f1() - self.mean_ln_f2()
-                // );
-                // assert!(
-                //     (self.mean_diff_ln_f1_f2() - (self.mean_ln_f1() - self.mean_ln_f2())).abs()
-                //         < 0.000001,
-                //     "execute: two different ways to compute mean_diff_ln_f1_f2"
-                // );
             }
 
             exec_status(i * 4);
@@ -491,10 +462,7 @@ pub fn bench_diff_x(
     state
         .merge_reversed(state_rev)
         .expect("state merger cannot fail");
-    // assert!(
-    //     (state.mean_diff_ln_f1_f2() - (state.mean_ln_f1() - state.mean_ln_f2())).abs() < 0.000001,
-    //     "bench_diff_x after merge_reversed: two different ways to compute mean_diff_ln_f1_f2"
-    // );
+
     state
 }
 

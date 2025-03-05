@@ -1,5 +1,5 @@
 use crate::{
-    BenchDiffOut, LatencyUnit, Moments, PositionInCi, bench_diff_print, collect_moments,
+    BenchDiffOut, LatencyUnit, PositionInCi, SampleMoments, bench_diff_print, collect_moments,
     dev_utils::{calibrate_real_work, real_work},
 };
 use rand::{SeedableRng, rngs::StdRng};
@@ -17,19 +17,16 @@ pub struct Params {
 
 #[derive(Debug)]
 struct TestResult {
-    pub scenario: String,
-    pub test: &'static str,
-    pub passed: bool,
-    pub result_string: String,
+    scenario: String,
+    test: &'static str,
+    passed: bool,
+    #[allow(dead_code)]
+    result_string: String,
 }
 
 impl TestResult {
-    pub fn check(
-        scenario: &str,
-        test: &'static str,
-        condition: bool,
-        result_string: String,
-    ) -> Self {
+    #[allow(dead_code)]
+    fn check(scenario: &str, test: &'static str, condition: bool, result_string: String) -> Self {
         Self {
             scenario: scenario.to_owned(),
             test,
@@ -38,7 +35,7 @@ impl TestResult {
         }
     }
 
-    pub fn check_eq<T: PartialEq + Debug>(
+    fn check_eq<T: PartialEq + Debug>(
         scenario: &str,
         test: &'static str,
         expected: T,
@@ -268,9 +265,15 @@ fn cmd_line_args() -> Option<usize> {
     Some(nrepeats)
 }
 
-pub static FN_NAME_PAIRS: [(&'static str, &'static str); 2] = [
+pub static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
     ("base_median_no_var", "base_median_no_var"),
     ("base_median_no_var", "hi_median_no_var"),
+    ("hi_median_no_var", "base_median_no_var"),
+    ("base_median_lo_var", "base_median_lo_var"),
+    ("base_median_lo_var", "base_median_hi_var"),
+    ("base_median_hi_var", "base_median_lo_var"),
+    ("base_median_lo_var", "hi_median_lo_var"),
+    ("base_median_lo_var", "hi_median_hi_var"),
 ];
 
 struct ScenarioSpec {
@@ -399,8 +402,8 @@ pub fn bench_t<T: Deref<Target = str>>(params: Params, fn_name_pairs: &[(T, T)])
     let base_effort = calibrate_real_work(params.unit, params.base_median as u64);
 
     let mut test_failures = TestFailures::new();
-    let mut ratio_medians_noises = BTreeMap::<(&'static str, &'static str), Moments>::new();
-    let mut diff_ln_stdev_noises = BTreeMap::<(&'static str, &'static str), Moments>::new();
+    let mut ratio_medians_noises = BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
+    let mut diff_ln_stdev_noises = BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
 
     for i in 1..=nrepeats {
         println!("*** iteration = {i} ***");
@@ -429,12 +432,12 @@ pub fn bench_t<T: Deref<Target = str>>(params: Params, fn_name_pairs: &[(T, T)])
 
             let ratio_medians_noise = ratio_medians_noises
                 .entry((name1, name2))
-                .or_insert_with(|| Moments::new());
+                .or_insert_with(|| SampleMoments::default());
             collect_moments(ratio_medians_noise, diff_out.mean_diff_ln_f1_f2().exp());
 
             let diff_ln_stdev_noise = diff_ln_stdev_noises
                 .entry((name1, name2))
-                .or_insert_with(|| Moments::new());
+                .or_insert_with(|| SampleMoments::default());
             collect_moments(diff_ln_stdev_noise, diff_out.stdev_diff_ln_f1_f2());
 
             let spec = get_spec(name1, name2);

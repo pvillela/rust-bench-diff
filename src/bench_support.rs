@@ -4,10 +4,7 @@ use crate::{
 };
 use rand::{SeedableRng, rngs::StdRng};
 use rand_distr::{Distribution, LogNormal};
-use std::{
-    collections::BTreeMap,
-    fmt::{Debug, Display},
-};
+use std::{collections::BTreeMap, fmt::Debug};
 
 pub struct Params {
     pub unit: LatencyUnit,
@@ -19,7 +16,7 @@ pub struct Params {
 }
 
 #[derive(Debug)]
-pub struct TestResult {
+struct TestResult {
     pub scenario: String,
     pub test: &'static str,
     pub passed: bool,
@@ -56,7 +53,7 @@ impl TestResult {
     }
 }
 
-pub struct TestFailures(Vec<(TestResult, bool)>);
+struct TestFailures(Vec<(TestResult, bool)>);
 
 impl TestFailures {
     pub fn new() -> Self {
@@ -82,9 +79,9 @@ impl TestFailures {
     }
 }
 
-pub const ALPHA: f64 = 0.05;
+const ALPHA: f64 = 0.05;
 
-pub fn all_tests<'a>(
+fn all_tests<'a>(
     diff_out: &BenchDiffOut,
     test_failures: &mut TestFailures,
     scenario: String,
@@ -271,26 +268,12 @@ fn cmd_line_args() -> Option<usize> {
     Some(nrepeats)
 }
 
-pub static SCENARIO_SPECS: [ScenarioSpec; 2] = [
-    ScenarioSpec::new(
-        "base_median_no_var",
-        "base_median_no_var",
-        PositionInCi::In,
-        true,
-        false,
-        true,
-    ),
-    ScenarioSpec::new(
-        "base_median_no_var",
-        "hi_median_no_var",
-        PositionInCi::Above,
-        true,
-        true,
-        true,
-    ),
+pub static FN_NAME_PAIRS: [(&'static str, &'static str); 2] = [
+    ("base_median_no_var", "base_median_no_var"),
+    ("base_median_no_var", "hi_median_no_var"),
 ];
 
-pub struct ScenarioSpec {
+struct ScenarioSpec {
     pub name1: &'static str,
     pub name2: &'static str,
     pub position_in_ci: PositionInCi,
@@ -319,27 +302,53 @@ impl ScenarioSpec {
     }
 }
 
-pub fn bench_t(params: Params, scenario_specs: &[ScenarioSpec]) {
+const NAMED_FNS: [(&str, fn(u32, &Params) -> MyFnMut); 6] = [
+    ("base_median_no_var", make_base_median_no_var),
+    ("hi_median_no_var", make_hi_median_no_var),
+    ("base_median_lo_var", make_base_median_lo_var),
+    ("hi_median_lo_var", make_hi_median_lo_var),
+    ("base_median_hi_var", make_base_median_hi_var),
+    ("hi_median_hi_var", make_hi_median_hi_var),
+];
+
+const SCENARIO_SPECS: [ScenarioSpec; 2] = [
+    ScenarioSpec::new(
+        "base_median_no_var",
+        "base_median_no_var",
+        PositionInCi::In,
+        true,
+        false,
+        true,
+    ),
+    ScenarioSpec::new(
+        "base_median_no_var",
+        "hi_median_no_var",
+        PositionInCi::Above,
+        true,
+        true,
+        true,
+    ),
+];
+
+fn get_fn(name: &str) -> fn(u32, &Params) -> MyFnMut {
+    NAMED_FNS
+        .iter()
+        .find(|pair| pair.0 == name)
+        .expect("invalid fn name")
+        .1
+}
+
+fn get_spec(name1: &str, name2: &str) -> &'static ScenarioSpec {
+    SCENARIO_SPECS
+        .iter()
+        .find(|spec| spec.name1 == name1 && spec.name2 == name2)
+        .expect("invalid fn name pair")
+}
+
+pub fn bench_t(params: Params, fn_name_pairs: &[(&str, &str)]) {
     let nrepeats = cmd_line_args().unwrap_or(1);
 
     let base_effort = calibrate_real_work(params.unit, params.base_median as u64);
-
-    let named_fns: Vec<(&str, fn(u32, &Params) -> MyFnMut)> = vec![
-        ("base_median_no_var", make_base_median_no_var),
-        ("hi_median_no_var", make_hi_median_no_var),
-        ("base_median_lo_var", make_base_median_lo_var),
-        ("hi_median_lo_var", make_hi_median_lo_var),
-        ("base_median_hi_var", make_base_median_hi_var),
-        ("hi_median_hi_var", make_hi_median_hi_var),
-    ];
-
-    let get_fn = |name: &'static str| -> fn(u32, &Params) -> MyFnMut {
-        named_fns
-            .iter()
-            .find(|pair| pair.0 == name)
-            .expect("invalid fn name")
-            .1
-    };
 
     let mut test_failures = TestFailures::new();
     let mut ratio_medians_noises = BTreeMap::<(&'static str, &'static str), Moments>::new();
@@ -374,15 +383,7 @@ pub fn bench_t(params: Params, scenario_specs: &[ScenarioSpec]) {
         //     );
         // }
 
-        for ScenarioSpec {
-            name1,
-            name2,
-            position_in_ci,
-            must_pass1,
-            must_pass2,
-            must_pass3,
-        } in scenario_specs
-        {
+        for (name1, name2) in fn_name_pairs {
             let scenario = format!("f1={name1}, f2={name2}");
 
             let f1 = {
@@ -408,35 +409,37 @@ pub fn bench_t(params: Params, scenario_specs: &[ScenarioSpec]) {
                 .entry((name1, name2))
                 .or_insert_with(|| Moments::new());
             collect_moments(ratio_medians_noise, diff_out.mean_diff_ln_f1_f2().exp());
-            // println!(
-            //     ">>>>> mean_diff_ln_f1_f2.exp()={}",
-            //     diff_out.mean_diff_ln_f1_f2().exp()
-            // );
-            // println!(
-            //     ">>>>> mean_ln_f1.exp()/mean_ln_f2.exp()={}",
-            //     diff_out.mean_ln_f1().exp() / diff_out.mean_ln_f2().exp()
-            // );
+            println!(
+                ">>>>> mean_diff_ln_f1_f2.exp()={}",
+                diff_out.mean_diff_ln_f1_f2().exp()
+            );
+            println!(
+                ">>>>> mean_ln_f1.exp()/mean_ln_f2.exp()={}",
+                diff_out.mean_ln_f1().exp() / diff_out.mean_ln_f2().exp()
+            );
 
-            // assert!(
-            //     (diff_out.mean_diff_ln_f1_f2() - (diff_out.mean_ln_f1() - diff_out.mean_ln_f2()))
-            //         .abs()
-            //         < 0.000001,
-            //     "bench_t: two different ways to compute mean_diff_ln_f1_f2"
-            // );
+            assert!(
+                (diff_out.mean_diff_ln_f1_f2() - (diff_out.mean_ln_f1() - diff_out.mean_ln_f2()))
+                    .abs()
+                    < 0.000001,
+                "bench_t: two different ways to compute mean_diff_ln_f1_f2"
+            );
 
             let diff_ln_stdev_noise = diff_ln_stdev_noises
                 .entry((name1, name2))
                 .or_insert_with(|| Moments::new());
             collect_moments(diff_ln_stdev_noise, diff_out.stdev_diff_ln_f1_f2());
 
+            let spec = get_spec(name1, name2);
+
             all_tests(
                 &diff_out,
                 &mut test_failures,
                 scenario,
-                *position_in_ci,
-                *must_pass1,
-                *must_pass2,
-                *must_pass3,
+                spec.position_in_ci,
+                spec.must_pass1,
+                spec.must_pass2,
+                spec.must_pass3,
             );
         }
 
@@ -614,7 +617,7 @@ pub fn bench_t(params: Params, scenario_specs: &[ScenarioSpec]) {
 
     println!();
     println!("*** noise ***");
-    for ScenarioSpec { name1, name2, .. } in scenario_specs {
+    for (name1, name2) in fn_name_pairs {
         println!();
         println!("scenario: fn1={name1}, fn2={name2}");
         println!(

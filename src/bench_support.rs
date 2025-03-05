@@ -4,7 +4,7 @@ use crate::{
 };
 use rand::{SeedableRng, rngs::StdRng};
 use rand_distr::{Distribution, LogNormal};
-use std::{collections::BTreeMap, fmt::Debug};
+use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
 pub struct Params {
     pub unit: LatencyUnit,
@@ -311,7 +311,7 @@ const NAMED_FNS: [(&str, fn(u32, &Params) -> MyFnMut); 6] = [
     ("hi_median_hi_var", make_hi_median_hi_var),
 ];
 
-const SCENARIO_SPECS: [ScenarioSpec; 2] = [
+const SCENARIO_SPECS: [ScenarioSpec; 8] = [
     ScenarioSpec::new(
         "base_median_no_var",
         "base_median_no_var",
@@ -327,6 +327,54 @@ const SCENARIO_SPECS: [ScenarioSpec; 2] = [
         true,
         true,
         true,
+    ),
+    ScenarioSpec::new(
+        "hi_median_no_var",
+        "base_median_no_var",
+        PositionInCi::Below,
+        true,
+        true,
+        true,
+    ),
+    ScenarioSpec::new(
+        "base_median_lo_var",
+        "base_median_lo_var",
+        PositionInCi::In,
+        false,
+        false,
+        true,
+    ),
+    ScenarioSpec::new(
+        "base_median_lo_var",
+        "base_median_hi_var",
+        PositionInCi::In,
+        false,
+        false,
+        true,
+    ),
+    ScenarioSpec::new(
+        "base_median_hi_var",
+        "base_median_lo_var",
+        PositionInCi::In,
+        false,
+        false,
+        true,
+    ),
+    ScenarioSpec::new(
+        "base_median_lo_var",
+        "hi_median_lo_var",
+        PositionInCi::Above,
+        true,
+        true,
+        true,
+    ),
+    ScenarioSpec::new(
+        "base_median_lo_var",
+        "hi_median_hi_var",
+        PositionInCi::Above,
+        false,
+        true,
+        false,
     ),
 ];
 
@@ -345,7 +393,7 @@ fn get_spec(name1: &str, name2: &str) -> &'static ScenarioSpec {
         .expect("invalid fn name pair")
 }
 
-pub fn bench_t(params: Params, fn_name_pairs: &[(&str, &str)]) {
+pub fn bench_t<T: Deref<Target = str>>(params: Params, fn_name_pairs: &[(T, T)]) {
     let nrepeats = cmd_line_args().unwrap_or(1);
 
     let base_effort = calibrate_real_work(params.unit, params.base_median as u64);
@@ -357,34 +405,8 @@ pub fn bench_t(params: Params, fn_name_pairs: &[(&str, &str)]) {
     for i in 1..=nrepeats {
         println!("*** iteration = {i} ***");
 
-        // {
-        //     let scenario = "f1=base_median_no_var, f2=base_median_no_var";
-
-        //     let diff_out = bench_diff_print(
-        //         params.unit,
-        //         &base_median_no_var,
-        //         &base_median_no_var,
-        //         params.exec_count,
-        //         || println!("{scenario}"),
-        //         print_diff_out,
-        //     );
-
-        //     collect_mean_stdev(&mut ratio_medians_noise, diff_out.mean_diff_ln_f1_f2());
-        //     collect_mean_stdev(&mut base_noise_moments2, diff_out.stdev_diff_ln_f1_f2());
-
-        //     all_tests(
-        //         &diff_out,
-        //         &mut test_failures,
-        //         scenario,
-        //         PositionInCi::In,
-        //         true,
-        //         false,
-        //         true,
-        //     );
-        // }
-
         for (name1, name2) in fn_name_pairs {
-            let scenario = format!("f1={name1}, f2={name2}");
+            let scenario = format!("f1={}, f2={}", name1.deref(), name2.deref());
 
             let f1 = {
                 let mut my_fn = get_fn(name1)(base_effort, &params);
@@ -409,21 +431,6 @@ pub fn bench_t(params: Params, fn_name_pairs: &[(&str, &str)]) {
                 .entry((name1, name2))
                 .or_insert_with(|| Moments::new());
             collect_moments(ratio_medians_noise, diff_out.mean_diff_ln_f1_f2().exp());
-            println!(
-                ">>>>> mean_diff_ln_f1_f2.exp()={}",
-                diff_out.mean_diff_ln_f1_f2().exp()
-            );
-            println!(
-                ">>>>> mean_ln_f1.exp()/mean_ln_f2.exp()={}",
-                diff_out.mean_ln_f1().exp() / diff_out.mean_ln_f2().exp()
-            );
-
-            assert!(
-                (diff_out.mean_diff_ln_f1_f2() - (diff_out.mean_ln_f1() - diff_out.mean_ln_f2()))
-                    .abs()
-                    < 0.000001,
-                "bench_t: two different ways to compute mean_diff_ln_f1_f2"
-            );
 
             let diff_ln_stdev_noise = diff_ln_stdev_noises
                 .entry((name1, name2))
@@ -442,144 +449,6 @@ pub fn bench_t(params: Params, fn_name_pairs: &[(&str, &str)]) {
                 spec.must_pass3,
             );
         }
-
-        // {
-        //     let scenario = "f1=hi_median_no_var, f2=base_median_no_var";
-
-        //     let diff_out = bench_diff_print(
-        //         params.unit,
-        //         &hi_median_no_var,
-        //         &base_median_no_var,
-        //         params.exec_count,
-        //         || println!("{scenario}"),
-        //         print_diff_out,
-        //     );
-
-        //     all_tests(
-        //         &diff_out,
-        //         &mut test_failures,
-        //         scenario,
-        //         PositionInCi::Below,
-        //         true,
-        //         true,
-        //         true,
-        //     );
-        // }
-
-        // {
-        //     let scenario = "f1=base_median_lo_var, f2=base_median_lo_var1";
-
-        //     let diff_out = bench_diff_print(
-        //         params.unit,
-        //         &mut base_median_lo_var,
-        //         &mut base_median_lo_var1,
-        //         params.exec_count,
-        //         || println!("{scenario}"),
-        //         print_diff_out,
-        //     );
-
-        //     all_tests(
-        //         &diff_out,
-        //         &mut test_failures,
-        //         scenario,
-        //         PositionInCi::In,
-        //         false,
-        //         false,
-        //         true,
-        //     );
-        // }
-
-        // {
-        //     let scenario = "f1=base_median_lo_var, f2=base_median_hi_var";
-
-        //     let diff_out = bench_diff_print(
-        //         params.unit,
-        //         &mut base_median_lo_var,
-        //         &mut base_median_hi_var,
-        //         params.exec_count,
-        //         || println!("{scenario}"),
-        //         print_diff_out,
-        //     );
-
-        //     all_tests(
-        //         &diff_out,
-        //         &mut test_failures,
-        //         scenario,
-        //         PositionInCi::In,
-        //         false,
-        //         false,
-        //         true,
-        //     );
-        // }
-
-        // {
-        //     let scenario = "f1=base_median_hi_var, f2=base_median_lo_var";
-
-        //     let diff_out = bench_diff_print(
-        //         params.unit,
-        //         &mut base_median_hi_var,
-        //         &mut base_median_lo_var,
-        //         params.exec_count,
-        //         || println!("{scenario}"),
-        //         print_diff_out,
-        //     );
-
-        //     all_tests(
-        //         &diff_out,
-        //         &mut test_failures,
-        //         scenario,
-        //         PositionInCi::In,
-        //         false,
-        //         false,
-        //         true,
-        //     );
-        // }
-
-        // {
-        //     let scenario = "f1=base_median_lo_var, f2=hi_median_lo_var";
-
-        //     let diff_out = bench_diff_print(
-        //         params.unit,
-        //         &mut base_median_lo_var,
-        //         &mut hi_median_lo_var,
-        //         params.exec_count,
-        //         || println!("{scenario}"),
-        //         print_diff_out,
-        //     );
-
-        //     all_tests(
-        //         &diff_out,
-        //         &mut test_failures,
-        //         scenario,
-        //         PositionInCi::Above,
-        //         true,
-        //         true,
-        //         true,
-        //     );
-        // }
-
-        // {
-        //     let scenario = "f1=base_median_lo_var, f2=hi_median_hi_var";
-
-        //     let diff_out = bench_diff_print(
-        //         params.unit,
-        //         &mut base_median_lo_var,
-        //         &mut hi_median_hi_var,
-        //         params.exec_count,
-        //         || println!("{scenario}"),
-        //         print_diff_out,
-        //     );
-
-        //     all_tests(
-        //         &diff_out,
-        //         &mut test_failures,
-        //         scenario,
-        //         PositionInCi::Above,
-        //         false,
-        //         true,
-        //         false,
-        //     );
-        // }
     }
 
     let failures = test_failures.failures();
@@ -619,7 +488,7 @@ pub fn bench_t(params: Params, fn_name_pairs: &[(&str, &str)]) {
     println!("*** noise ***");
     for (name1, name2) in fn_name_pairs {
         println!();
-        println!("scenario: fn1={name1}, fn2={name2}");
+        println!("scenario: fn1={}, fn2={}", name1.deref(), name2.deref());
         println!(
             "ratio_medians_noise_mean={}, ratio_medians_noise_stdev={}",
             ratio_medians_noises.get(&(name1, name2)).unwrap().mean(),

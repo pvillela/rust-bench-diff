@@ -1,5 +1,6 @@
 use crate::{
-    BenchDiffOut, LatencyUnit, PositionInCi, SampleMoments, bench_diff_print, collect_moments,
+    BenchDiffOut, LatencyUnit, PositionInCi, SampleMoments, bench_diff, bench_diff_print,
+    collect_moments,
     dev_utils::{calibrate_real_work, real_work},
 };
 use rand::{SeedableRng, rngs::StdRng};
@@ -276,6 +277,8 @@ pub static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
     ("base_median_lo_var", "hi_median_hi_var"),
 ];
 
+pub static VERBOSE: bool = false;
+
 struct ScenarioSpec {
     pub name1: &'static str,
     pub name2: &'static str,
@@ -396,7 +399,7 @@ fn get_spec(name1: &str, name2: &str) -> &'static ScenarioSpec {
         .expect("invalid fn name pair")
 }
 
-pub fn bench_t<T: Deref<Target = str>>(params: Params, fn_name_pairs: &[(T, T)]) {
+pub fn bench_t<T: Deref<Target = str>>(params: Params, fn_name_pairs: &[(T, T)], verbose: bool) {
     let nrepeats = cmd_line_args().unwrap_or(1);
 
     let base_effort = calibrate_real_work(params.unit, params.base_median as u64);
@@ -421,14 +424,18 @@ pub fn bench_t<T: Deref<Target = str>>(params: Params, fn_name_pairs: &[(T, T)])
                 move || my_fn.invoke()
             };
 
-            let diff_out = bench_diff_print(
-                params.unit,
-                f1,
-                f2,
-                params.exec_count,
-                || println!("{scenario}"),
-                print_diff_out,
-            );
+            let diff_out = if verbose {
+                bench_diff_print(
+                    params.unit,
+                    f1,
+                    f2,
+                    params.exec_count,
+                    || println!("{scenario}"),
+                    print_diff_out,
+                )
+            } else {
+                bench_diff(params.unit, f1, f2, params.exec_count)
+            };
 
             let ratio_medians_noise = ratio_medians_noises
                 .entry((name1, name2))

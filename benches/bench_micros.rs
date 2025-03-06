@@ -2,7 +2,7 @@
 
 use bench_diff::LatencyUnit;
 use bench_diff::bench_support::{
-    FN_NAME_PAIRS, Params, bench_t, default_hi_median_ratio, default_hi_stdev_log,
+    FN_NAME_PAIRS, Params, VERBOSE, bench_t, default_hi_median_ratio, default_hi_stdev_log,
     default_lo_stdev_log,
 };
 
@@ -18,5 +18,5 @@ fn main() {
         hi_stdev_log: default_hi_stdev_log(),
     };
 
-    bench_t(params, &FN_NAME_PAIRS);
+    bench_t(params, &FN_NAME_PAIRS, VERBOSE);
 }

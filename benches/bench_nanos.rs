@@ -18,5 +18,5 @@ fn main() {
         hi_stdev_log: default_hi_stdev_log(),
     };
 
-    bench_t(params, &FN_NAME_PAIRS, VERBOSE);
+    bench_t();
 }

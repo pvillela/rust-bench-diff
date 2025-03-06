@@ -5,7 +5,7 @@ use crate::{
 };
 use rand::{SeedableRng, rngs::StdRng};
 use rand_distr::{Distribution, LogNormal};
-use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
+use std::{collections::BTreeMap, fmt::Debug, ops::Deref, sync::LazyLock};
 
 pub struct Params {
     pub unit: LatencyUnit,
@@ -399,9 +399,76 @@ fn get_spec(name1: &str, name2: &str) -> &'static ScenarioSpec {
         .expect("invalid fn name pair")
 }
 
-pub fn bench_t<T: Deref<Target = str>>(params: Params, fn_name_pairs: &[(T, T)], verbose: bool) {
-    let nrepeats = cmd_line_args().unwrap_or(1);
+struct Args {
+    params_idx: usize,
+    fn_name_pairs: Vec<(String, String)>,
+    verbose: bool,
+    nrepeats: usize,
+}
 
+fn get_args() -> Args {
+    let nrepeats = cmd_line_args().unwrap_or(1);
+    todo!("get args from environment and command line")
+}
+
+static PARAMS_VEC: LazyLock<Vec<Params>> = LazyLock::new(|| {
+    vec![
+        // latency magnitude: nanos
+        {
+            let base_median = 400.0;
+            Params {
+                unit: LatencyUnit::Nano,
+                exec_count: 100_000,
+                base_median,
+                hi_median: base_median * default_hi_median_ratio(),
+                lo_stdev_log: default_lo_stdev_log(),
+                hi_stdev_log: default_hi_stdev_log(),
+            }
+        },
+        // latency magnitude: micros
+        {
+            let base_median = 100_000.0;
+            Params {
+                unit: LatencyUnit::Nano,
+                exec_count: 10_000,
+                base_median,
+                hi_median: base_median * default_hi_median_ratio(),
+                lo_stdev_log: default_lo_stdev_log(),
+                hi_stdev_log: default_hi_stdev_log(),
+            }
+        },
+        // latency magnitude: millis
+        {
+            let base_median = 20_000.0;
+            Params {
+                unit: LatencyUnit::Micro,
+                exec_count: 1000,
+                base_median,
+                hi_median: base_median * default_hi_median_ratio(),
+                lo_stdev_log: default_lo_stdev_log(),
+                hi_stdev_log: default_hi_stdev_log(),
+            }
+        },
+    ]
+});
+
+pub fn bench_t() {
+    let Args {
+        params_idx,
+        fn_name_pairs,
+        verbose,
+        nrepeats,
+    } = get_args();
+    let params = &PARAMS_VEC[params_idx];
+    bench_t0(params, &fn_name_pairs, nrepeats, verbose);
+}
+
+pub fn bench_t0<T: Deref<Target = str>>(
+    params: &Params,
+    fn_name_pairs: &[(T, T)],
+    nrepeats: usize,
+    verbose: bool,
+) {
     let base_effort = calibrate_real_work(params.unit, params.base_median as u64);
 
     let mut test_failures = TestFailures::new();

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-RUSTFLAGS="-Awarnings" cargo bench --bench bench_micros_in_nanos --all-features --target-dir target/bench-target -- 10
-
-# cargo bench --bench bench_nanos --all-features
-# cargo bench --bench bench_micros --all-features
-# cargo bench --bench bench_millis --all-features
+RUSTFLAGS="-Awarnings" \
+PARAMS_NAME="nanos_scale" \
+FN_NAME_PAIRS="all" \
+VERBOSE="true" \
+cargo bench --bench bench_t --all-features --target-dir target/bench-target -- 10

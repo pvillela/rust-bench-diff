@@ -39,21 +39,25 @@ dev_utils = ["dep:sha2"] # utilities for creation of synthetic benchmarks
 wilcoxon = []            # to enable Wilcoxon rank sum test functionality
 
 [[bench]]
-name = "bench_nanos"
+name = "bench_t"
 harness = false
 
-[[bench]]
-name = "bench_micros"
-harness = false
+# [[bench]]
+# name = "bench_nanos"
+# harness = false
 
-[[bench]]
-name = "bench_micros_in_nanos"
-harness = false
+# [[bench]]
+# name = "bench_micros"
+# harness = false
 
-[[bench]]
-name = "bench_millis"
-harness = false
+# [[bench]]
+# name = "bench_micros_in_nanos"
+# harness = false
 
-[[bench]]
-name = "bench_millis_in_micros"
-harness = false
+# [[bench]]
+# name = "bench_millis"
+# harness = false
+
+# [[bench]]
+# name = "bench_millis_in_micros"
+# harness = false

@@ -1,4 +1,4 @@
-use super::params_args::{Args, NAMED_PARAMS, Params, get_args, get_fn, get_params, get_spec};
+use super::params_args::{Args, Params, get_args, get_fn, get_params, get_spec};
 use crate::{
     BenchDiffOut, PositionInCi, SampleMoments, bench_diff, bench_diff_print, collect_moments,
     dev_utils::calibrate_real_work,

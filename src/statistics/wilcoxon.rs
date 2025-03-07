@@ -1,6 +1,6 @@
 use hdrhistogram::{
-    iterators::{recorded::Iter, HistogramIterator, IterationValue},
     Histogram,
+    iterators::{HistogramIterator, IterationValue, recorded::Iter},
 };
 use statrs::distribution::{ContinuousCDF, Normal};
 
@@ -143,12 +143,14 @@ fn wilcoxon_rank_sum(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     ranked_items_b.iter().map(|y| y.count as f64 * y.rank).sum()
 }
 
+#[cfg(test)]
 fn mann_whitney_a_lt_b_u(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let w = wilcoxon_rank_sum(hist_a, hist_b);
     let n_b = hist_b.len() as f64;
     w - n_b * (n_b + 1.0) / 2.0
 }
 
+#[cfg(test)]
 fn mann_whitney_a_gt_b_u(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;

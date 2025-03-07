@@ -1,7 +1,7 @@
 use crate::{LatencyUnit, PositionInCi, dev_utils::real_work};
 use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
 use rand_distr::LogNormal;
-use std::sync::LazyLock;
+use std::{env, sync::LazyLock};
 
 pub(super) struct Params {
     pub(super) unit: LatencyUnit,
@@ -100,19 +100,6 @@ fn make_hi_median_hi_var(base_effort: u32, params: &Params) -> MyFnMut {
     MyFnMut::new_variable(effort, params.hi_stdev_log)
 }
 
-fn cmd_line_args() -> Option<usize> {
-    let mut args = std::env::args();
-
-    let nrepeats = match args.nth(1) {
-        Some(v) if v.eq("--bench") => return None,
-        Some(v) => v
-            .parse::<usize>()
-            .expect("argument, if provided, must be integer"),
-        None => return None,
-    };
-    Some(nrepeats)
-}
-
 pub(super) static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
     ("base_median_no_var", "base_median_no_var"),
     ("base_median_no_var", "hi_median_no_var"),
@@ -123,8 +110,6 @@ pub(super) static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
     ("base_median_lo_var", "hi_median_lo_var"),
     ("base_median_lo_var", "hi_median_hi_var"),
 ];
-
-pub(super) static VERBOSE: bool = false;
 
 pub(super) struct ScenarioSpec {
     pub(super) name1: &'static str,
@@ -240,22 +225,16 @@ const SCENARIO_SPECS: [ScenarioSpec; 8] = [
 ];
 
 pub(super) fn get_spec(name1: &str, name2: &str) -> &'static ScenarioSpec {
+    let valid_name_pairs = SCENARIO_SPECS
+        .iter()
+        .map(|s| (s.name1, s.name2))
+        .collect::<Vec<_>>();
     SCENARIO_SPECS
         .iter()
         .find(|spec| spec.name1 == name1 && spec.name2 == name2)
-        .expect(&format!("invalid fn name pair: ({name1}, {name2})"))
-}
-
-pub(super) struct Args {
-    pub(super) params_name: String,
-    pub(super) fn_name_pairs: Vec<(String, String)>,
-    pub(super) verbose: bool,
-    pub(super) nrepeats: usize,
-}
-
-pub(super) fn get_args() -> Args {
-    let nrepeats = cmd_line_args().unwrap_or(1);
-    todo!("get args from environment and command line")
+        .expect(&format!(
+            "invalid fn name pair: ({name1}, {name2}); valid name pairs are: {valid_name_pairs:?}"
+        ))
 }
 
 pub(super) static NAMED_PARAMS: LazyLock<Vec<(&'static str, Params)>> = LazyLock::new(|| {
@@ -300,9 +279,74 @@ pub(super) static NAMED_PARAMS: LazyLock<Vec<(&'static str, Params)>> = LazyLock
 });
 
 pub(super) fn get_params(name: &str) -> &Params {
+    let valid_names = NAMED_PARAMS.iter().map(|p| p.0).collect::<Vec<_>>();
     &NAMED_PARAMS
         .iter()
         .find(|pair| pair.0 == name)
-        .expect(&format!("invalid params name: {name}"))
+        .expect(&format!(
+            "invalid params name: {name}; valid names are: {valid_names:?}"
+        ))
         .1
+}
+
+pub(super) struct Args {
+    pub(super) params_name: String,
+    pub(super) fn_name_pairs: Vec<(String, String)>,
+    pub(super) verbose: bool,
+    pub(super) nrepeats: usize,
+}
+
+fn cmd_line_args() -> Option<usize> {
+    let mut args = std::env::args();
+
+    let nrepeats = match args.nth(1) {
+        Some(v) if v.eq("--bench") => return None,
+        Some(v) => v
+            .parse::<usize>()
+            .expect("argument, if provided, must be integer"),
+        None => return None,
+    };
+    Some(nrepeats)
+}
+
+pub(super) fn get_args() -> Args {
+    let nrepeats = cmd_line_args().unwrap_or(1);
+    let params_name = env::var("PARAMS_NAME").unwrap_or("micros_scale".into());
+    let fn_name_pairs_res = env::var("FN_NAME_PAIRS");
+    let verbose_str = env::var("VERBOSE").unwrap_or("true".into());
+
+    let verbose: bool = verbose_str
+        .parse()
+        .expect("VERBOSE environment variable has invalid string representation of boolean");
+
+    let fn_name_pairs: Vec<(String, String)> = match &fn_name_pairs_res {
+        Ok(s) if s == "all" => FN_NAME_PAIRS
+            .iter()
+            .map(|(name1, name2)| (name1.to_string(), name2.to_string()))
+            .collect(),
+        Ok(s) => s
+            .split_whitespace()
+            .map(|x| {
+                let pair_v = x.split("/").collect::<Vec<_>>();
+                let err_msg =
+                    "properly formatted function name pair must contain one `/` and no whitespace: "
+                        .to_string() + x;
+                assert!(pair_v.len() == 2, "{err_msg}");
+                (pair_v[0].to_string(), pair_v[1].to_string())
+            })
+            .collect::<Vec<_>>(),
+        Err(_) => {
+            vec![
+                ("base_median_no_var".into(), "base_median_no_var".into()),
+                ("base_median_no_var".into(), "hi_median_no_var".into()),
+            ]
+        }
+    };
+
+    Args {
+        params_name,
+        fn_name_pairs,
+        verbose,
+        nrepeats,
+    }
 }

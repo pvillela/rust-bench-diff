@@ -3,24 +3,24 @@ use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
 use rand_distr::LogNormal;
 use std::sync::LazyLock;
 
-pub struct Params {
-    pub unit: LatencyUnit,
-    pub exec_count: usize,
-    pub base_median: f64,
-    pub hi_median: f64,
-    pub lo_stdev_log: f64,
-    pub hi_stdev_log: f64,
+pub(super) struct Params {
+    pub(super) unit: LatencyUnit,
+    pub(super) exec_count: usize,
+    pub(super) base_median: f64,
+    pub(super) hi_median: f64,
+    pub(super) lo_stdev_log: f64,
+    pub(super) hi_stdev_log: f64,
 }
 
-pub fn default_hi_median_ratio() -> f64 {
+pub(super) fn default_hi_median_ratio() -> f64 {
     1.01
 }
 
-pub fn default_lo_stdev_log() -> f64 {
+pub(super) fn default_lo_stdev_log() -> f64 {
     1.2_f64.ln() / 2.0
 }
 
-pub fn default_hi_stdev_log() -> f64 {
+pub(super) fn default_hi_stdev_log() -> f64 {
     2.4_f64.ln() / 2.0
 }
 
@@ -113,7 +113,7 @@ fn cmd_line_args() -> Option<usize> {
     Some(nrepeats)
 }
 
-pub static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
+pub(super) static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
     ("base_median_no_var", "base_median_no_var"),
     ("base_median_no_var", "hi_median_no_var"),
     ("hi_median_no_var", "base_median_no_var"),
@@ -123,7 +123,8 @@ pub static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
     ("base_median_lo_var", "hi_median_lo_var"),
     ("base_median_lo_var", "hi_median_hi_var"),
 ];
-pub static VERBOSE: bool = false;
+
+pub(super) static VERBOSE: bool = false;
 
 pub(super) struct ScenarioSpec {
     pub(super) name1: &'static str,
@@ -162,6 +163,15 @@ const NAMED_FNS: [(&str, fn(u32, &Params) -> MyFnMut); 6] = [
     ("base_median_hi_var", make_base_median_hi_var),
     ("hi_median_hi_var", make_hi_median_hi_var),
 ];
+
+pub(super) fn get_fn(name: &str) -> fn(u32, &Params) -> MyFnMut {
+    NAMED_FNS
+        .iter()
+        .find(|pair| pair.0 == name)
+        .expect(&format!("invalid fn name: {name}"))
+        .1
+}
+
 const SCENARIO_SPECS: [ScenarioSpec; 8] = [
     ScenarioSpec::new(
         "base_median_no_var",
@@ -229,37 +239,29 @@ const SCENARIO_SPECS: [ScenarioSpec; 8] = [
     ),
 ];
 
-pub fn get_fn(name: &str) -> fn(u32, &Params) -> MyFnMut {
-    NAMED_FNS
-        .iter()
-        .find(|pair| pair.0 == name)
-        .expect("invalid fn name")
-        .1
-}
-
-pub fn get_spec(name1: &str, name2: &str) -> &'static ScenarioSpec {
+pub(super) fn get_spec(name1: &str, name2: &str) -> &'static ScenarioSpec {
     SCENARIO_SPECS
         .iter()
         .find(|spec| spec.name1 == name1 && spec.name2 == name2)
-        .expect("invalid fn name pair")
+        .expect(&format!("invalid fn name pair: ({name1}, {name2})"))
 }
 
 pub(super) struct Args {
-    pub(super) params_idx: usize,
+    pub(super) params_name: String,
     pub(super) fn_name_pairs: Vec<(String, String)>,
     pub(super) verbose: bool,
     pub(super) nrepeats: usize,
 }
 
-pub fn get_args() -> Args {
+pub(super) fn get_args() -> Args {
     let nrepeats = cmd_line_args().unwrap_or(1);
     todo!("get args from environment and command line")
 }
 
-pub static PARAMS_VEC: LazyLock<Vec<Params>> = LazyLock::new(|| {
+pub(super) static NAMED_PARAMS: LazyLock<Vec<(&'static str, Params)>> = LazyLock::new(|| {
     vec![
         // latency magnitude: nanos
-        {
+        ("nanos_scale", {
             let base_median = 400.0;
             Params {
                 unit: LatencyUnit::Nano,
@@ -269,9 +271,9 @@ pub static PARAMS_VEC: LazyLock<Vec<Params>> = LazyLock::new(|| {
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),
             }
-        },
+        }),
         // latency magnitude: micros
-        {
+        ("micros_scale", {
             let base_median = 100_000.0;
             Params {
                 unit: LatencyUnit::Nano,
@@ -281,9 +283,9 @@ pub static PARAMS_VEC: LazyLock<Vec<Params>> = LazyLock::new(|| {
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),
             }
-        },
+        }),
         // latency magnitude: millis
-        {
+        ("millis_scale", {
             let base_median = 20_000.0;
             Params {
                 unit: LatencyUnit::Micro,
@@ -293,6 +295,14 @@ pub static PARAMS_VEC: LazyLock<Vec<Params>> = LazyLock::new(|| {
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),
             }
-        },
+        }),
     ]
 });
+
+pub(super) fn get_params(name: &str) -> &Params {
+    &NAMED_PARAMS
+        .iter()
+        .find(|pair| pair.0 == name)
+        .expect(&format!("invalid params name: {name}"))
+        .1
+}

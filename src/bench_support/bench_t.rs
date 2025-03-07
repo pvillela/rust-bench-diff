@@ -1,4 +1,4 @@
-use super::parms_args::{Args, PARAMS_VEC, Params, get_args, get_fn, get_spec};
+use super::params_args::{Args, NAMED_PARAMS, Params, get_args, get_fn, get_params, get_spec};
 use crate::{
     BenchDiffOut, PositionInCi, SampleMoments, bench_diff, bench_diff_print, collect_moments,
     dev_utils::calibrate_real_work,
@@ -43,21 +43,21 @@ impl TestResult {
 struct TestFailures(Vec<(TestResult, bool)>);
 
 impl TestFailures {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self(Vec::new())
     }
 
-    pub fn push_failure(&mut self, result: TestResult, must_pass: bool) {
+    fn push_failure(&mut self, result: TestResult, must_pass: bool) {
         if !result.passed {
             self.0.push((result, must_pass))
         };
     }
 
-    pub fn failures(&self) -> Vec<&TestResult> {
+    fn failures(&self) -> Vec<&TestResult> {
         self.0.iter().map(|p| &p.0).collect()
     }
 
-    pub fn failed_must_pass(&self) -> Vec<&TestResult> {
+    fn failed_must_pass(&self) -> Vec<&TestResult> {
         self.0
             .iter()
             .filter(|p| !p.0.passed && p.1)
@@ -156,16 +156,16 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
 
 pub fn bench_t() {
     let Args {
-        params_idx,
+        params_name,
         fn_name_pairs,
         verbose,
         nrepeats,
     } = get_args();
-    let params = &PARAMS_VEC[params_idx];
+    let params = get_params(&params_name);
     bench_t0(params, &fn_name_pairs, nrepeats, verbose);
 }
 
-pub fn bench_t0<T: Deref<Target = str>>(
+fn bench_t0<T: Deref<Target = str>>(
     params: &Params,
     fn_name_pairs: &[(T, T)],
     nrepeats: usize,

@@ -1,15 +1,17 @@
+//! Definition of target functions, test scenarios, and their parameterization.
+
 use crate::{LatencyUnit, PositionInCi, dev_utils::real_work};
 use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
 use rand_distr::LogNormal;
 use std::{env, sync::LazyLock};
 
-pub(super) struct Params {
-    pub(super) unit: LatencyUnit,
-    pub(super) exec_count: usize,
-    pub(super) base_median: f64,
-    pub(super) hi_median: f64,
-    pub(super) lo_stdev_log: f64,
-    pub(super) hi_stdev_log: f64,
+pub struct FnParams {
+    pub unit: LatencyUnit,
+    pub exec_count: usize,
+    pub base_median: f64,
+    pub hi_median: f64,
+    pub lo_stdev_log: f64,
+    pub hi_stdev_log: f64,
 }
 
 pub(super) fn default_hi_median_ratio() -> f64 {
@@ -70,32 +72,32 @@ impl MyFnMut {
     }
 }
 
-fn make_base_median_no_var(base_effort: u32, _: &Params) -> MyFnMut {
+fn make_base_median_no_var(base_effort: u32, _: &FnParams) -> MyFnMut {
     let effort = base_effort;
     MyFnMut::new_constant(effort)
 }
 
-fn make_hi_median_no_var(base_effort: u32, params: &Params) -> MyFnMut {
+fn make_hi_median_no_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = (base_effort as f64 * params.hi_median / params.base_median) as u32;
     MyFnMut::new_constant(effort)
 }
 
-fn make_base_median_lo_var(base_effort: u32, params: &Params) -> MyFnMut {
+fn make_base_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = base_effort;
     MyFnMut::new_variable(effort, params.lo_stdev_log)
 }
 
-fn make_hi_median_lo_var(base_effort: u32, params: &Params) -> MyFnMut {
+fn make_hi_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = (base_effort as f64 * params.hi_median / params.base_median) as u32;
     MyFnMut::new_variable(effort, params.lo_stdev_log)
 }
 
-fn make_base_median_hi_var(base_effort: u32, params: &Params) -> MyFnMut {
+fn make_base_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = base_effort;
     MyFnMut::new_variable(effort, params.hi_stdev_log)
 }
 
-fn make_hi_median_hi_var(base_effort: u32, params: &Params) -> MyFnMut {
+fn make_hi_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = (base_effort as f64 * params.hi_median / params.base_median) as u32;
     MyFnMut::new_variable(effort, params.hi_stdev_log)
 }
@@ -140,7 +142,7 @@ impl ScenarioSpec {
     }
 }
 
-const NAMED_FNS: [(&str, fn(u32, &Params) -> MyFnMut); 6] = [
+const NAMED_FNS: [(&str, fn(u32, &FnParams) -> MyFnMut); 6] = [
     ("base_median_no_var", make_base_median_no_var),
     ("hi_median_no_var", make_hi_median_no_var),
     ("base_median_lo_var", make_base_median_lo_var),
@@ -149,7 +151,7 @@ const NAMED_FNS: [(&str, fn(u32, &Params) -> MyFnMut); 6] = [
     ("hi_median_hi_var", make_hi_median_hi_var),
 ];
 
-pub(super) fn get_fn(name: &str) -> fn(u32, &Params) -> MyFnMut {
+pub(super) fn get_fn(name: &str) -> fn(u32, &FnParams) -> MyFnMut {
     NAMED_FNS
         .iter()
         .find(|pair| pair.0 == name)
@@ -237,12 +239,12 @@ pub(super) fn get_spec(name1: &str, name2: &str) -> &'static ScenarioSpec {
         ))
 }
 
-pub(super) static NAMED_PARAMS: LazyLock<Vec<(&'static str, Params)>> = LazyLock::new(|| {
+pub(super) static NAMED_PARAMS: LazyLock<Vec<(&'static str, FnParams)>> = LazyLock::new(|| {
     vec![
         // latency magnitude: nanos
         ("nanos_scale", {
             let base_median = 400.0;
-            Params {
+            FnParams {
                 unit: LatencyUnit::Nano,
                 exec_count: 100_000,
                 base_median,
@@ -254,7 +256,7 @@ pub(super) static NAMED_PARAMS: LazyLock<Vec<(&'static str, Params)>> = LazyLock
         // latency magnitude: micros
         ("micros_scale", {
             let base_median = 100_000.0;
-            Params {
+            FnParams {
                 unit: LatencyUnit::Nano,
                 exec_count: 10_000,
                 base_median,
@@ -266,7 +268,7 @@ pub(super) static NAMED_PARAMS: LazyLock<Vec<(&'static str, Params)>> = LazyLock
         // latency magnitude: millis
         ("millis_scale", {
             let base_median = 20_000.0;
-            Params {
+            FnParams {
                 unit: LatencyUnit::Micro,
                 exec_count: 1000,
                 base_median,
@@ -278,7 +280,7 @@ pub(super) static NAMED_PARAMS: LazyLock<Vec<(&'static str, Params)>> = LazyLock
     ]
 });
 
-pub(super) fn get_params(name: &str) -> &Params {
+pub(super) fn get_params(name: &str) -> &FnParams {
     let valid_names = NAMED_PARAMS.iter().map(|p| p.0).collect::<Vec<_>>();
     &NAMED_PARAMS
         .iter()

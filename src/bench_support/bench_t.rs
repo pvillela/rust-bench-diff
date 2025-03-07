@@ -1,4 +1,6 @@
-use super::params_args::{Args, Params, get_args, get_fn, get_params, get_spec};
+//!
+
+use super::params_args::{Args, FnParams, get_args, get_fn, get_params, get_spec};
 use crate::{
     BenchDiffOut, PositionInCi, SampleMoments, bench_diff, bench_diff_print, collect_moments,
     dev_utils::calibrate_real_work,
@@ -154,24 +156,29 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
     println!();
 }
 
-pub fn bench_t() {
+/// Runs benchmarks with statistical t-tests for target functions and comparison scenarios defined by
+/// environment variables and command line arguments.
+/// Defaults are provided for environment variables and command line arguments not defined.
+pub fn bench_diff_t_with_args() {
     let Args {
         params_name,
         fn_name_pairs,
         verbose,
         nrepeats,
     } = get_args();
-    let params = get_params(&params_name);
-    bench_t0(params, &fn_name_pairs, nrepeats, verbose);
+    let fn_params = get_params(&params_name);
+    bench_diff_t(fn_params, &fn_name_pairs, nrepeats, verbose);
 }
 
-fn bench_t0<T: Deref<Target = str>>(
-    params: &Params,
+/// Runs benchmarks with statistical t-tests for target functions parameterized by `fn_params`,
+/// with comparison scenarios defined by `fn_name_pairs`.
+pub fn bench_diff_t<T: Deref<Target = str>>(
+    fn_params: &FnParams,
     fn_name_pairs: &[(T, T)],
     nrepeats: usize,
     verbose: bool,
 ) {
-    let base_effort = calibrate_real_work(params.unit, params.base_median as u64);
+    let base_effort = calibrate_real_work(fn_params.unit, fn_params.base_median as u64);
 
     let mut test_failures = TestFailures::new();
     let mut ratio_medians_noises = BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
@@ -184,26 +191,26 @@ fn bench_t0<T: Deref<Target = str>>(
             let scenario = format!("f1={}, f2={}", name1.deref(), name2.deref());
 
             let f1 = {
-                let mut my_fn = get_fn(name1)(base_effort, &params);
+                let mut my_fn = get_fn(name1)(base_effort, &fn_params);
                 move || my_fn.invoke()
             };
 
             let f2 = {
-                let mut my_fn = get_fn(name2)(base_effort, &params);
+                let mut my_fn = get_fn(name2)(base_effort, &fn_params);
                 move || my_fn.invoke()
             };
 
             let diff_out = if verbose {
                 bench_diff_print(
-                    params.unit,
+                    fn_params.unit,
                     f1,
                     f2,
-                    params.exec_count,
+                    fn_params.exec_count,
                     || println!("{scenario}"),
                     print_diff_out,
                 )
             } else {
-                bench_diff(params.unit, f1, f2, params.exec_count)
+                bench_diff(fn_params.unit, f1, f2, fn_params.exec_count)
             };
 
             let ratio_medians_noise = ratio_medians_noises

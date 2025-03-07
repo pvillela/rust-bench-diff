@@ -2,7 +2,7 @@
 
 use crate::{
     PositionInCi, SampleMoments, SummaryStats, Timing, new_timing, sample_mean, sample_stdev,
-    statistics, summary_stats, welch_ci, welch_deg_freedom, welch_t,
+    summary_stats, welch_ci, welch_deg_freedom, welch_t,
 };
 use hdrhistogram::Histogram;
 use statrs::distribution::{ContinuousCDF, StudentsT};
@@ -11,6 +11,9 @@ use std::{
     io::{Write, stdout},
     time::{Duration, Instant},
 };
+
+#[cfg(feature = "wilcoxon")]
+use crate::statistics;
 
 const WARMUP_MILLIS: u64 = 3_000;
 const WARMUP_INCREMENT_COUNT: usize = 20;
@@ -22,31 +25,56 @@ pub enum LatencyUnit {
     Nano,
 }
 
-#[inline(always)]
-pub fn latency(unit: LatencyUnit, mut f: impl FnMut()) -> u64 {
-    let start = Instant::now();
-    f();
-    let duration = Instant::now().duration_since(start);
-    match unit {
-        LatencyUnit::Milli => duration.as_millis() as u64,
-        LatencyUnit::Micro => duration.as_micros() as u64,
-        LatencyUnit::Nano => duration.as_nanos() as u64,
+impl LatencyUnit {
+    #[inline(always)]
+    pub fn latency_as_u64(&self, latency: Duration) -> u64 {
+        match self {
+            Self::Nano => latency.as_nanos() as u64,
+            Self::Micro => latency.as_micros() as u64,
+            Self::Milli => latency.as_millis() as u64,
+        }
+    }
+
+    #[inline(always)]
+    pub fn latency_from_u64(&self, elapsed: u64) -> Duration {
+        match self {
+            Self::Nano => Duration::from_nanos(elapsed),
+            Self::Micro => Duration::from_micros(elapsed),
+            Self::Milli => Duration::from_millis(elapsed),
+        }
+    }
+
+    #[inline(always)]
+    pub fn latency_as_f64(&self, latency: Duration) -> f64 {
+        self.latency_as_u64(latency) as f64
+    }
+
+    #[inline(always)]
+    pub fn latency_from_f64(&self, elapsed: f64) -> Duration {
+        self.latency_from_u64(elapsed as u64)
     }
 }
 
 #[inline(always)]
-fn quad_exec(unit: LatencyUnit, mut f1: impl FnMut(), mut f2: impl FnMut()) -> [(u64, u64); 4] {
-    let l01 = latency(unit, &mut f1);
-    let l02 = latency(unit, &mut f2);
+pub fn latency(mut f: impl FnMut()) -> Duration {
+    let start = Instant::now();
+    f();
+    Instant::now().duration_since(start)
+}
 
-    let l11 = latency(unit, &mut f1);
-    let l12 = latency(unit, &mut f2);
+#[inline(always)]
+fn quad_exec(mut f1: impl FnMut(), mut f2: impl FnMut()) -> [(Duration, Duration); 4] {
+    let l01 = latency(&mut f1);
+    let l02 = latency(&mut f2);
 
-    let l22 = latency(unit, &mut f2);
-    let l21 = latency(unit, &mut f1);
+    let l11 = latency(&mut f1);
+    let l12 = latency(&mut f2);
 
-    let l32 = latency(unit, &mut f2);
-    let l31 = latency(unit, &mut f1);
+    let l22 = latency(&mut f2);
+    let l21 = latency(&mut f1);
+
+    let l32 = latency(&mut f2);
+    let l31 = latency(&mut f1);
 
     [(l01, l02), (l11, l12), (l21, l22), (l31, l32)]
 }
@@ -318,9 +346,12 @@ impl BenchDiffState {
         pre_exec();
 
         for i in 1..=exec_count / 4 {
-            let pairs = quad_exec(unit, &mut f1, &mut f2);
+            let pairs = quad_exec(&mut f1, &mut f2);
 
-            for (elapsed1, elapsed2) in pairs {
+            for (latency1, latency2) in pairs {
+                let elapsed1 = unit.latency_as_u64(latency1);
+                let elapsed2 = unit.latency_as_u64(latency2);
+
                 self.hist_f1
                     .record(elapsed1)
                     .expect("can't happen: histogram is auto-resizable");

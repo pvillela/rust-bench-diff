@@ -178,7 +178,8 @@ pub fn bench_diff_t<T: Deref<Target = str>>(
     nrepeats: usize,
     verbose: bool,
 ) {
-    let base_effort = calibrate_real_work(fn_params.unit, fn_params.base_median as u64);
+    let unit = fn_params.unit;
+    let base_effort = calibrate_real_work(unit.latency_from_f64(fn_params.base_median));
 
     let mut test_failures = TestFailures::new();
     let mut ratio_medians_noises = BTreeMap::<(&'static str, &'static str), SampleMoments>::new();

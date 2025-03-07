@@ -1,15 +1,15 @@
-//! Module that provides functions to simulate work, used to support creation of synthetic benchmarks.
+//! Module that provides functions to simulate work, used to support the validation of benchmarking frameworks.
 
-use crate::{LatencyUnit, latency};
+use crate::latency;
 use sha2::{Digest, Sha256};
 use std::{hint::black_box, thread, time::Duration};
 
-/// Function that sleeps to simulate work to support benchmarks.
-pub fn fake_work(micros: u64) {
-    thread::sleep(Duration::from_micros(micros));
+/// Function that sleeps to simulate work to support validation of benchmarking frameworks.
+pub fn fake_work(target_latency: Duration) {
+    thread::sleep(target_latency);
 }
 
-/// Function that does a significant amount of computation to support benchmarks.
+/// Function that does a significant amount of computation to support validation of benchmarking frameworks.
 /// `effort` is the number of iterations that determines the amount of work performed.
 pub fn real_work(effort: u32) {
     let extent = black_box(effort);
@@ -27,23 +27,14 @@ pub fn real_work(effort: u32) {
 /// of `target_micros`.
 ///
 /// Calls [`calibrate_real_work_x`] with a predefined `calibration_effort`;
-pub fn calibrate_real_work(unit: LatencyUnit, target_latency: u64) -> u32 {
-    const NANO_CALIBRATION_EFFORT: u32 = 200;
-    let calibration_effort: u32 = match unit {
-        LatencyUnit::Nano => NANO_CALIBRATION_EFFORT,
-        LatencyUnit::Micro => NANO_CALIBRATION_EFFORT * 1000,
-        LatencyUnit::Milli => NANO_CALIBRATION_EFFORT * 1000 * 1000,
-    };
-    calibrate_real_work_x(unit, target_latency, calibration_effort)
+pub fn calibrate_real_work(target_latency: Duration) -> u32 {
+    const CALIBRATION_EFFORT: u32 = 200_000;
+    calibrate_real_work_x(CALIBRATION_EFFORT, target_latency)
 }
 
 /// Returns an estimate of the number of iterations required for [`real_work`] to have a latency
 /// of `target_micros`. `calibration_effort` is the number of iterations executed during calibration.
-pub fn calibrate_real_work_x(
-    unit: LatencyUnit,
-    target_latency: u64,
-    calibration_effort: u32,
-) -> u32 {
-    let elapsed = latency(unit, || real_work(calibration_effort));
-    ((target_latency as f64 / elapsed as f64) * calibration_effort as f64).ceil() as u32
+pub fn calibrate_real_work_x(calibration_effort: u32, target_latency: Duration) -> u32 {
+    let latency = latency(|| real_work(calibration_effort));
+    (target_latency.as_nanos() * calibration_effort as u128 / latency.as_nanos()) as u32
 }

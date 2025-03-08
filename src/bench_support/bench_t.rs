@@ -113,6 +113,7 @@ fn all_tests<'a>(
 fn print_diff_out(diff_out: &BenchDiffOut) {
     let ratio_median_f1_f2 =
         diff_out.summary_f1().median as f64 / diff_out.summary_f2().median as f64;
+    let alt_ratio_median_f1_f2 = diff_out.mean_diff_ln_f1_f2().exp();
     let welch_ratio_ci = diff_out.welch_ratio_ci(ALPHA);
     let welch_position_of_1_in_ratio_ci = diff_out.welch_position_of_1_in_ratio_ci(ALPHA);
     let mean_diff_f1_f2 = diff_out.mean_diff_f1_f2();
@@ -129,6 +130,11 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
     println!("count_f1_eq_f2={}", diff_out.count_f1_eq_f2());
     println!("count_f1_gt_f2={}", diff_out.count_f1_gt_f2());
     println!("ratio_median_f1_f2={}", ratio_median_f1_f2);
+    println!("alt_ratio_median_f1_f2={}", alt_ratio_median_f1_f2);
+    println!(
+        "ratio_median_f1_f2-alt_ratio_median_f1_f2={}",
+        ratio_median_f1_f2 - alt_ratio_median_f1_f2
+    );
     println!("welch_ratio_ci={:?}", welch_ratio_ci);
     println!(
         "welch_position_of_1_in_ratio_ci={:?}",
@@ -182,7 +188,10 @@ pub fn bench_diff_t<T: Deref<Target = str>>(
     let base_effort = calibrate_real_work(unit.latency_from_f64(fn_params.base_median));
 
     let mut test_failures = TestFailures::new();
-    let mut ratio_medians_noises = BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
+    let mut alt_ratio_medians_noises =
+        BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
+    let mut diff_reg_alt_ratio_medians_noises =
+        BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
     let mut diff_ln_stdev_noises = BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
 
     for i in 1..=nrepeats {
@@ -214,10 +223,18 @@ pub fn bench_diff_t<T: Deref<Target = str>>(
                 bench_diff(fn_params.unit, f1, f2, fn_params.exec_count)
             };
 
-            let ratio_medians_noise = ratio_medians_noises
+            let alt_ratio_medians_noise = alt_ratio_medians_noises
                 .entry((name1, name2))
                 .or_insert_with(|| SampleMoments::default());
-            collect_moments(ratio_medians_noise, diff_out.mean_diff_ln_f1_f2().exp());
+            collect_moments(alt_ratio_medians_noise, diff_out.mean_diff_ln_f1_f2().exp());
+
+            let diff_reg_alt_ratio_medians_noise = diff_reg_alt_ratio_medians_noises
+                .entry((name1, name2))
+                .or_insert_with(|| SampleMoments::default());
+            collect_moments(
+                diff_reg_alt_ratio_medians_noise,
+                diff_out.ratio_medians_f1_f2() - diff_out.alt_ratio_medians_f1_f2(),
+            );
 
             let diff_ln_stdev_noise = diff_ln_stdev_noises
                 .entry((name1, name2))
@@ -277,9 +294,26 @@ pub fn bench_diff_t<T: Deref<Target = str>>(
         println!();
         println!("scenario: fn1={}, fn2={}", name1.deref(), name2.deref());
         println!(
-            "ratio_medians_noise_mean={}, ratio_medians_noise_stdev={}",
-            ratio_medians_noises.get(&(name1, name2)).unwrap().mean(),
-            ratio_medians_noises.get(&(name1, name2)).unwrap().stdev()
+            "alt_ratio_medians_noise_mean={}, alt_ratio_medians_noise_stdev={}",
+            alt_ratio_medians_noises
+                .get(&(name1, name2))
+                .unwrap()
+                .mean(),
+            alt_ratio_medians_noises
+                .get(&(name1, name2))
+                .unwrap()
+                .stdev()
+        );
+        println!(
+            "diff_reg_alt_ratio_medians_noise_mean={}, diff_reg_alt_ratio_medians_noise_stdev={}",
+            diff_reg_alt_ratio_medians_noises
+                .get(&(name1, name2))
+                .unwrap()
+                .mean(),
+            diff_reg_alt_ratio_medians_noises
+                .get(&(name1, name2))
+                .unwrap()
+                .stdev()
         );
         println!(
             "diff_ln_stdev_noise_mean={}, diff_ln_stdev_noise_stdev={}",

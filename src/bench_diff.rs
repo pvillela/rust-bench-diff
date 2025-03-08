@@ -153,6 +153,24 @@ impl BenchDiffOut {
         sample_stdev(self.n(), self.sum_diff_ln_f1_f2, self.sum2_diff_ln_f1_f2)
     }
 
+    pub fn median_f1(&self) -> f64 {
+        self.summary_f1().median as f64
+    }
+
+    pub fn median_f2(&self) -> f64 {
+        self.summary_f2().median as f64
+    }
+
+    // Ratio of medians computed from histograms.
+    pub fn ratio_medians_f1_f2(&self) -> f64 {
+        self.median_f1() / self.median_f2()
+    }
+
+    // Alternative ratio of medians computed from the `exp` of the mean difference of `ln`s of latencies.
+    pub fn alt_ratio_medians_f1_f2(&self) -> f64 {
+        self.mean_diff_ln_f1_f2().exp()
+    }
+
     /// Welch's t statistic for
     /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm),
     ///

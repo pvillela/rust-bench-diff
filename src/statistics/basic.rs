@@ -41,11 +41,19 @@ pub struct SampleMoments {
     count: u64,
     sum: f64,
     sum2: f64,
+    min: f64,
+    max: f64,
 }
 
 impl SampleMoments {
-    pub fn new(count: u64, sum: f64, sum2: f64) -> Self {
-        Self { count, sum, sum2 }
+    pub fn new(count: u64, sum: f64, sum2: f64, min: f64, max: f64) -> Self {
+        Self {
+            count,
+            sum,
+            sum2,
+            min,
+            max,
+        }
     }
 
     pub fn n(&self) -> f64 {
@@ -77,6 +85,14 @@ impl SampleMoments {
     pub fn stdev(&self) -> f64 {
         sample_stdev(self.n(), self.sum, self.sum2)
     }
+
+    pub fn min(&self) -> f64 {
+        self.min
+    }
+
+    pub fn max(&self) -> f64 {
+        self.max
+    }
 }
 
 impl Default for SampleMoments {
@@ -85,6 +101,8 @@ impl Default for SampleMoments {
             count: 0,
             sum: 0.0,
             sum2: 0.0,
+            min: f64::NAN,
+            max: f64::NAN,
         }
     }
 }
@@ -93,6 +111,8 @@ pub fn collect_moments(moments: &mut SampleMoments, value: f64) {
     moments.count += 1;
     moments.sum += value;
     moments.sum2 += value * value;
+    moments.min = value.min(moments.min);
+    moments.max = value.max(moments.max);
 }
 
 pub fn welch_t(moments_a: &SampleMoments, moments_b: &SampleMoments) -> f64 {

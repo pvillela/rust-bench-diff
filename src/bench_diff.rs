@@ -167,7 +167,7 @@ impl BenchDiffOut {
     }
 
     // Alternative ratio of medians computed from the `exp` of the mean difference of `ln`s of latencies.
-    pub fn alt_ratio_medians_f1_f2(&self) -> f64 {
+    pub fn ratio_medians_f1_f2_from_lns(&self) -> f64 {
         self.mean_diff_ln_f1_f2().exp()
     }
 
@@ -176,8 +176,20 @@ impl BenchDiffOut {
     ///
     /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
     pub fn welch_ln_t(&self) -> f64 {
-        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
-        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
+        let moments1 = SampleMoments::new(
+            self.hist_f1.len(),
+            self.sum_ln_f1,
+            self.sum2_ln_f1,
+            f64::NAN,
+            f64::NAN,
+        );
+        let moments2 = SampleMoments::new(
+            self.hist_f2.len(),
+            self.sum_ln_f2,
+            self.sum2_ln_f2,
+            f64::NAN,
+            f64::NAN,
+        );
         welch_t(&moments1, &moments2)
     }
 
@@ -186,8 +198,20 @@ impl BenchDiffOut {
     ///
     /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
     pub fn welch_ln_deg_freedom(&self) -> f64 {
-        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
-        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
+        let moments1 = SampleMoments::new(
+            self.hist_f1.len(),
+            self.sum_ln_f1,
+            self.sum2_ln_f1,
+            f64::NAN,
+            f64::NAN,
+        );
+        let moments2 = SampleMoments::new(
+            self.hist_f2.len(),
+            self.sum_ln_f2,
+            self.sum2_ln_f2,
+            f64::NAN,
+            f64::NAN,
+        );
         welch_deg_freedom(&moments1, &moments2)
     }
 
@@ -200,8 +224,20 @@ impl BenchDiffOut {
     ///
     /// This is also the confidence interval for the difference of medians of logarithms under the above assumption.
     pub fn welch_ln_ci(&self, alpha: f64) -> (f64, f64) {
-        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
-        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
+        let moments1 = SampleMoments::new(
+            self.hist_f1.len(),
+            self.sum_ln_f1,
+            self.sum2_ln_f1,
+            f64::NAN,
+            f64::NAN,
+        );
+        let moments2 = SampleMoments::new(
+            self.hist_f2.len(),
+            self.sum_ln_f2,
+            self.sum2_ln_f2,
+            f64::NAN,
+            f64::NAN,
+        );
         welch_ci(&moments1, &moments2, alpha)
     }
 

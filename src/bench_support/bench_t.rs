@@ -1,114 +1,263 @@
-//!
+//! Implementaton of main benchmarking logic to verify [`bench_diff`].
 
 use super::params_args::{Args, FnParams, get_args, get_fn, get_params, get_spec};
 use crate::{
     BenchDiffOut, PositionInCi, SampleMoments, bench_diff, bench_diff_print, collect_moments,
-    dev_utils::calibrate_real_work,
+    dev_utils::{ApproxEq, calibrate_real_work},
 };
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
-#[derive(Debug)]
-struct TestResult {
-    scenario: String,
-    test: &'static str,
-    passed: bool,
-    #[allow(dead_code)]
-    result_string: String,
+#[derive(Clone)]
+pub(super) struct Claim {
+    name: &'static str,
+    f: fn(&BenchDiffOut) -> Option<String>,
 }
 
-impl TestResult {
-    #[allow(dead_code)]
-    fn check(scenario: &str, test: &'static str, condition: bool, result_string: String) -> Self {
-        Self {
-            scenario: scenario.to_owned(),
-            test,
-            passed: condition,
-            result_string,
+pub(super) mod claim {
+    use super::*;
+
+    fn eq_result<T: Debug + PartialEq>(expected: T, actual: T) -> Option<String> {
+        if expected == actual {
+            None
+        } else {
+            Some(format!("expected={:?}, actual={:?}", expected, actual))
         }
     }
 
-    fn check_eq<T: PartialEq + Debug>(
-        scenario: &str,
-        test: &'static str,
-        expected: T,
-        actual: T,
+    pub static WELCH_1_IS_BELOW_RATIO_CI: Claim = Claim {
+        name: "welch_1_is_below_ratio_ci",
+        f: |out: &BenchDiffOut| {
+            let expected = PositionInCi::Below;
+            let actual = out.welch_position_of_1_in_ratio_ci(ALPHA);
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static WELCH_1_IS_IN_RATIO_CI: Claim = Claim {
+        name: "welch_1_is_in_ratio_ci",
+        f: |out: &BenchDiffOut| {
+            let actual = out.welch_position_of_1_in_ratio_ci(ALPHA);
+            let expected = PositionInCi::In;
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static WELCH_1_IS_ABOVE_RATIO_CI: Claim = Claim {
+        name: "welch_1_is_above_ratio_ci",
+        f: |out: &BenchDiffOut| {
+            let actual = out.welch_position_of_1_in_ratio_ci(ALPHA);
+            let expected = PositionInCi::Above;
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_0_IS_BELOW_DIFF_CI: Claim = Claim {
+        name: "student_0_is_below_diff_ci",
+        f: |out: &BenchDiffOut| {
+            let actual = out.student_position_of_0_in_diff_ci(ALPHA);
+            let expected = PositionInCi::Below;
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_0_IS_IN_DIFF_CI: Claim = Claim {
+        name: "student_0_is_in_diff_ci",
+        f: |out: &BenchDiffOut| {
+            let actual = out.student_position_of_0_in_diff_ci(ALPHA);
+            let expected = PositionInCi::In;
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_0_IS_ABOVE_DIFF_CI: Claim = Claim {
+        name: "student_0_is_above_diff_ci",
+        f: |out: &BenchDiffOut| {
+            let actual = out.student_position_of_0_in_diff_ci(ALPHA);
+            let expected = PositionInCi::Above;
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_1_IS_BELOW_RATIO_CI: Claim = Claim {
+        name: "student_1_is_below_ratio_ci",
+        f: |out: &BenchDiffOut| {
+            let actual = out.student_position_of_1_in_ratio_ci(ALPHA);
+            let expected = PositionInCi::Below;
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_1_IS_IN_RATIO_CI: Claim = Claim {
+        name: "student_1_is_in_ratio_ci",
+        f: |out: &BenchDiffOut| {
+            let actual = out.student_position_of_1_in_ratio_ci(ALPHA);
+            let expected = PositionInCi::In;
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_1_IS_ABOVE_RATIO_CI: Claim = Claim {
+        name: "student_1_is_above_ratio_ci",
+        f: |out: &BenchDiffOut| {
+            let actual = out.student_position_of_1_in_ratio_ci(ALPHA);
+            let expected = PositionInCi::Above;
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS: Claim = Claim {
+        name: "ratio_medians_f1_f2_near_ratio_from_lns",
+        f: |out: &BenchDiffOut| {
+            let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
+            let ratio_medians_f1_f2_from_lns = out.ratio_medians_f1_f2_from_lns();
+
+            if ratio_medians_f1_f2.approx_eq(ratio_medians_f1_f2_from_lns, 0.005) {
+                None
+            } else {
+                Some(format!(
+                    "ratio_medians_f1_f2={ratio_medians_f1_f2}, ratio_medians_f1_f2_from_lns={ratio_medians_f1_f2_from_lns}"
+                ))
+            }
+        },
+    };
+
+    pub static WILCOXON_RANK_SUM_F1_LT_F2: Claim = Claim {
+        name: "wilcoxon_rank_sum_f1_lt_f2",
+        f: |out: &BenchDiffOut| {
+            let wilcoxon_rank_sum_f1_lt_f2_p = out.wilcoxon_rank_sum_f1_lt_f2_p();
+            if wilcoxon_rank_sum_f1_lt_f2_p < ALPHA {
+                None
+            } else {
+                Some(format!(
+                    "wilcoxon_rank_sum_f1_lt_f2_p={wilcoxon_rank_sum_f1_lt_f2_p}, ALPHA={ALPHA}"
+                ))
+            }
+        },
+    };
+
+    pub static WILCOXON_RANK_SUM_F1_EQ_F2: Claim = Claim {
+        name: "wilcoxon_rank_sum_f1_eq_f2",
+        f: |out: &BenchDiffOut| {
+            let wilcoxon_rank_sum_f1_ne_f2_p = out.wilcoxon_rank_sum_f1_ne_f2_p();
+            if wilcoxon_rank_sum_f1_ne_f2_p > ALPHA {
+                None
+            } else {
+                Some(format!(
+                    "wilcoxon_rank_sum_f1_ne_f2_p={wilcoxon_rank_sum_f1_ne_f2_p}, ALPHA={ALPHA}"
+                ))
+            }
+        },
+    };
+
+    pub static WILCOXON_RANK_SUM_F1_GT_F2: Claim = Claim {
+        name: "wilcoxon_rank_sum_f1_gt_f2",
+        f: |out: &BenchDiffOut| {
+            let wilcoxon_rank_sum_f1_gt_f2_p = out.wilcoxon_rank_sum_f1_gt_f2_p();
+            if wilcoxon_rank_sum_f1_gt_f2_p < ALPHA {
+                None
+            } else {
+                Some(format!(
+                    "wilcoxon_rank_sum_f1_gt_f2_p={wilcoxon_rank_sum_f1_gt_f2_p}, ALPHA={ALPHA}"
+                ))
+            }
+        },
+    };
+}
+
+pub(super) struct Scenario {
+    pub(super) name1: &'static str,
+    pub(super) name2: &'static str,
+    pub(super) claims: Vec<(&'static Claim, bool)>,
+}
+
+impl Scenario {
+    pub(super) const fn new(
+        name1: &'static str,
+        name2: &'static str,
+        claims: Vec<(&'static Claim, bool)>,
     ) -> Self {
         Self {
-            scenario: scenario.to_owned(),
-            test,
-            passed: expected == actual,
-            result_string: format!("expected={expected:?}, actual={actual:?}"),
+            name1,
+            name2,
+            claims,
         }
     }
-}
 
-struct TestFailures(Vec<(TestResult, bool)>);
-
-impl TestFailures {
-    fn new() -> Self {
-        Self(Vec::new())
-    }
-
-    fn push_failure(&mut self, result: TestResult, must_pass: bool) {
-        if !result.passed {
-            self.0.push((result, must_pass))
-        };
-    }
-
-    fn failures(&self) -> Vec<&TestResult> {
-        self.0.iter().map(|p| &p.0).collect()
-    }
-
-    fn failed_must_pass(&self) -> Vec<&TestResult> {
-        self.0
+    pub(super) fn run(&self, diff_out: &BenchDiffOut) -> Vec<ClaimResult> {
+        self.claims
             .iter()
-            .filter(|p| !p.0.passed && p.1)
-            .map(|x| &x.0)
+            .map(|(claim, must_pass)| ClaimResult {
+                scenario_name: format!("fn1={}, fn2={}", self.name1, self.name2),
+                claim_name: claim.name,
+                result: (claim.f)(diff_out),
+                must_pass: *must_pass,
+            })
             .collect()
     }
 }
 
-const ALPHA: f64 = 0.05;
-
-fn all_tests<'a>(
-    diff_out: &BenchDiffOut,
-    test_failures: &mut TestFailures,
-    scenario: String,
-    expected: PositionInCi,
-    must_pass1: bool,
-    must_pass2: bool,
-    must_pass3: bool,
-) {
-    test_failures.push_failure(
-        TestResult::check_eq(
-            &scenario,
-            "welch_position_of_1_in_ratio_ci",
-            expected,
-            diff_out.welch_position_of_1_in_ratio_ci(ALPHA),
-        ),
-        must_pass1,
-    );
-
-    test_failures.push_failure(
-        TestResult::check_eq(
-            &scenario,
-            "student_position_of_0_in_diff_ci",
-            expected,
-            diff_out.student_position_of_0_in_diff_ci(ALPHA),
-        ),
-        must_pass2,
-    );
-
-    test_failures.push_failure(
-        TestResult::check_eq(
-            &scenario,
-            "student_position_of_1_in_ratio_ci",
-            expected,
-            diff_out.student_position_of_1_in_ratio_ci(ALPHA),
-        ),
-        must_pass3,
-    );
+#[derive(Debug)]
+pub(super) struct ClaimResult {
+    scenario_name: String,
+    claim_name: &'static str,
+    result: Option<String>,
+    must_pass: bool,
 }
+
+impl ClaimResult {
+    fn passed(&self) -> bool {
+        self.result.is_none()
+    }
+}
+
+struct ClaimFailures(Vec<ClaimResult>);
+
+impl ClaimFailures {
+    fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    fn push_failure(&mut self, result: ClaimResult) {
+        if result.result.is_some() {
+            self.0.push(result)
+        };
+    }
+
+    fn run_scenario(&mut self, scenario: &Scenario, diff_out: &BenchDiffOut) {
+        let results = scenario.run(diff_out);
+        for result in results {
+            self.push_failure(result);
+        }
+    }
+
+    fn failed_must_pass(&self) -> Vec<&ClaimResult> {
+        self.0
+            .iter()
+            .filter(|cr| !cr.passed() && cr.must_pass)
+            .collect()
+    }
+
+    fn summary(&self) -> BTreeMap<(String, &'static str), u32> {
+        let mut summary = BTreeMap::<(String, &'static str), u32>::new();
+        for result in self.iter() {
+            let count = summary
+                .entry((result.scenario_name.clone(), result.claim_name))
+                .or_insert(0);
+            *count += 1;
+        }
+        summary
+    }
+}
+
+impl Deref for ClaimFailures {
+    type Target = Vec<ClaimResult>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+const ALPHA: f64 = 0.05;
 
 fn print_diff_out(diff_out: &BenchDiffOut) {
     let ratio_medians_f1_f2 = diff_out.ratio_medians_f1_f2();
@@ -167,7 +316,7 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
 /// Runs benchmarks with statistical t-tests for target functions and comparison scenarios defined by
 /// environment variables and command line arguments.
 /// Defaults are provided for environment variables and command line arguments not defined.
-pub fn bench_diff_t_with_args() {
+pub fn bench_diff_claims_with_args() {
     let Args {
         params_name,
         fn_name_pairs,
@@ -175,12 +324,12 @@ pub fn bench_diff_t_with_args() {
         nrepeats,
     } = get_args();
     let fn_params = get_params(&params_name);
-    bench_diff_t(fn_params, &fn_name_pairs, nrepeats, verbose);
+    bench_diff_with_claims(fn_params, &fn_name_pairs, nrepeats, verbose);
 }
 
 /// Runs benchmarks with statistical t-tests for target functions parameterized by `fn_params`,
 /// with comparison scenarios defined by `fn_name_pairs`.
-pub fn bench_diff_t<T: Deref<Target = str>>(
+pub fn bench_diff_with_claims<T: Deref<Target = str>>(
     fn_params: &FnParams,
     fn_name_pairs: &[(T, T)],
     nrepeats: usize,
@@ -189,7 +338,7 @@ pub fn bench_diff_t<T: Deref<Target = str>>(
     let unit = fn_params.unit;
     let base_effort = calibrate_real_work(unit.latency_from_f64(fn_params.base_median));
 
-    let mut test_failures = TestFailures::new();
+    let mut failures = ClaimFailures::new();
     let mut ratio_medians_from_lns_noises =
         BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
     let mut diff_ratio_medians_noises =
@@ -200,7 +349,7 @@ pub fn bench_diff_t<T: Deref<Target = str>>(
         println!("*** iteration = {i} ***");
 
         for (name1, name2) in fn_name_pairs {
-            let scenario = format!("f1={}, f2={}", name1.deref(), name2.deref());
+            let scenario_name = format!("f1={}, f2={}", name1.deref(), name2.deref());
 
             let f1 = {
                 let mut my_fn = get_fn(name1)(base_effort, &fn_params);
@@ -218,7 +367,7 @@ pub fn bench_diff_t<T: Deref<Target = str>>(
                     f1,
                     f2,
                     fn_params.exec_count,
-                    || println!("{scenario}"),
+                    || println!("{scenario_name}"),
                     print_diff_out,
                 )
             } else {
@@ -246,51 +395,20 @@ pub fn bench_diff_t<T: Deref<Target = str>>(
                 .or_insert_with(|| SampleMoments::default());
             collect_moments(diff_ln_stdev_noise, diff_out.stdev_diff_ln_f1_f2());
 
-            let spec = get_spec(name1, name2);
-
-            all_tests(
-                &diff_out,
-                &mut test_failures,
-                scenario,
-                spec.position_in_ci,
-                spec.must_pass1,
-                spec.must_pass2,
-                spec.must_pass3,
-            );
+            let scenario = get_spec(name1, name2);
+            failures.run_scenario(scenario, &diff_out);
         }
     }
 
-    let failures = test_failures.failures();
-    let failed_must_pass = test_failures.failed_must_pass();
-    let mut failures_summary = BTreeMap::<(&'static str, &'static str), u32>::new();
-
-    {
-        println!("*** failures ***");
-        if !failures.is_empty() {
-            for test_result in &failures {
-                println!("{test_result:?}");
-                let count = failures_summary
-                    .entry((&test_result.scenario, test_result.test))
-                    .or_insert(0);
-                *count += 1;
-            }
-        } else {
-            println!("none")
-        }
-    }
-
-    if !failed_must_pass.is_empty() {
-        println!();
-        println!("*** failed_must_pass ***");
-        for test_result in &failed_must_pass {
-            println!("{test_result:?}");
-        }
+    println!("*** failures ***");
+    for claim_result in failures.iter() {
+        println!("{claim_result:?}");
     }
 
     println!();
     println!("*** failures_summary ***");
-    for ((scenario, test), count) in failures_summary {
-        println!("{scenario} | {test} ==> count={count}");
+    for ((scenario_name, test), count) in failures.summary() {
+        println!("{scenario_name} | {test} ==> count={count}");
     }
 
     println!();
@@ -334,6 +452,8 @@ pub fn bench_diff_t<T: Deref<Target = str>>(
             diff_ln_stdev_noises.get(&(name1, name2)).unwrap().stdev()
         );
     }
+
+    let failed_must_pass = failures.failed_must_pass();
 
     assert!(
         failed_must_pass.len() == 0,

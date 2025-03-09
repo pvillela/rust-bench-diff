@@ -1,6 +1,7 @@
 //! Definition of target functions, test scenarios, and their parameterization.
 
-use crate::{LatencyUnit, PositionInCi, dev_utils::real_work};
+use super::{Scenario, claim};
+use crate::{LatencyUnit, dev_utils::real_work};
 use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
 use rand_distr::LogNormal;
 use std::{env, sync::LazyLock};
@@ -113,35 +114,6 @@ pub(super) static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
     ("base_median_lo_var", "hi_median_hi_var"),
 ];
 
-pub(super) struct ScenarioSpec {
-    pub(super) name1: &'static str,
-    pub(super) name2: &'static str,
-    pub(super) position_in_ci: PositionInCi,
-    pub(super) must_pass1: bool,
-    pub(super) must_pass2: bool,
-    pub(super) must_pass3: bool,
-}
-
-impl ScenarioSpec {
-    pub(super) const fn new(
-        name1: &'static str,
-        name2: &'static str,
-        position_in_ci: PositionInCi,
-        must_pass1: bool,
-        must_pass2: bool,
-        must_pass3: bool,
-    ) -> Self {
-        Self {
-            name1,
-            name2,
-            position_in_ci,
-            must_pass1,
-            must_pass2,
-            must_pass3,
-        }
-    }
-}
-
 const NAMED_FNS: [(&str, fn(u32, &FnParams) -> MyFnMut); 6] = [
     ("base_median_no_var", make_base_median_no_var),
     ("hi_median_no_var", make_hi_median_no_var),
@@ -159,74 +131,68 @@ pub(super) fn get_fn(name: &str) -> fn(u32, &FnParams) -> MyFnMut {
         .1
 }
 
-const SCENARIO_SPECS: [ScenarioSpec; 8] = [
-    ScenarioSpec::new(
-        "base_median_no_var",
-        "base_median_no_var",
-        PositionInCi::In,
-        true,
-        false,
-        true,
-    ),
-    ScenarioSpec::new(
-        "base_median_no_var",
-        "hi_median_no_var",
-        PositionInCi::Above,
-        true,
-        true,
-        true,
-    ),
-    ScenarioSpec::new(
-        "hi_median_no_var",
-        "base_median_no_var",
-        PositionInCi::Below,
-        true,
-        true,
-        true,
-    ),
-    ScenarioSpec::new(
-        "base_median_lo_var",
-        "base_median_lo_var",
-        PositionInCi::In,
-        false,
-        false,
-        true,
-    ),
-    ScenarioSpec::new(
-        "base_median_lo_var",
-        "base_median_hi_var",
-        PositionInCi::In,
-        false,
-        false,
-        true,
-    ),
-    ScenarioSpec::new(
-        "base_median_hi_var",
-        "base_median_lo_var",
-        PositionInCi::In,
-        false,
-        false,
-        true,
-    ),
-    ScenarioSpec::new(
-        "base_median_lo_var",
-        "hi_median_lo_var",
-        PositionInCi::Above,
-        true,
-        true,
-        true,
-    ),
-    ScenarioSpec::new(
-        "base_median_lo_var",
-        "hi_median_hi_var",
-        PositionInCi::Above,
-        false,
-        true,
-        false,
-    ),
-];
+static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
+    let lt_claims_strict = vec![
+        (&claim::WELCH_1_IS_ABOVE_RATIO_CI, true),
+        (&claim::STUDENT_0_IS_ABOVE_DIFF_CI, false),
+        (&claim::STUDENT_1_IS_ABOVE_RATIO_CI, true),
+        (&claim::WILCOXON_RANK_SUM_F1_LT_F2, false),
+        (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
+    ];
 
-pub(super) fn get_spec(name1: &str, name2: &str) -> &'static ScenarioSpec {
+    let lt_claims = vec![
+        (&claim::WELCH_1_IS_ABOVE_RATIO_CI, false),
+        (&claim::STUDENT_0_IS_ABOVE_DIFF_CI, false),
+        (&claim::STUDENT_1_IS_ABOVE_RATIO_CI, false),
+        (&claim::WILCOXON_RANK_SUM_F1_LT_F2, false),
+        (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
+    ];
+
+    let eq_claims_strict = vec![
+        (&claim::WELCH_1_IS_IN_RATIO_CI, true),
+        (&claim::STUDENT_0_IS_IN_DIFF_CI, false),
+        (&claim::STUDENT_1_IS_IN_RATIO_CI, true),
+        (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, false),
+        (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
+    ];
+
+    let eq_claims = vec![
+        (&claim::WELCH_1_IS_IN_RATIO_CI, false),
+        (&claim::STUDENT_0_IS_IN_DIFF_CI, false),
+        (&claim::STUDENT_1_IS_IN_RATIO_CI, false),
+        (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, false),
+        (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
+    ];
+
+    let gt_claims_strict = vec![
+        (&claim::WELCH_1_IS_BELOW_RATIO_CI, true),
+        (&claim::STUDENT_0_IS_BELOW_DIFF_CI, false),
+        (&claim::STUDENT_1_IS_BELOW_RATIO_CI, true),
+        (&claim::WILCOXON_RANK_SUM_F1_GT_F2, false),
+        (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
+    ];
+
+    [
+        Scenario::new("base_median_no_var", "base_median_no_var", eq_claims_strict),
+        Scenario::new("base_median_no_var", "hi_median_no_var", lt_claims_strict),
+        Scenario::new("hi_median_no_var", "base_median_no_var", gt_claims_strict),
+        Scenario::new(
+            "base_median_lo_var",
+            "base_median_lo_var",
+            eq_claims.clone(),
+        ),
+        Scenario::new(
+            "base_median_lo_var",
+            "base_median_hi_var",
+            eq_claims.clone(),
+        ),
+        Scenario::new("base_median_hi_var", "base_median_lo_var", eq_claims),
+        Scenario::new("base_median_lo_var", "hi_median_lo_var", lt_claims.clone()),
+        Scenario::new("base_median_lo_var", "hi_median_hi_var", lt_claims),
+    ]
+});
+
+pub(super) fn get_spec(name1: &str, name2: &str) -> &'static Scenario {
     let valid_name_pairs = SCENARIO_SPECS
         .iter()
         .map(|s| (s.name1, s.name2))

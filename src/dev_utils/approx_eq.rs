@@ -2,17 +2,28 @@
 
 pub trait ApproxEq {
     fn approx_eq(self, other: Self, epsilon: Self) -> bool;
+    fn round_to_sig_decimals(self, n: u32) -> Self;
 }
 
 impl ApproxEq for f32 {
     fn approx_eq(self, other: Self, epsilon: Self) -> bool {
         (self - other).abs() <= epsilon
     }
+
+    fn round_to_sig_decimals(self, n: u32) -> f32 {
+        let pow = 10.0_f32.powi(n as i32);
+        (self * pow).round() / pow
+    }
 }
 
 impl ApproxEq for f64 {
     fn approx_eq(self, other: Self, epsilon: Self) -> bool {
         (self - other).abs() < epsilon
+    }
+
+    fn round_to_sig_decimals(self, n: u32) -> f64 {
+        let pow = 10.0_f64.powi(n as i32);
+        (self * pow).round() / pow
     }
 }
 

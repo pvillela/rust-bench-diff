@@ -274,6 +274,7 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
 
     let wilcoxon_rank_sum_f1_lt_f2_p = diff_out.wilcoxon_rank_sum_p(AltHyp::Lt);
     let wilcoxon_rank_sum_f1_gt_f2_p = diff_out.wilcoxon_rank_sum_p(AltHyp::Gt);
+    let wilcoxon_rank_sum_f1_ne_f2_p = diff_out.wilcoxon_rank_sum_p(AltHyp::Ne);
 
     println!("summary_f1={:?}", diff_out.summary_f1());
     println!("\nsummary_f2={:?}", diff_out.summary_f2());
@@ -305,6 +306,11 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
         student_position_of_1_in_ratio_ci
     );
 
+    println!("wilcoxon_rank_sum_z={:?}", diff_out.wilcoxon_rank_sum_z());
+    println!(
+        "wilcoxon_rank_sum_f_ne_f2_p={:?}",
+        wilcoxon_rank_sum_f1_ne_f2_p
+    );
     println!(
         "wilcoxon_rank_sum_f1_lt_f2_p={:?}",
         wilcoxon_rank_sum_f1_lt_f2_p

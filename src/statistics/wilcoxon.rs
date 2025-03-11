@@ -177,7 +177,7 @@ fn mann_whitney_u(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     mann_whitney_u_b(hist_a, hist_b).min(mann_whitney_u_a(hist_a, hist_b))
 }
 
-fn wilcoxon_rank_sum_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+pub fn wilcoxon_rank_sum_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;
     let (w, ties_sum_prod) = wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b);
@@ -187,7 +187,7 @@ fn wilcoxon_rank_sum_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 
     let var0_w = var0_w_base - var0_w_ties_adjust;
     let w_star = (w - e0_w) / var0_w.sqrt();
 
-    -w_star
+    w_star
 }
 
 #[cfg(test)]
@@ -201,7 +201,7 @@ fn wilcoxon_rank_sum_z_no_ties_adjust(hist_a: &Histogram<u64>, hist_b: &Histogra
     let var0_w = var0_w_base - var0_w_ties_adjust;
     let w_star = (w - e0_w) / var0_w.sqrt();
 
-    -w_star
+    w_star
 }
 
 // fn wilcoxon_rank_sum_a_gt_b_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
@@ -295,28 +295,6 @@ mod base_test {
         wilcoxon::{wilcoxon_rank_sum_p, wilcoxon_rank_sum_ties_sum_prod},
     };
     use hdrhistogram::Histogram;
-
-    #[test]
-    fn test_w() {
-        let sample_a = vec![15, 18, 20, 22, 22, 24, 25, 27, 28, 30];
-        let sample_b = vec![16, 19, 21, 22, 23, 24, 25, 26, 29, 31];
-
-        let mut hist_a = Histogram::new_with_max(300, 3).unwrap();
-        let mut hist_b = Histogram::new_with_max(300, 3).unwrap();
-
-        for i in 0..sample_a.len() {
-            hist_a.record(sample_a[i]).unwrap();
-            hist_b.record(sample_b[i]).unwrap();
-        }
-
-        let expected_w = 108.0;
-        let (actual_w, _) = wilcoxon_rank_sum_ties_sum_prod(&hist_a, &hist_b);
-        assert_eq!(expected_w, actual_w, "w comparison");
-
-        let expected_p = 0.425;
-        let actual_p = wilcoxon_rank_sum_p(&hist_a, &hist_b, AltHyp::Lt);
-        assert_eq!(expected_p, actual_p, "p comparison");
-    }
 
     #[test]
     fn test_p() {

@@ -136,7 +136,7 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
         (&claim::WELCH_1_IS_ABOVE_RATIO_CI, true),
         (&claim::STUDENT_0_IS_ABOVE_DIFF_CI, false),
         (&claim::STUDENT_1_IS_ABOVE_RATIO_CI, true),
-        (&claim::WILCOXON_RANK_SUM_F1_LT_F2, false),
+        (&claim::WILCOXON_RANK_SUM_F1_LT_F2, true),
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
     ];
 
@@ -168,7 +168,7 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
         (&claim::WELCH_1_IS_BELOW_RATIO_CI, true),
         (&claim::STUDENT_0_IS_BELOW_DIFF_CI, false),
         (&claim::STUDENT_1_IS_BELOW_RATIO_CI, true),
-        (&claim::WILCOXON_RANK_SUM_F1_GT_F2, false),
+        (&claim::WILCOXON_RANK_SUM_F1_GT_F2, true),
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
     ];
 

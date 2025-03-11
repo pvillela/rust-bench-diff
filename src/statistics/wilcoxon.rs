@@ -322,33 +322,37 @@ mod base_test {
     fn test_p() {
         // Based on https://learning.oreilly.com/library/view/nonparametric-statistical-methods/9781118553299/9781118553299c04.xhtml#c04_level1_2
         // Nonparametric Statistical Methods, 3rd Edition, by Myles Hollander, Douglas A. Wolfe, Eric Chicken
-        // Example 4.2 Alcohol Intakes.
+        // Example 4.1.
 
-        let sample_a0 = vec![1651.0, 1112.0, 102.4, 100.0, 67.6, 65.9, 64.7, 39.6, 31.0];
-        let sample_b0 = vec![
-            48.1, 48.0, 45.5, 41.7, 35.4, 34.3, 32.4, 29.1, 27.3, 18.9, 6.6, 5.2, 4.7,
-        ];
+        let sample_a0 = vec![0.73, 0.80, 0.83, 1.04, 1.38, 1.45, 1.46, 1.64, 1.89, 1.91];
+        let sample_b0 = vec![0.74, 0.88, 0.90, 1.15, 1.21];
 
         let sample_a = sample_a0
             .into_iter()
-            .map(|x| (x * 10.0) as u64)
+            .map(|x| (x * 100.0) as u64)
             .collect::<Vec<_>>();
         let sample_b = sample_b0
             .into_iter()
-            .map(|x| (x * 10.0) as u64)
+            .map(|x| (x * 100.0) as u64)
             .collect::<Vec<_>>();
 
-        let mut hist_a = Histogram::new_with_max(20000, 5).unwrap();
-        let mut hist_b = Histogram::new_with_max(20000, 5).unwrap();
+        let mut hist_a = Histogram::new_with_max(200, 3).unwrap();
+        let mut hist_b = Histogram::new_with_max(200, 3).unwrap();
 
-        for i in 0..sample_a.len() {
-            hist_a.record(sample_a[i]).unwrap();
-            hist_b.record(sample_b[i]).unwrap();
+        for v in &sample_a {
+            hist_a.record(*v).unwrap();
         }
 
-        let expected_p = 0.00049;
-        let actual_p = wilcoxon_rank_sum_p(&hist_a, &hist_b, AltHyp::Lt);
+        for v in &sample_b {
+            hist_b.record(*v).unwrap();
+        }
 
+        let expected_w = 30.0;
+        let (actual_w, _) = wilcoxon_rank_sum_ties_sum_prod(&hist_a, &hist_b);
+        assert_eq!(expected_w, actual_w, "w comparison");
+
+        let expected_p = 0.2544;
+        let actual_p = wilcoxon_rank_sum_p(&hist_a, &hist_b, AltHyp::Ne);
         assert_eq!(expected_p, actual_p, "p comparison");
     }
 }
@@ -361,7 +365,7 @@ mod test_with_hypors {
             AltHyp,
             wilcoxon::{
                 mann_whitney_u, mann_whitney_u_a, mann_whitney_u_b, wilcoxon_rank_sum_p,
-                wilcoxon_rank_sum_p_no_ties_adjust,
+                wilcoxon_rank_sum_p_no_ties_adjust, wilcoxon_rank_sum_ties_sum_prod,
             },
         },
     };
@@ -377,17 +381,19 @@ mod test_with_hypors {
         let mut hist_a = Histogram::new_with_max(hist_max, hist_sigfig).unwrap();
         let mut hist_b = Histogram::new_from(&hist_a);
 
-        for i in 0..sample_a.len() {
-            hist_a.record(sample_a[i]).unwrap();
-            hist_b.record(sample_b[i]).unwrap();
+        for v in &sample_a {
+            hist_a.record(*v).unwrap();
+        }
+
+        for v in &sample_b {
+            hist_b.record(*v).unwrap();
         }
 
         let (ranked_items, _) = wilcoxon_ranked_items_ties_sum_prod(&mut hist_a, &mut hist_b);
         println!("{ranked_items:?}");
 
-        let rank_sum_b = ranked_items.iter().map(|y| y.rank).sum::<f64>();
+        let (rank_sum_b, _) = wilcoxon_rank_sum_ties_sum_prod(&mut hist_a, &mut hist_b);
         println!("rank_sum_b={rank_sum_b}");
-        // assert_eq!(exp_rank_sum_b, rank_sum_b);
 
         let n_a = sample_a.len() as f64;
         let n_b = sample_b.len() as f64;
@@ -473,24 +479,22 @@ mod test_with_hypors {
     #[test]
     fn test_book_data() {
         println!(
-            "***** Samples from Nonparametric Statistical Methods, 3rd Edition, Example 4.2 Alcohol Intakes. *****"
+            "***** Samples from Nonparametric Statistical Methods, 3rd Edition, Example 4.1. *****"
         );
         {
-            let sample_a0 = vec![1651.0, 1112.0, 102.4, 100.0, 67.6, 65.9, 64.7, 39.6, 31.0];
-            let sample_b0 = vec![
-                48.1, 48.0, 45.5, 41.7, 35.4, 34.3, 32.4, 29.1, 27.3, 18.9, 6.6, 5.2, 4.7,
-            ];
+            let sample_a0 = vec![0.73, 0.80, 0.83, 1.04, 1.38, 1.45, 1.46, 1.64, 1.89, 1.91];
+            let sample_b0 = vec![0.74, 0.88, 0.90, 1.15, 1.21];
 
             let sample_a = sample_a0
                 .into_iter()
-                .map(|x| (x * 10.0) as u64)
+                .map(|x| (x * 100.0) as u64)
                 .collect::<Vec<_>>();
             let sample_b = sample_b0
                 .into_iter()
-                .map(|x| (x * 10.0) as u64)
+                .map(|x| (x * 100.0) as u64)
                 .collect::<Vec<_>>();
 
-            process_samples(sample_a, sample_b, 20000, 4);
+            process_samples(sample_a, sample_b, 200, 3);
         }
     }
 

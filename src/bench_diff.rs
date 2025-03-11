@@ -1,8 +1,12 @@
 //! Module to compare the difference in latency between two closures.
 
 use crate::{
-    PositionInCi, SampleMoments, SummaryStats, Timing, new_timing, sample_mean, sample_stdev,
-    summary_stats, welch_ci, welch_deg_freedom, welch_t,
+    SummaryStats, Timing, new_timing,
+    statistics::{
+        PositionInCi, SampleMoments, sample_mean, sample_stdev, welch_ci, welch_deg_freedom,
+        welch_t,
+    },
+    summary_stats,
 };
 use hdrhistogram::Histogram;
 use statrs::distribution::{ContinuousCDF, StudentsT};

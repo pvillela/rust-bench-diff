@@ -7,8 +7,7 @@ pub use bench_diff::*;
 mod summary_stats;
 pub use summary_stats::*;
 
-mod statistics;
-pub use statistics::*;
+pub mod statistics;
 
 #[cfg(feature = "dev_utils")]
 pub mod dev_utils;

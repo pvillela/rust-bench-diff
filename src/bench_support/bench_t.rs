@@ -2,8 +2,9 @@
 
 use super::params_args::{Args, FnParams, get_args, get_fn, get_params, get_spec};
 use crate::{
-    BenchDiffOut, PositionInCi, SampleMoments, bench_diff, bench_diff_print, collect_moments,
+    BenchDiffOut, bench_diff, bench_diff_print,
     dev_utils::{ApproxEq, calibrate_real_work},
+    statistics::{PositionInCi, SampleMoments, collect_moments},
 };
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 

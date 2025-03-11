@@ -308,6 +308,18 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
 
     println!("wilcoxon_rank_sum_z={:?}", diff_out.wilcoxon_rank_sum_z());
     println!(
+        "wilcoxon_rank_sum_z_reverse={:?}",
+        diff_out.wilcoxon_rank_sum_z_reverse()
+    );
+    println!(
+        "wilcoxon_rank_sum_z_no_ties_adjust={:?}",
+        diff_out.wilcoxon_rank_sum_z_no_ties_adjust()
+    );
+    println!(
+        "wilcoxon_rank_sum_z_reverse_no_ties_adjust={:?}",
+        diff_out.wilcoxon_rank_sum_z_reverse_no_ties_adjust()
+    );
+    println!(
         "wilcoxon_rank_sum_f_ne_f2_p={:?}",
         wilcoxon_rank_sum_f1_ne_f2_p
     );

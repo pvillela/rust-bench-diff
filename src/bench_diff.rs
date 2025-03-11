@@ -331,6 +331,21 @@ impl BenchDiffOut {
     }
 
     #[cfg(feature = "wilcoxon")]
+    pub fn wilcoxon_rank_sum_z_no_ties_adjust(&self) -> f64 {
+        statistics::wilcoxon_rank_sum_z_no_ties_adjust(&self.hist_f1, &self.hist_f2)
+    }
+
+    #[cfg(feature = "wilcoxon")]
+    pub fn wilcoxon_rank_sum_z_reverse(&self) -> f64 {
+        statistics::wilcoxon_rank_sum_z(&self.hist_f2, &self.hist_f1)
+    }
+
+    #[cfg(feature = "wilcoxon")]
+    pub fn wilcoxon_rank_sum_z_reverse_no_ties_adjust(&self) -> f64 {
+        statistics::wilcoxon_rank_sum_z_no_ties_adjust(&self.hist_f2, &self.hist_f1)
+    }
+
+    #[cfg(feature = "wilcoxon")]
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
         statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
     }

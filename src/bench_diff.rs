@@ -17,7 +17,7 @@ use std::{
 };
 
 #[cfg(feature = "wilcoxon")]
-use crate::statistics;
+use crate::statistics::{self, AltHyp};
 
 const WARMUP_MILLIS: u64 = 3_000;
 const WARMUP_INCREMENT_COUNT: usize = 20;
@@ -326,18 +326,8 @@ impl BenchDiffOut {
     }
 
     #[cfg(feature = "wilcoxon")]
-    pub fn wilcoxon_rank_sum_f1_lt_f2_p(&self) -> f64 {
-        statistics::wilcoxon_rank_sum_a_lt_b_p(&self.hist_f1, &self.hist_f2)
-    }
-
-    #[cfg(feature = "wilcoxon")]
-    pub fn wilcoxon_rank_sum_f1_gt_f2_p(&self) -> f64 {
-        statistics::wilcoxon_rank_sum_a_gt_b_p(&self.hist_f1, &self.hist_f2)
-    }
-
-    #[cfg(feature = "wilcoxon")]
-    pub fn wilcoxon_rank_sum_f1_ne_f2_p(&self) -> f64 {
-        statistics::wilcoxon_rank_sum_a_ne_b_p(&self.hist_f1, &self.hist_f2)
+    pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
+        statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
     }
 }
 

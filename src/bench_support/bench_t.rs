@@ -4,7 +4,7 @@ use super::params_args::{Args, FnParams, get_args, get_fn, get_params, get_spec}
 use crate::{
     BenchDiffOut, bench_diff, bench_diff_print,
     dev_utils::{ApproxEq, calibrate_real_work},
-    statistics::{PositionInCi, SampleMoments, collect_moments},
+    statistics::{AltHyp, PositionInCi, SampleMoments, collect_moments},
 };
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
@@ -15,6 +15,8 @@ pub(super) struct Claim {
 }
 
 pub(super) mod claim {
+    use crate::statistics::AltHyp;
+
     use super::*;
 
     fn eq_result<T: Debug + PartialEq>(expected: T, actual: T) -> Option<String> {
@@ -125,7 +127,7 @@ pub(super) mod claim {
     pub static WILCOXON_RANK_SUM_F1_LT_F2: Claim = Claim {
         name: "wilcoxon_rank_sum_f1_lt_f2",
         f: |out: &BenchDiffOut| {
-            let wilcoxon_rank_sum_f1_lt_f2_p = out.wilcoxon_rank_sum_f1_lt_f2_p();
+            let wilcoxon_rank_sum_f1_lt_f2_p = out.wilcoxon_rank_sum_p(AltHyp::Lt);
             if wilcoxon_rank_sum_f1_lt_f2_p < ALPHA {
                 None
             } else {
@@ -139,7 +141,7 @@ pub(super) mod claim {
     pub static WILCOXON_RANK_SUM_F1_EQ_F2: Claim = Claim {
         name: "wilcoxon_rank_sum_f1_eq_f2",
         f: |out: &BenchDiffOut| {
-            let wilcoxon_rank_sum_f1_ne_f2_p = out.wilcoxon_rank_sum_f1_ne_f2_p();
+            let wilcoxon_rank_sum_f1_ne_f2_p = out.wilcoxon_rank_sum_p(AltHyp::Ne);
             if wilcoxon_rank_sum_f1_ne_f2_p > ALPHA {
                 None
             } else {
@@ -153,7 +155,7 @@ pub(super) mod claim {
     pub static WILCOXON_RANK_SUM_F1_GT_F2: Claim = Claim {
         name: "wilcoxon_rank_sum_f1_gt_f2",
         f: |out: &BenchDiffOut| {
-            let wilcoxon_rank_sum_f1_gt_f2_p = out.wilcoxon_rank_sum_f1_gt_f2_p();
+            let wilcoxon_rank_sum_f1_gt_f2_p = out.wilcoxon_rank_sum_p(AltHyp::Gt);
             if wilcoxon_rank_sum_f1_gt_f2_p < ALPHA {
                 None
             } else {
@@ -270,8 +272,8 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
     let student_position_of_0_in_diff_ci = diff_out.student_position_of_0_in_diff_ci(ALPHA);
     let student_position_of_1_in_ratio_ci = diff_out.student_position_of_1_in_ratio_ci(ALPHA);
 
-    let wilcoxon_rank_sum_f1_lt_f2_p = diff_out.wilcoxon_rank_sum_f1_lt_f2_p();
-    let wilcoxon_rank_sum_f1_gt_f2_p = diff_out.wilcoxon_rank_sum_f1_gt_f2_p();
+    let wilcoxon_rank_sum_f1_lt_f2_p = diff_out.wilcoxon_rank_sum_p(AltHyp::Lt);
+    let wilcoxon_rank_sum_f1_gt_f2_p = diff_out.wilcoxon_rank_sum_p(AltHyp::Gt);
 
     println!("summary_f1={:?}", diff_out.summary_f1());
     println!("\nsummary_f2={:?}", diff_out.summary_f2());

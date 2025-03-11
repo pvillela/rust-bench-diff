@@ -1,8 +1,8 @@
+use super::{AltHyp, HypTestResult, z_to_p};
 use hdrhistogram::{
     Histogram,
     iterators::{HistogramIterator, IterationValue, recorded::Iter},
 };
-use statrs::distribution::{ContinuousCDF, Normal};
 
 #[derive(Debug)]
 struct RankedItem {
@@ -159,25 +159,25 @@ fn wilcoxon_rank_sum_ties_sum_prod(hist_a: &Histogram<u64>, hist_b: &Histogram<u
 }
 
 #[cfg(test)]
-fn mann_whitney_a_lt_b_u(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+fn mann_whitney_u_b(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let (w, _) = wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b);
     let n_b = hist_b.len() as f64;
     w - n_b * (n_b + 1.0) / 2.0
 }
 
 #[cfg(test)]
-fn mann_whitney_a_gt_b_u(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+fn mann_whitney_u_a(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;
-    (n_a * n_b) - mann_whitney_a_lt_b_u(hist_a, hist_b)
+    (n_a * n_b) - mann_whitney_u_b(hist_a, hist_b)
 }
 
 #[cfg(test)]
-fn mann_whitney_a_ne_b_u(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
-    mann_whitney_a_lt_b_u(hist_a, hist_b).min(mann_whitney_a_gt_b_u(hist_a, hist_b))
+fn mann_whitney_u(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+    mann_whitney_u_b(hist_a, hist_b).min(mann_whitney_u_a(hist_a, hist_b))
 }
 
-fn wilcoxon_rank_sum_a_lt_b_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+fn wilcoxon_rank_sum_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;
     let (w, ties_sum_prod) = wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b);
@@ -191,10 +191,7 @@ fn wilcoxon_rank_sum_a_lt_b_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) 
 }
 
 #[cfg(test)]
-fn wilcoxon_rank_sum_a_lt_b_z_no_ties_adjust(
-    hist_a: &Histogram<u64>,
-    hist_b: &Histogram<u64>,
-) -> f64 {
+fn wilcoxon_rank_sum_z_no_ties_adjust(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;
     let (w, _) = wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b);
@@ -207,64 +204,95 @@ fn wilcoxon_rank_sum_a_lt_b_z_no_ties_adjust(
     -w_star
 }
 
-fn wilcoxon_rank_sum_a_gt_b_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
-    -wilcoxon_rank_sum_a_lt_b_z(hist_a, hist_b)
-}
+// fn wilcoxon_rank_sum_a_gt_b_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+//     -wilcoxon_rank_sum_z(hist_a, hist_b)
+// }
 
-fn wilcoxon_rank_sum_a_ne_b_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
-    -wilcoxon_rank_sum_a_lt_b_z(hist_a, hist_b).abs()
+// fn wilcoxon_rank_sum_a_ne_b_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+//     -wilcoxon_rank_sum_z(hist_a, hist_b).abs()
+// }
+
+// #[cfg(test)]
+// fn wilcoxon_rank_sum_a_ne_b_z_no_ties_adjust(
+//     hist_a: &Histogram<u64>,
+//     hist_b: &Histogram<u64>,
+// ) -> f64 {
+//     -wilcoxon_rank_sum_z_no_ties_adjust(hist_a, hist_b).abs()
+// }
+
+pub fn wilcoxon_rank_sum_p(
+    hist_a: &Histogram<u64>,
+    hist_b: &Histogram<u64>,
+    alt_hyp: AltHyp,
+) -> f64 {
+    let z = wilcoxon_rank_sum_z(hist_a, hist_b);
+    z_to_p(z, alt_hyp)
 }
 
 #[cfg(test)]
-fn wilcoxon_rank_sum_a_ne_b_z_no_ties_adjust(
+fn wilcoxon_rank_sum_p_no_ties_adjust(
     hist_a: &Histogram<u64>,
     hist_b: &Histogram<u64>,
+    alt_hyp: AltHyp,
 ) -> f64 {
-    -wilcoxon_rank_sum_a_lt_b_z_no_ties_adjust(hist_a, hist_b).abs()
+    let z = wilcoxon_rank_sum_z_no_ties_adjust(hist_a, hist_b);
+    z_to_p(z, alt_hyp)
 }
 
-pub fn wilcoxon_rank_sum_a_lt_b_p(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
-    let z = wilcoxon_rank_sum_a_lt_b_z(hist_a, hist_b);
-    let normal = Normal::standard();
-    normal.cdf(z)
+pub fn wilcoxon_rank_sum_test(
+    hist_a: &Histogram<u64>,
+    hist_b: &Histogram<u64>,
+    alt_hyp: AltHyp,
+    alpha: f64,
+) -> HypTestResult {
+    if wilcoxon_rank_sum_p(hist_a, hist_b, alt_hyp) < alpha {
+        HypTestResult::Reject
+    } else {
+        HypTestResult::Accept
+    }
 }
 
 #[cfg(test)]
-fn wilcoxon_rank_sum_a_lt_b_p_no_ties_adjust(
+pub fn wilcoxon_rank_sum_test_no_ties_adjust(
     hist_a: &Histogram<u64>,
     hist_b: &Histogram<u64>,
-) -> f64 {
-    let z = wilcoxon_rank_sum_a_lt_b_z_no_ties_adjust(hist_a, hist_b);
-    let normal = Normal::standard();
-    normal.cdf(z) * 2.0
+    alt_hyp: AltHyp,
+    alpha: f64,
+) -> HypTestResult {
+    if wilcoxon_rank_sum_p_no_ties_adjust(hist_a, hist_b, alt_hyp) < alpha {
+        HypTestResult::Reject
+    } else {
+        HypTestResult::Accept
+    }
 }
 
-pub fn wilcoxon_rank_sum_a_gt_b_p(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
-    let z = wilcoxon_rank_sum_a_gt_b_z(hist_a, hist_b);
-    let normal = Normal::standard();
-    normal.cdf(z)
-}
+// pub fn wilcoxon_rank_sum_a_gt_b_p(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+//     let z = wilcoxon_rank_sum_a_gt_b_z(hist_a, hist_b);
+//     let normal = Normal::standard();
+//     normal.cdf(z)
+// }
 
-pub fn wilcoxon_rank_sum_a_ne_b_p(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
-    let z = wilcoxon_rank_sum_a_ne_b_z(hist_a, hist_b);
-    let normal = Normal::standard();
-    normal.cdf(z) * 2.0
-}
+// pub fn wilcoxon_rank_sum_a_ne_b_p(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+//     let z = wilcoxon_rank_sum_a_ne_b_z(hist_a, hist_b);
+//     let normal = Normal::standard();
+//     normal.cdf(z) * 2.0
+// }
 
-#[cfg(test)]
-fn wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust(
-    hist_a: &Histogram<u64>,
-    hist_b: &Histogram<u64>,
-) -> f64 {
-    let z = wilcoxon_rank_sum_a_ne_b_z_no_ties_adjust(hist_a, hist_b);
-    let normal = Normal::standard();
-    normal.cdf(z) * 2.0
-}
+// #[cfg(test)]
+// fn wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust(
+//     hist_a: &Histogram<u64>,
+//     hist_b: &Histogram<u64>,
+// ) -> f64 {
+//     let z = wilcoxon_rank_sum_a_ne_b_z_no_ties_adjust(hist_a, hist_b);
+//     let normal = Normal::standard();
+//     normal.cdf(z) * 2.0
+// }
 
 #[cfg(test)]
 mod base_test {
-    use crate::statistics::wilcoxon::{
-        wilcoxon_rank_sum_a_gt_b_p, wilcoxon_rank_sum_a_lt_b_p, wilcoxon_rank_sum_ties_sum_prod,
+    use crate::statistics::{
+        AltHyp,
+        wilcoxon::{wilcoxon_rank_sum_p, wilcoxon_rank_sum_ties_sum_prod},
     };
     use hdrhistogram::Histogram;
 
@@ -286,7 +314,7 @@ mod base_test {
         assert_eq!(expected_w, actual_w, "w comparison");
 
         let expected_p = 0.425;
-        let actual_p = wilcoxon_rank_sum_a_lt_b_p(&hist_a, &hist_b);
+        let actual_p = wilcoxon_rank_sum_p(&hist_a, &hist_b, AltHyp::Lt);
         assert_eq!(expected_p, actual_p, "p comparison");
     }
 
@@ -319,7 +347,7 @@ mod base_test {
         }
 
         let expected_p = 0.00049;
-        let actual_p = wilcoxon_rank_sum_a_gt_b_p(&hist_a, &hist_b);
+        let actual_p = wilcoxon_rank_sum_p(&hist_a, &hist_b, AltHyp::Lt);
 
         assert_eq!(expected_p, actual_p, "p comparison");
     }
@@ -329,11 +357,12 @@ mod base_test {
 mod test_with_hypors {
     use crate::{
         dev_utils::ApproxEq,
-        statistics::wilcoxon::{
-            mann_whitney_a_gt_b_u, mann_whitney_a_lt_b_u, mann_whitney_a_ne_b_u,
-            wilcoxon_rank_sum_a_gt_b_p, wilcoxon_rank_sum_a_lt_b_p,
-            wilcoxon_rank_sum_a_lt_b_p_no_ties_adjust, wilcoxon_rank_sum_a_ne_b_p,
-            wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust,
+        statistics::{
+            AltHyp,
+            wilcoxon::{
+                mann_whitney_u, mann_whitney_u_a, mann_whitney_u_b, wilcoxon_rank_sum_p,
+                wilcoxon_rank_sum_p_no_ties_adjust,
+            },
         },
     };
 
@@ -365,28 +394,29 @@ mod test_with_hypors {
         let rank_sum_a = (1.0 + n_a + n_b) * (n_a + n_b) / 2.0 - rank_sum_b;
         println!("rank_sum_a={rank_sum_a}");
 
-        let wilcoxon_rank_sum_a_lt_b_p = wilcoxon_rank_sum_a_lt_b_p(&mut hist_a, &mut hist_b);
+        let wilcoxon_rank_sum_a_lt_b_p = wilcoxon_rank_sum_p(&mut hist_a, &mut hist_b, AltHyp::Lt);
         println!("wilcoxon_rank_sum_a_lt_b_p={wilcoxon_rank_sum_a_lt_b_p}");
         let wilcoxon_rank_sum_a_lt_b_p_no_ties_adjust: f64 =
-            wilcoxon_rank_sum_a_lt_b_p_no_ties_adjust(&mut hist_a, &mut hist_b);
+            wilcoxon_rank_sum_p_no_ties_adjust(&mut hist_a, &mut hist_b, AltHyp::Lt);
         println!(
             "wilcoxon_rank_sum_a_lt_b_p_no_ties_adjust={wilcoxon_rank_sum_a_lt_b_p_no_ties_adjust}"
         );
-        let wilcoxon_rank_sum_a_gt_b_p = wilcoxon_rank_sum_a_gt_b_p(&mut hist_a, &mut hist_b);
+        let wilcoxon_rank_sum_a_gt_b_p = wilcoxon_rank_sum_p(&mut hist_a, &mut hist_b, AltHyp::Gt);
         println!("wilcoxon_rank_sum_a_gt_b_p={wilcoxon_rank_sum_a_gt_b_p}");
-        let wilcoxon_rank_sum_a_ne_b_p: f64 = wilcoxon_rank_sum_a_ne_b_p(&mut hist_a, &mut hist_b);
+        let wilcoxon_rank_sum_a_ne_b_p: f64 =
+            wilcoxon_rank_sum_p(&mut hist_a, &mut hist_b, AltHyp::Ne);
         println!("wilcoxon_rank_sum_a_ne_b_p={wilcoxon_rank_sum_a_ne_b_p}");
         let wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust: f64 =
-            wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust(&mut hist_a, &mut hist_b);
+            wilcoxon_rank_sum_p_no_ties_adjust(&mut hist_a, &mut hist_b, AltHyp::Ne);
         println!(
             "wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust={wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust}"
         );
 
-        let mann_whitney_a_lt_b_u = mann_whitney_a_lt_b_u(&hist_a, &hist_b);
+        let mann_whitney_a_lt_b_u = mann_whitney_u_b(&hist_a, &hist_b);
         println!("mann_whitney_a_lt_b_u={mann_whitney_a_lt_b_u}");
-        let mann_whitney_a_gt_b_u = mann_whitney_a_gt_b_u(&hist_a, &hist_b);
+        let mann_whitney_a_gt_b_u = mann_whitney_u_a(&hist_a, &hist_b);
         println!("mann_whitney_a_gt_b_u={mann_whitney_a_gt_b_u}");
-        let mann_whitney_a_ne_b_u = mann_whitney_a_ne_b_u(&hist_a, &hist_b);
+        let mann_whitney_a_ne_b_u = mann_whitney_u(&hist_a, &hist_b);
         println!("mann_whitney_a_ne_b_u={mann_whitney_a_ne_b_u}");
 
         {

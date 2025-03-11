@@ -1,4 +1,30 @@
-use statrs::distribution::{ContinuousCDF, StudentsT};
+use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
+
+/// Altnernative statistical hypothesis to the null hypothesis that there is no difference between the two distributions.
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum AltHyp {
+    Lt,
+    Gt,
+    Ne,
+}
+
+/// Statistical hypothesis test result
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum HypTestResult {
+    Accept,
+    Reject,
+}
+
+// Obtain the p-value for a z-value
+pub fn z_to_p(z: f64, alt_hyp: AltHyp) -> f64 {
+    let normal = Normal::standard();
+
+    match alt_hyp {
+        AltHyp::Lt => normal.cdf(-z),
+        AltHyp::Gt => normal.cdf(z),
+        AltHyp::Ne => normal.cdf(-z.abs()) * 2.0,
+    }
+}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PositionInCi {

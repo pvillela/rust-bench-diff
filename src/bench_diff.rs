@@ -3,13 +3,14 @@
 use crate::{
     SummaryStats, Timing, new_timing,
     statistics::{
-        PositionInCi, SampleMoments, sample_mean, sample_stdev, welch_ci, welch_deg_freedom,
-        welch_t,
+        HypTestResult, PositionWrtCi, SampleMoments, bernoulli_psucc_ci, bernoulli_test,
+        sample_mean, sample_stdev, student_one_sample_ci, student_one_sample_t,
+        student_one_sample_test, welch_ci, welch_deg_freedom, welch_t, welch_test,
     },
     summary_stats,
 };
+use core::f64;
 use hdrhistogram::Histogram;
-use statrs::distribution::{ContinuousCDF, StudentsT};
 use std::{
     error::Error,
     io::{Write, stdout},
@@ -175,25 +176,36 @@ impl BenchDiffOut {
         self.mean_diff_ln_f1_f2().exp()
     }
 
+    /// Estimator of mean of Bernoulli distribution.
+    pub fn bernoulli_prob(&self) -> f64 {
+        (self.count_f1_lt_f2() as f64 + self.count_f1_eq_f2 as f64 / 2.0)
+            / (self.count_f1_lt_f2() + self.count_f1_eq_f2 + self.count_f1_gt_f2()) as f64
+    }
+
+    /// Confidence interval for Bernoulli distribution (Wilson score interval).
+    pub fn bernoulli_prob_ci(&self, alpha: f64) -> (f64, f64) {
+        let p = self.bernoulli_prob();
+        let n = self.n();
+        bernoulli_psucc_ci(n, p, alpha)
+    }
+
+    pub fn bernoulli_prob_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
+        let (low, high) = self.bernoulli_prob_ci(alpha);
+        PositionWrtCi::position_of_value(value, low, high)
+    }
+
+    pub fn bernoulli_prob_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        let p_hat = self.bernoulli_prob();
+        bernoulli_test(p_hat, 1.0 / 2.0, alt_hyp, alpha)
+    }
+
     /// Welch's t statistic for
     /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm),
     ///
     /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
     pub fn welch_ln_t(&self) -> f64 {
-        let moments1 = SampleMoments::new(
-            self.hist_f1.len(),
-            self.sum_ln_f1,
-            self.sum2_ln_f1,
-            f64::NAN,
-            f64::NAN,
-        );
-        let moments2 = SampleMoments::new(
-            self.hist_f2.len(),
-            self.sum_ln_f2,
-            self.sum2_ln_f2,
-            f64::NAN,
-            f64::NAN,
-        );
+        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
+        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
         welch_t(&moments1, &moments2)
     }
 
@@ -202,20 +214,8 @@ impl BenchDiffOut {
     ///
     /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
     pub fn welch_ln_deg_freedom(&self) -> f64 {
-        let moments1 = SampleMoments::new(
-            self.hist_f1.len(),
-            self.sum_ln_f1,
-            self.sum2_ln_f1,
-            f64::NAN,
-            f64::NAN,
-        );
-        let moments2 = SampleMoments::new(
-            self.hist_f2.len(),
-            self.sum_ln_f2,
-            self.sum2_ln_f2,
-            f64::NAN,
-            f64::NAN,
-        );
+        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
+        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
         welch_deg_freedom(&moments1, &moments2)
     }
 
@@ -228,20 +228,8 @@ impl BenchDiffOut {
     ///
     /// This is also the confidence interval for the difference of medians of logarithms under the above assumption.
     pub fn welch_ln_ci(&self, alpha: f64) -> (f64, f64) {
-        let moments1 = SampleMoments::new(
-            self.hist_f1.len(),
-            self.sum_ln_f1,
-            self.sum2_ln_f1,
-            f64::NAN,
-            f64::NAN,
-        );
-        let moments2 = SampleMoments::new(
-            self.hist_f2.len(),
-            self.sum_ln_f2,
-            self.sum2_ln_f2,
-            f64::NAN,
-            f64::NAN,
-        );
+        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
+        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
         welch_ci(&moments1, &moments2, alpha)
     }
 
@@ -258,16 +246,24 @@ impl BenchDiffOut {
         (low, high)
     }
 
-    pub fn welch_position_of_1_in_ratio_ci(&self, alpha: f64) -> PositionInCi {
+    pub fn welch_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let (low, high) = self.welch_ratio_ci(alpha);
-        PositionInCi::position_of_value(1.0, low, high)
+        PositionWrtCi::position_of_value(value, low, high)
+    }
+
+    pub fn welch_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
+        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
+        welch_test(&moments1, &moments2, alt_hyp, alpha)
     }
 
     pub fn student_diff_t(&self) -> f64 {
-        let n = self.n();
-        let dx = self.mean_diff_f1_f2();
-        let s_dx = self.stdev_diff_f1_f2();
-        dx / s_dx * n.sqrt()
+        let moments = SampleMoments::new(
+            self.hist_f1.len(),
+            self.sum_diff_f1_f2,
+            self.sum2_diff_f1_f2,
+        );
+        student_one_sample_t(&moments, 0.0)
     }
 
     pub fn student_diff_deg_freedom(&self) -> f64 {
@@ -275,27 +271,35 @@ impl BenchDiffOut {
     }
 
     pub fn student_diff_ci(&self, alpha: f64) -> (f64, f64) {
-        let nu = self.student_diff_deg_freedom();
-        let stud = StudentsT::new(0.0, 1.0, nu)
-            .expect("can't happen: degrees of freedom is always >= 3 by construction");
-        let t = -stud.inverse_cdf(alpha / 2.0);
-
-        let mid = self.mean_diff_f1_f2();
-        let radius = (self.stdev_diff_f1_f2() / self.n().sqrt()) * t;
-
-        (mid - radius, mid + radius)
+        let moments = SampleMoments::new(
+            self.hist_f1.len(),
+            self.sum_diff_f1_f2,
+            self.sum2_diff_f1_f2,
+        );
+        student_one_sample_ci(&moments, alpha)
     }
 
-    pub fn student_position_of_0_in_diff_ci(&self, alpha: f64) -> PositionInCi {
+    pub fn student_value_position_wrt_diff_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let (low, high) = self.student_diff_ci(alpha);
-        PositionInCi::position_of_value(0.0, low, high)
+        PositionWrtCi::position_of_value(value, low, high)
+    }
+
+    pub fn student_diff_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        let moments = SampleMoments::new(
+            self.hist_f1.len(),
+            self.sum_diff_f1_f2,
+            self.sum2_diff_f1_f2,
+        );
+        student_one_sample_test(&moments, 0.0, alt_hyp, alpha)
     }
 
     pub fn student_diff_ln_t(&self) -> f64 {
-        let n = self.n();
-        let dx = self.mean_diff_ln_f1_f2();
-        let s_dx = self.stdev_diff_ln_f1_f2();
-        dx / s_dx * n.sqrt()
+        let moments = SampleMoments::new(
+            self.hist_f1.len(),
+            self.sum_diff_ln_f1_f2,
+            self.sum2_diff_ln_f1_f2,
+        );
+        student_one_sample_t(&moments, 0.0)
     }
 
     pub fn student_diff_ln_deg_freedom(&self) -> f64 {
@@ -303,15 +307,12 @@ impl BenchDiffOut {
     }
 
     pub fn student_diff_ln_ci(&self, alpha: f64) -> (f64, f64) {
-        let nu = self.student_diff_ln_deg_freedom();
-        let stud = StudentsT::new(0.0, 1.0, nu)
-            .expect("can't happen: degrees of freedom is always >= 3 by construction");
-        let t = -stud.inverse_cdf(alpha / 2.0);
-
-        let mid = self.mean_diff_ln_f1_f2();
-        let radius = (self.stdev_diff_ln_f1_f2() / self.n().sqrt()) * t;
-
-        (mid - radius, mid + radius)
+        let moments = SampleMoments::new(
+            self.hist_f1.len(),
+            self.sum_diff_ln_f1_f2,
+            self.sum2_diff_ln_f1_f2,
+        );
+        student_one_sample_ci(&moments, alpha)
     }
     pub fn student_ratio_ci(&self, alpha: f64) -> (f64, f64) {
         let (log_low, log_high) = self.student_diff_ln_ci(alpha);
@@ -320,9 +321,18 @@ impl BenchDiffOut {
         (low, high)
     }
 
-    pub fn student_position_of_1_in_ratio_ci(&self, alpha: f64) -> PositionInCi {
+    pub fn student_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let (low, high) = self.student_ratio_ci(alpha);
-        PositionInCi::position_of_value(1.0, low, high)
+        PositionWrtCi::position_of_value(value, low, high)
+    }
+
+    pub fn student_diff_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        let moments = SampleMoments::new(
+            self.hist_f1.len(),
+            self.sum_diff_ln_f1_f2,
+            self.sum2_diff_ln_f1_f2,
+        );
+        student_one_sample_test(&moments, 0.0, alt_hyp, alpha)
     }
 
     #[cfg(feature = "wilcoxon")]
@@ -336,18 +346,13 @@ impl BenchDiffOut {
     }
 
     #[cfg(feature = "wilcoxon")]
-    pub fn wilcoxon_rank_sum_z_reverse(&self) -> f64 {
-        statistics::wilcoxon_rank_sum_z(&self.hist_f2, &self.hist_f1)
-    }
-
-    #[cfg(feature = "wilcoxon")]
-    pub fn wilcoxon_rank_sum_z_reverse_no_ties_adjust(&self) -> f64 {
-        statistics::wilcoxon_rank_sum_z_no_ties_adjust(&self.hist_f2, &self.hist_f1)
-    }
-
-    #[cfg(feature = "wilcoxon")]
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
         statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
+    }
+
+    #[cfg(feature = "wilcoxon")]
+    pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        statistics::wilcoxon_rank_sum_test(&self.hist_f1, &self.hist_f2, alt_hyp, alpha)
     }
 }
 

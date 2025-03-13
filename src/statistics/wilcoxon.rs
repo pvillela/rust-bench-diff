@@ -356,11 +356,8 @@ pub fn wilcoxon_rank_sum_test(
     alt_hyp: AltHyp,
     alpha: f64,
 ) -> HypTestResult {
-    if wilcoxon_rank_sum_p(hist_a, hist_b, alt_hyp) < alpha {
-        HypTestResult::Reject
-    } else {
-        HypTestResult::Accept
-    }
+    let p = wilcoxon_rank_sum_p(hist_a, hist_b, alt_hyp);
+    HypTestResult::from_p_and_alpha(p, alpha)
 }
 
 #[cfg(test)]
@@ -370,11 +367,8 @@ pub fn wilcoxon_rank_sum_test_no_ties_adjust(
     alt_hyp: AltHyp,
     alpha: f64,
 ) -> HypTestResult {
-    if wilcoxon_rank_sum_p_no_ties_adjust(hist_a, hist_b, alt_hyp) < alpha {
-        HypTestResult::Reject
-    } else {
-        HypTestResult::Accept
-    }
+    let p = wilcoxon_rank_sum_p_no_ties_adjust(hist_a, hist_b, alt_hyp);
+    HypTestResult::from_p_and_alpha(p, alpha)
 }
 
 #[cfg(test)]

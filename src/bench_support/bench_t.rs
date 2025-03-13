@@ -4,7 +4,7 @@ use super::params_args::{Args, FnParams, get_args, get_fn, get_params, get_spec}
 use crate::{
     BenchDiffOut, bench_diff, bench_diff_print,
     dev_utils::{ApproxEq, calibrate_real_work},
-    statistics::{AltHyp, PositionInCi, SampleMoments, collect_moments},
+    statistics::{AltHyp, PositionWrtCi, SampleMoments, collect_moments},
 };
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
@@ -15,7 +15,7 @@ pub(super) struct Claim {
 }
 
 pub(super) mod claim {
-    use crate::statistics::AltHyp;
+    use crate::statistics::{AltHyp, HypTestResult};
 
     use super::*;
 
@@ -27,84 +27,191 @@ pub(super) mod claim {
         }
     }
 
+    fn check_null_hyp_accept(res: HypTestResult, alt_hyp: AltHyp) -> Option<String> {
+        if res.is_accept() {
+            None
+        } else {
+            Some(format!(
+                "expected null hypothesis accepted: p={:?}, alpha={:?}, alt_hyp:{:?}",
+                res.p(),
+                res.alpha(),
+                alt_hyp
+            ))
+        }
+    }
+
+    fn check_null_hyp_reject(res: HypTestResult, alt_hyp: AltHyp) -> Option<String> {
+        if res.is_reject() {
+            None
+        } else {
+            Some(format!(
+                "expected null hypothesis rejected: p={:?}, alpha={:?}, alt_hyp:{:?}",
+                res.p(),
+                res.alpha(),
+                alt_hyp
+            ))
+        }
+    }
+
     pub static WELCH_1_IS_BELOW_RATIO_CI: Claim = Claim {
         name: "welch_1_is_below_ratio_ci",
         f: |out: &BenchDiffOut| {
-            let expected = PositionInCi::Below;
-            let actual = out.welch_position_of_1_in_ratio_ci(ALPHA);
+            let expected = PositionWrtCi::Below;
+            let actual = out.welch_value_position_wrt_ratio_ci(1.0, ALPHA);
             eq_result(expected, actual)
+        },
+    };
+
+    pub static WELCH_RATIO_GT_1: Claim = Claim {
+        name: "welch_ratio_gt_1",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Gt;
+            let res = out.welch_ln_test(alt_hyp, ALPHA);
+            check_null_hyp_reject(res, alt_hyp)
         },
     };
 
     pub static WELCH_1_IS_IN_RATIO_CI: Claim = Claim {
         name: "welch_1_is_in_ratio_ci",
         f: |out: &BenchDiffOut| {
-            let actual = out.welch_position_of_1_in_ratio_ci(ALPHA);
-            let expected = PositionInCi::In;
+            let actual = out.welch_value_position_wrt_ratio_ci(1.0, ALPHA);
+            let expected = PositionWrtCi::In;
             eq_result(expected, actual)
+        },
+    };
+
+    pub static WELCH_RATIO_EQ_1: Claim = Claim {
+        name: "welch_ratio_eq_1",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Ne;
+            let res = out.welch_ln_test(alt_hyp, ALPHA);
+            check_null_hyp_accept(res, alt_hyp)
         },
     };
 
     pub static WELCH_1_IS_ABOVE_RATIO_CI: Claim = Claim {
         name: "welch_1_is_above_ratio_ci",
         f: |out: &BenchDiffOut| {
-            let actual = out.welch_position_of_1_in_ratio_ci(ALPHA);
-            let expected = PositionInCi::Above;
+            let actual = out.welch_value_position_wrt_ratio_ci(1.0, ALPHA);
+            let expected = PositionWrtCi::Above;
             eq_result(expected, actual)
+        },
+    };
+
+    pub static WELCH_RATIO_LT_1: Claim = Claim {
+        name: "welch_ratio_lt_1",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Lt;
+            let res = out.welch_ln_test(alt_hyp, ALPHA);
+            check_null_hyp_reject(res, alt_hyp)
         },
     };
 
     pub static STUDENT_0_IS_BELOW_DIFF_CI: Claim = Claim {
         name: "student_0_is_below_diff_ci",
         f: |out: &BenchDiffOut| {
-            let actual = out.student_position_of_0_in_diff_ci(ALPHA);
-            let expected = PositionInCi::Below;
+            let actual = out.student_value_position_wrt_diff_ci(0.0, ALPHA);
+            let expected = PositionWrtCi::Below;
             eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_DIFF_GT_0: Claim = Claim {
+        name: "student_diff_gt_0",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Gt;
+            let res = out.student_diff_test(alt_hyp, ALPHA);
+            check_null_hyp_reject(res, alt_hyp)
         },
     };
 
     pub static STUDENT_0_IS_IN_DIFF_CI: Claim = Claim {
         name: "student_0_is_in_diff_ci",
         f: |out: &BenchDiffOut| {
-            let actual = out.student_position_of_0_in_diff_ci(ALPHA);
-            let expected = PositionInCi::In;
+            let actual = out.student_value_position_wrt_diff_ci(0.0, ALPHA);
+            let expected = PositionWrtCi::In;
             eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_DIFF_EQ_0: Claim = Claim {
+        name: "student_diff_eq_0",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Gt;
+            let res = out.student_diff_test(alt_hyp, ALPHA);
+            check_null_hyp_accept(res, alt_hyp)
         },
     };
 
     pub static STUDENT_0_IS_ABOVE_DIFF_CI: Claim = Claim {
         name: "student_0_is_above_diff_ci",
         f: |out: &BenchDiffOut| {
-            let actual = out.student_position_of_0_in_diff_ci(ALPHA);
-            let expected = PositionInCi::Above;
+            let actual = out.student_value_position_wrt_diff_ci(0.0, ALPHA);
+            let expected = PositionWrtCi::Above;
             eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_DIFF_LT_0: Claim = Claim {
+        name: "student_diff_lt_0",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Gt;
+            let res = out.student_diff_test(alt_hyp, ALPHA);
+            check_null_hyp_reject(res, alt_hyp)
         },
     };
 
     pub static STUDENT_1_IS_BELOW_RATIO_CI: Claim = Claim {
         name: "student_1_is_below_ratio_ci",
         f: |out: &BenchDiffOut| {
-            let actual = out.student_position_of_1_in_ratio_ci(ALPHA);
-            let expected = PositionInCi::Below;
+            let actual = out.student_value_position_wrt_ratio_ci(1.0, ALPHA);
+            let expected = PositionWrtCi::Below;
             eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_RATIO_GT_1: Claim = Claim {
+        name: "student_ratio_gt_1",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Gt;
+            let res = out.student_diff_ln_test(alt_hyp, ALPHA);
+            check_null_hyp_reject(res, alt_hyp)
         },
     };
 
     pub static STUDENT_1_IS_IN_RATIO_CI: Claim = Claim {
         name: "student_1_is_in_ratio_ci",
         f: |out: &BenchDiffOut| {
-            let actual = out.student_position_of_1_in_ratio_ci(ALPHA);
-            let expected = PositionInCi::In;
+            let actual = out.student_value_position_wrt_ratio_ci(1.0, ALPHA);
+            let expected = PositionWrtCi::In;
             eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_RATIO_EQ_1: Claim = Claim {
+        name: "student_ratio_eq_1",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Ne;
+            let res = out.student_diff_ln_test(alt_hyp, ALPHA);
+            check_null_hyp_accept(res, alt_hyp)
         },
     };
 
     pub static STUDENT_1_IS_ABOVE_RATIO_CI: Claim = Claim {
         name: "student_1_is_above_ratio_ci",
         f: |out: &BenchDiffOut| {
-            let actual = out.student_position_of_1_in_ratio_ci(ALPHA);
-            let expected = PositionInCi::Above;
+            let actual = out.student_value_position_wrt_ratio_ci(1.0, ALPHA);
+            let expected = PositionWrtCi::Above;
             eq_result(expected, actual)
+        },
+    };
+
+    pub static STUDENT_RATIO_LT_1: Claim = Claim {
+        name: "student_ratio_lt_1",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Lt;
+            let res = out.student_diff_ln_test(alt_hyp, ALPHA);
+            check_null_hyp_reject(res, alt_hyp)
         },
     };
 
@@ -127,42 +234,81 @@ pub(super) mod claim {
     pub static WILCOXON_RANK_SUM_F1_LT_F2: Claim = Claim {
         name: "wilcoxon_rank_sum_f1_lt_f2",
         f: |out: &BenchDiffOut| {
-            let wilcoxon_rank_sum_f1_lt_f2_p = out.wilcoxon_rank_sum_p(AltHyp::Lt);
-            if wilcoxon_rank_sum_f1_lt_f2_p < ALPHA {
-                None
-            } else {
-                Some(format!(
-                    "wilcoxon_rank_sum_f1_lt_f2_p={wilcoxon_rank_sum_f1_lt_f2_p}, ALPHA={ALPHA}"
-                ))
-            }
+            let alt_hyp = AltHyp::Lt;
+            let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
+            check_null_hyp_reject(res, alt_hyp)
         },
     };
 
     pub static WILCOXON_RANK_SUM_F1_EQ_F2: Claim = Claim {
         name: "wilcoxon_rank_sum_f1_eq_f2",
         f: |out: &BenchDiffOut| {
-            let wilcoxon_rank_sum_f1_ne_f2_p = out.wilcoxon_rank_sum_p(AltHyp::Ne);
-            if wilcoxon_rank_sum_f1_ne_f2_p > ALPHA {
-                None
-            } else {
-                Some(format!(
-                    "wilcoxon_rank_sum_f1_ne_f2_p={wilcoxon_rank_sum_f1_ne_f2_p}, ALPHA={ALPHA}"
-                ))
-            }
+            let alt_hyp = AltHyp::Ne;
+            let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
+            check_null_hyp_accept(res, alt_hyp)
         },
     };
 
     pub static WILCOXON_RANK_SUM_F1_GT_F2: Claim = Claim {
         name: "wilcoxon_rank_sum_f1_gt_f2",
         f: |out: &BenchDiffOut| {
-            let wilcoxon_rank_sum_f1_gt_f2_p = out.wilcoxon_rank_sum_p(AltHyp::Gt);
-            if wilcoxon_rank_sum_f1_gt_f2_p < ALPHA {
-                None
-            } else {
-                Some(format!(
-                    "wilcoxon_rank_sum_f1_gt_f2_p={wilcoxon_rank_sum_f1_gt_f2_p}, ALPHA={ALPHA}"
-                ))
-            }
+            let alt_hyp = AltHyp::Gt;
+            let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
+            check_null_hyp_reject(res, alt_hyp)
+        },
+    };
+
+    pub static PROB_F1_LT_F2_HALF_IS_BELOW_CI: Claim = Claim {
+        name: "prob_f1_lt_f2_half_is_below_ci",
+        f: |out: &BenchDiffOut| {
+            let expected = PositionWrtCi::Below;
+            let actual = out.bernoulli_prob_value_position_wrt_ci(0.5, ALPHA);
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static BERNOULLI_F1_GT_F2: Claim = Claim {
+        name: "bernoulli_f1_gt_f2",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Gt;
+            let res = out.bernoulli_prob_eq_half_test(alt_hyp, ALPHA);
+            check_null_hyp_reject(res, alt_hyp)
+        },
+    };
+
+    pub static PROB_F1_LT_F2_HALF_IS_IN_CI: Claim = Claim {
+        name: "prob_f1_lt_f2_half_is_in_ci",
+        f: |out: &BenchDiffOut| {
+            let expected = PositionWrtCi::In;
+            let actual = out.bernoulli_prob_value_position_wrt_ci(0.5, ALPHA);
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static BERNOULLI_F1_EQ_F2: Claim = Claim {
+        name: "bernoulli_f1_eq_f2",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Ne;
+            let res = out.bernoulli_prob_eq_half_test(alt_hyp, ALPHA);
+            check_null_hyp_accept(res, alt_hyp)
+        },
+    };
+
+    pub static PROB_F1_LT_F2_HALF_IS_ABOVE_CI: Claim = Claim {
+        name: "prob_f1_lt_f2_half_is_above_ci",
+        f: |out: &BenchDiffOut| {
+            let expected = PositionWrtCi::Above;
+            let actual = out.bernoulli_prob_value_position_wrt_ci(0.5, ALPHA);
+            eq_result(expected, actual)
+        },
+    };
+
+    pub static BERNOULLI_F1_LT_F2: Claim = Claim {
+        name: "bernoulli_f1_lt_f2",
+        f: |out: &BenchDiffOut| {
+            let alt_hyp = AltHyp::Lt;
+            let res = out.bernoulli_prob_eq_half_test(alt_hyp, ALPHA);
+            check_null_hyp_reject(res, alt_hyp)
         },
     };
 }
@@ -265,16 +411,6 @@ const ALPHA: f64 = 0.05;
 fn print_diff_out(diff_out: &BenchDiffOut) {
     let ratio_medians_f1_f2 = diff_out.ratio_medians_f1_f2();
     let ratio_medians_f1_f2_from_lns = diff_out.mean_diff_ln_f1_f2().exp();
-    let welch_ratio_ci = diff_out.welch_ratio_ci(ALPHA);
-    let welch_position_of_1_in_ratio_ci = diff_out.welch_position_of_1_in_ratio_ci(ALPHA);
-    let mean_diff_f1_f2 = diff_out.mean_diff_f1_f2();
-    let student_diff_ci = diff_out.student_diff_ci(ALPHA);
-    let student_position_of_0_in_diff_ci = diff_out.student_position_of_0_in_diff_ci(ALPHA);
-    let student_position_of_1_in_ratio_ci = diff_out.student_position_of_1_in_ratio_ci(ALPHA);
-
-    let wilcoxon_rank_sum_f1_lt_f2_p = diff_out.wilcoxon_rank_sum_p(AltHyp::Lt);
-    let wilcoxon_rank_sum_f1_gt_f2_p = diff_out.wilcoxon_rank_sum_p(AltHyp::Gt);
-    let wilcoxon_rank_sum_f1_ne_f2_p = diff_out.wilcoxon_rank_sum_p(AltHyp::Ne);
 
     println!("summary_f1={:?}", diff_out.summary_f1());
     println!("\nsummary_f2={:?}", diff_out.summary_f2());
@@ -290,46 +426,38 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
         "ratio_medians_f1_f2-ratio_medians_f1_f2_from_lns={}",
         ratio_medians_f1_f2 - ratio_medians_f1_f2_from_lns
     );
-    println!("welch_ratio_ci={:?}", welch_ratio_ci);
+    println!("welch_ratio_ci={:?}", diff_out.welch_ratio_ci(ALPHA));
     println!(
-        "welch_position_of_1_in_ratio_ci={:?}",
-        welch_position_of_1_in_ratio_ci
+        "welch_position_of_1_wrt_ratio_ci={:?}",
+        diff_out.welch_value_position_wrt_ratio_ci(1.0, ALPHA)
     );
-    println!("mean_diff_f1_f2={}", mean_diff_f1_f2);
-    println!("diff_ci={:?}", student_diff_ci);
+    println!("mean_diff_f1_f2={}", diff_out.mean_diff_f1_f2());
+    println!("diff_ci={:?}", diff_out.student_diff_ci(ALPHA));
     println!(
-        "student_position_of_0_in_diff_ci={:?}",
-        student_position_of_0_in_diff_ci
+        "student_position_of_0_wrt_diff_ci={:?}",
+        diff_out.student_value_position_wrt_diff_ci(0.0, ALPHA)
     );
     println!(
-        "student_position_of_1_in_ratio_ci={:?}",
-        student_position_of_1_in_ratio_ci
+        "student_position_of_1_wrt_ratio_ci={:?}",
+        diff_out.student_value_position_wrt_ratio_ci(1.0, ALPHA)
     );
-
+    println!("prob_f1_lt_f2={:?}", diff_out.bernoulli_prob());
+    println!(
+        "prob_f1_lt_f2_position_of_half_wrt_ci={:?}",
+        diff_out.bernoulli_prob_value_position_wrt_ci(0.5, ALPHA)
+    );
     println!("wilcoxon_rank_sum_z={:?}", diff_out.wilcoxon_rank_sum_z());
     println!(
-        "wilcoxon_rank_sum_z_reverse={:?}",
-        diff_out.wilcoxon_rank_sum_z_reverse()
-    );
-    println!(
-        "wilcoxon_rank_sum_z_no_ties_adjust={:?}",
-        diff_out.wilcoxon_rank_sum_z_no_ties_adjust()
-    );
-    println!(
-        "wilcoxon_rank_sum_z_reverse_no_ties_adjust={:?}",
-        diff_out.wilcoxon_rank_sum_z_reverse_no_ties_adjust()
-    );
-    println!(
         "wilcoxon_rank_sum_f_ne_f2_p={:?}",
-        wilcoxon_rank_sum_f1_ne_f2_p
+        diff_out.wilcoxon_rank_sum_p(AltHyp::Ne)
     );
     println!(
         "wilcoxon_rank_sum_f1_lt_f2_p={:?}",
-        wilcoxon_rank_sum_f1_lt_f2_p
+        diff_out.wilcoxon_rank_sum_p(AltHyp::Lt)
     );
     println!(
         "wilcoxon_rank_sum_f1_gt_f2_p={:?}",
-        wilcoxon_rank_sum_f1_gt_f2_p
+        diff_out.wilcoxon_rank_sum_p(AltHyp::Gt)
     );
     println!();
 }

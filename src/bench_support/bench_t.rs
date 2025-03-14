@@ -4,7 +4,7 @@ use super::params_args::{Args, FnParams, get_args, get_fn, get_params, get_spec}
 use crate::{
     BenchDiffOut, bench_diff, bench_diff_print,
     dev_utils::{ApproxEq, calibrate_real_work},
-    statistics::{AltHyp, PositionWrtCi, SampleMoments, collect_moments},
+    statistics::{AltHyp, SampleMoments, collect_moments},
 };
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
@@ -15,17 +15,8 @@ pub(super) struct Claim {
 }
 
 pub(super) mod claim {
-    use crate::statistics::{AltHyp, Hyp, HypTestResult};
-
     use super::*;
-
-    fn eq_result<T: Debug + PartialEq>(expected: T, actual: T) -> Option<String> {
-        if expected == actual {
-            None
-        } else {
-            Some(format!("expected={:?}, actual={:?}", expected, actual))
-        }
-    }
+    use crate::statistics::{AltHyp, Hyp, HypTestResult};
 
     fn check_hyp_test_result(res: HypTestResult, accept_hyp: Hyp) -> Option<String> {
         if res.accepted() == accept_hyp {
@@ -42,30 +33,12 @@ pub(super) mod claim {
         }
     }
 
-    pub static WELCH_1_IS_BELOW_RATIO_CI: Claim = Claim {
-        name: "welch_1_is_below_ratio_ci",
-        f: |out: &BenchDiffOut| {
-            let expected = PositionWrtCi::Below;
-            let actual = out.welch_value_position_wrt_ratio_ci(1.0, ALPHA);
-            eq_result(expected, actual)
-        },
-    };
-
     pub static WELCH_RATIO_GT_1: Claim = Claim {
         name: "welch_ratio_gt_1",
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Gt;
             let res = out.welch_ln_test(alt_hyp, ALPHA);
             check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
-
-    pub static WELCH_1_IS_IN_RATIO_CI: Claim = Claim {
-        name: "welch_1_is_in_ratio_ci",
-        f: |out: &BenchDiffOut| {
-            let actual = out.welch_value_position_wrt_ratio_ci(1.0, ALPHA);
-            let expected = PositionWrtCi::In;
-            eq_result(expected, actual)
         },
     };
 
@@ -78,30 +51,12 @@ pub(super) mod claim {
         },
     };
 
-    pub static WELCH_1_IS_ABOVE_RATIO_CI: Claim = Claim {
-        name: "welch_1_is_above_ratio_ci",
-        f: |out: &BenchDiffOut| {
-            let actual = out.welch_value_position_wrt_ratio_ci(1.0, ALPHA);
-            let expected = PositionWrtCi::Above;
-            eq_result(expected, actual)
-        },
-    };
-
     pub static WELCH_RATIO_LT_1: Claim = Claim {
         name: "welch_ratio_lt_1",
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Lt;
             let res = out.welch_ln_test(alt_hyp, ALPHA);
             check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
-
-    pub static STUDENT_0_IS_BELOW_DIFF_CI: Claim = Claim {
-        name: "student_0_is_below_diff_ci",
-        f: |out: &BenchDiffOut| {
-            let actual = out.student_value_position_wrt_diff_ci(0.0, ALPHA);
-            let expected = PositionWrtCi::Below;
-            eq_result(expected, actual)
         },
     };
 
@@ -114,30 +69,12 @@ pub(super) mod claim {
         },
     };
 
-    pub static STUDENT_0_IS_IN_DIFF_CI: Claim = Claim {
-        name: "student_0_is_in_diff_ci",
-        f: |out: &BenchDiffOut| {
-            let actual = out.student_value_position_wrt_diff_ci(0.0, ALPHA);
-            let expected = PositionWrtCi::In;
-            eq_result(expected, actual)
-        },
-    };
-
     pub static STUDENT_DIFF_EQ_0: Claim = Claim {
         name: "student_diff_eq_0",
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Gt;
             let res = out.student_diff_test(alt_hyp, ALPHA);
             check_hyp_test_result(res, Hyp::Null)
-        },
-    };
-
-    pub static STUDENT_0_IS_ABOVE_DIFF_CI: Claim = Claim {
-        name: "student_0_is_above_diff_ci",
-        f: |out: &BenchDiffOut| {
-            let actual = out.student_value_position_wrt_diff_ci(0.0, ALPHA);
-            let expected = PositionWrtCi::Above;
-            eq_result(expected, actual)
         },
     };
 
@@ -150,15 +87,6 @@ pub(super) mod claim {
         },
     };
 
-    pub static STUDENT_1_IS_BELOW_RATIO_CI: Claim = Claim {
-        name: "student_1_is_below_ratio_ci",
-        f: |out: &BenchDiffOut| {
-            let actual = out.student_value_position_wrt_ratio_ci(1.0, ALPHA);
-            let expected = PositionWrtCi::Below;
-            eq_result(expected, actual)
-        },
-    };
-
     pub static STUDENT_RATIO_GT_1: Claim = Claim {
         name: "student_ratio_gt_1",
         f: |out: &BenchDiffOut| {
@@ -168,30 +96,12 @@ pub(super) mod claim {
         },
     };
 
-    pub static STUDENT_1_IS_IN_RATIO_CI: Claim = Claim {
-        name: "student_1_is_in_ratio_ci",
-        f: |out: &BenchDiffOut| {
-            let actual = out.student_value_position_wrt_ratio_ci(1.0, ALPHA);
-            let expected = PositionWrtCi::In;
-            eq_result(expected, actual)
-        },
-    };
-
     pub static STUDENT_RATIO_EQ_1: Claim = Claim {
         name: "student_ratio_eq_1",
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Ne;
             let res = out.student_diff_ln_test(alt_hyp, ALPHA);
             check_hyp_test_result(res, Hyp::Null)
-        },
-    };
-
-    pub static STUDENT_1_IS_ABOVE_RATIO_CI: Claim = Claim {
-        name: "student_1_is_above_ratio_ci",
-        f: |out: &BenchDiffOut| {
-            let actual = out.student_value_position_wrt_ratio_ci(1.0, ALPHA);
-            let expected = PositionWrtCi::Above;
-            eq_result(expected, actual)
         },
     };
 
@@ -247,15 +157,6 @@ pub(super) mod claim {
         },
     };
 
-    pub static PROB_F1_LT_F2_HALF_IS_BELOW_CI: Claim = Claim {
-        name: "prob_f1_lt_f2_half_is_below_ci",
-        f: |out: &BenchDiffOut| {
-            let expected = PositionWrtCi::Below;
-            let actual = out.bernoulli_value_position_wrt_ci(0.5, ALPHA);
-            eq_result(expected, actual)
-        },
-    };
-
     pub static BERNOULLI_F1_GT_F2: Claim = Claim {
         name: "bernoulli_f1_gt_f2",
         f: |out: &BenchDiffOut| {
@@ -265,30 +166,12 @@ pub(super) mod claim {
         },
     };
 
-    pub static PROB_F1_LT_F2_HALF_IS_IN_CI: Claim = Claim {
-        name: "prob_f1_lt_f2_half_is_in_ci",
-        f: |out: &BenchDiffOut| {
-            let expected = PositionWrtCi::In;
-            let actual = out.bernoulli_value_position_wrt_ci(0.5, ALPHA);
-            eq_result(expected, actual)
-        },
-    };
-
     pub static BERNOULLI_F1_EQ_F2: Claim = Claim {
         name: "bernoulli_f1_eq_f2",
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Ne;
             let res = out.bernoulli_eq_half_test(alt_hyp, ALPHA);
             check_hyp_test_result(res, Hyp::Null)
-        },
-    };
-
-    pub static PROB_F1_LT_F2_HALF_IS_ABOVE_CI: Claim = Claim {
-        name: "prob_f1_lt_f2_half_is_above_ci",
-        f: |out: &BenchDiffOut| {
-            let expected = PositionWrtCi::Above;
-            let actual = out.bernoulli_value_position_wrt_ci(0.5, ALPHA);
-            eq_result(expected, actual)
         },
     };
 

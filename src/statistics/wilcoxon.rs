@@ -314,7 +314,7 @@ pub fn wilcoxon_rank_sum_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> 
     let var0_w = var0_w_base - var0_w_ties_adjust;
     let w_star = (w - e0_w) / var0_w.sqrt();
 
-    w_star
+    -w_star
 }
 
 // #[cfg(test)]
@@ -328,7 +328,7 @@ pub fn wilcoxon_rank_sum_z_no_ties_adjust(hist_a: &Histogram<u64>, hist_b: &Hist
     let var0_w = var0_w_base - var0_w_ties_adjust;
     let w_star = (w - e0_w) / var0_w.sqrt();
 
-    w_star
+    -w_star
 }
 
 pub fn wilcoxon_rank_sum_p(
@@ -357,7 +357,7 @@ pub fn wilcoxon_rank_sum_test(
     alpha: f64,
 ) -> HypTestResult {
     let p = wilcoxon_rank_sum_p(hist_a, hist_b, alt_hyp);
-    HypTestResult::from_p_and_alpha(p, alpha)
+    HypTestResult::new(p, alpha, alt_hyp)
 }
 
 #[cfg(test)]
@@ -368,7 +368,7 @@ pub fn wilcoxon_rank_sum_test_no_ties_adjust(
     alpha: f64,
 ) -> HypTestResult {
     let p = wilcoxon_rank_sum_p_no_ties_adjust(hist_a, hist_b, alt_hyp);
-    HypTestResult::from_p_and_alpha(p, alpha)
+    HypTestResult::new(p, alpha, alt_hyp)
 }
 
 #[cfg(test)]

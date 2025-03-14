@@ -15,7 +15,7 @@ pub(super) struct Claim {
 }
 
 pub(super) mod claim {
-    use crate::statistics::{AltHyp, HypTestResult};
+    use crate::statistics::{AltHyp, Hyp, HypTestResult};
 
     use super::*;
 
@@ -27,28 +27,17 @@ pub(super) mod claim {
         }
     }
 
-    fn check_null_hyp_accept(res: HypTestResult, alt_hyp: AltHyp) -> Option<String> {
-        if res.is_accept() {
+    fn check_hyp_test_result(res: HypTestResult, accept_hyp: Hyp) -> Option<String> {
+        if res.accepted() == accept_hyp {
             None
         } else {
             Some(format!(
-                "expected null hypothesis accepted: p={:?}, alpha={:?}, alt_hyp:{:?}",
+                "expected to accept {:?} but accepted {:?}: p={:?}, alpha={:?}, alt_hyp:{:?}",
+                accept_hyp,
+                res.accepted(),
                 res.p(),
                 res.alpha(),
-                alt_hyp
-            ))
-        }
-    }
-
-    fn check_null_hyp_reject(res: HypTestResult, alt_hyp: AltHyp) -> Option<String> {
-        if res.is_reject() {
-            None
-        } else {
-            Some(format!(
-                "expected null hypothesis rejected: p={:?}, alpha={:?}, alt_hyp:{:?}",
-                res.p(),
-                res.alpha(),
-                alt_hyp
+                res.alt_hyp()
             ))
         }
     }
@@ -67,7 +56,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Gt;
             let res = out.welch_ln_test(alt_hyp, ALPHA);
-            check_null_hyp_reject(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
         },
     };
 
@@ -85,7 +74,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Ne;
             let res = out.welch_ln_test(alt_hyp, ALPHA);
-            check_null_hyp_accept(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Null)
         },
     };
 
@@ -103,7 +92,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Lt;
             let res = out.welch_ln_test(alt_hyp, ALPHA);
-            check_null_hyp_reject(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
         },
     };
 
@@ -121,7 +110,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Gt;
             let res = out.student_diff_test(alt_hyp, ALPHA);
-            check_null_hyp_reject(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
         },
     };
 
@@ -139,7 +128,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Gt;
             let res = out.student_diff_test(alt_hyp, ALPHA);
-            check_null_hyp_accept(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Null)
         },
     };
 
@@ -155,9 +144,9 @@ pub(super) mod claim {
     pub static STUDENT_DIFF_LT_0: Claim = Claim {
         name: "student_diff_lt_0",
         f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Gt;
+            let alt_hyp = AltHyp::Lt;
             let res = out.student_diff_test(alt_hyp, ALPHA);
-            check_null_hyp_reject(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
         },
     };
 
@@ -175,7 +164,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Gt;
             let res = out.student_diff_ln_test(alt_hyp, ALPHA);
-            check_null_hyp_reject(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
         },
     };
 
@@ -193,7 +182,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Ne;
             let res = out.student_diff_ln_test(alt_hyp, ALPHA);
-            check_null_hyp_accept(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Null)
         },
     };
 
@@ -211,7 +200,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Lt;
             let res = out.student_diff_ln_test(alt_hyp, ALPHA);
-            check_null_hyp_reject(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
         },
     };
 
@@ -236,7 +225,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Lt;
             let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
-            check_null_hyp_reject(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
         },
     };
 
@@ -245,7 +234,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Ne;
             let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
-            check_null_hyp_accept(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Null)
         },
     };
 
@@ -254,7 +243,7 @@ pub(super) mod claim {
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Gt;
             let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
-            check_null_hyp_reject(res, alt_hyp)
+            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
         },
     };
 
@@ -262,7 +251,7 @@ pub(super) mod claim {
         name: "prob_f1_lt_f2_half_is_below_ci",
         f: |out: &BenchDiffOut| {
             let expected = PositionWrtCi::Below;
-            let actual = out.bernoulli_prob_value_position_wrt_ci(0.5, ALPHA);
+            let actual = out.bernoulli_value_position_wrt_ci(0.5, ALPHA);
             eq_result(expected, actual)
         },
     };
@@ -271,8 +260,8 @@ pub(super) mod claim {
         name: "bernoulli_f1_gt_f2",
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Gt;
-            let res = out.bernoulli_prob_eq_half_test(alt_hyp, ALPHA);
-            check_null_hyp_reject(res, alt_hyp)
+            let res = out.bernoulli_eq_half_test(alt_hyp, ALPHA);
+            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
         },
     };
 
@@ -280,7 +269,7 @@ pub(super) mod claim {
         name: "prob_f1_lt_f2_half_is_in_ci",
         f: |out: &BenchDiffOut| {
             let expected = PositionWrtCi::In;
-            let actual = out.bernoulli_prob_value_position_wrt_ci(0.5, ALPHA);
+            let actual = out.bernoulli_value_position_wrt_ci(0.5, ALPHA);
             eq_result(expected, actual)
         },
     };
@@ -289,8 +278,8 @@ pub(super) mod claim {
         name: "bernoulli_f1_eq_f2",
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Ne;
-            let res = out.bernoulli_prob_eq_half_test(alt_hyp, ALPHA);
-            check_null_hyp_accept(res, alt_hyp)
+            let res = out.bernoulli_eq_half_test(alt_hyp, ALPHA);
+            check_hyp_test_result(res, Hyp::Null)
         },
     };
 
@@ -298,7 +287,7 @@ pub(super) mod claim {
         name: "prob_f1_lt_f2_half_is_above_ci",
         f: |out: &BenchDiffOut| {
             let expected = PositionWrtCi::Above;
-            let actual = out.bernoulli_prob_value_position_wrt_ci(0.5, ALPHA);
+            let actual = out.bernoulli_value_position_wrt_ci(0.5, ALPHA);
             eq_result(expected, actual)
         },
     };
@@ -307,8 +296,8 @@ pub(super) mod claim {
         name: "bernoulli_f1_lt_f2",
         f: |out: &BenchDiffOut| {
             let alt_hyp = AltHyp::Lt;
-            let res = out.bernoulli_prob_eq_half_test(alt_hyp, ALPHA);
-            check_null_hyp_reject(res, alt_hyp)
+            let res = out.bernoulli_eq_half_test(alt_hyp, ALPHA);
+            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
         },
     };
 }
@@ -412,52 +401,112 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
     let ratio_medians_f1_f2 = diff_out.ratio_medians_f1_f2();
     let ratio_medians_f1_f2_from_lns = diff_out.mean_diff_ln_f1_f2().exp();
 
+    println!();
     println!("summary_f1={:?}", diff_out.summary_f1());
-    println!("\nsummary_f2={:?}", diff_out.summary_f2());
-    println!("\ncount_f1_lt_f2={}", diff_out.count_f1_lt_f2());
-    println!("count_f1_eq_f2={}", diff_out.count_f1_eq_f2());
-    println!("count_f1_gt_f2={}", diff_out.count_f1_gt_f2());
-    println!("ratio_median_f1_f2={}", ratio_medians_f1_f2);
+    println!();
+    println!("summary_f2={:?}", diff_out.summary_f2());
+    println!();
     println!(
-        "ratio_medians_f1_f2_from_lns={}",
-        ratio_medians_f1_f2_from_lns
-    );
-    println!(
-        "ratio_medians_f1_f2-ratio_medians_f1_f2_from_lns={}",
+        "ratio_median_f1_f2={}, ratio_medians_f1_f2_from_lns={}, diff={}",
+        ratio_medians_f1_f2,
+        ratio_medians_f1_f2_from_lns,
         ratio_medians_f1_f2 - ratio_medians_f1_f2_from_lns
     );
-    println!("welch_ratio_ci={:?}", diff_out.welch_ratio_ci(ALPHA));
+    println!();
     println!(
-        "welch_position_of_1_wrt_ratio_ci={:?}",
+        "welch_ratio_ci={:?}, welch_position_of_1_wrt_ratio_ci={:?}",
+        diff_out.welch_ratio_ci(ALPHA),
         diff_out.welch_value_position_wrt_ratio_ci(1.0, ALPHA)
     );
-    println!("mean_diff_f1_f2={}", diff_out.mean_diff_f1_f2());
-    println!("diff_ci={:?}", diff_out.student_diff_ci(ALPHA));
     println!(
-        "student_position_of_0_wrt_diff_ci={:?}",
+        "welch_ln_test_lt:{:?}",
+        diff_out.welch_ln_test(AltHyp::Lt, ALPHA)
+    );
+    println!(
+        "welch_ln_test_eq:{:?}",
+        diff_out.welch_ln_test(AltHyp::Ne, ALPHA)
+    );
+    println!(
+        "welch_ln_test_gt:{:?}",
+        diff_out.welch_ln_test(AltHyp::Gt, ALPHA)
+    );
+    println!();
+    println!(
+        "student_ratio_ci={:?}, student_position_of_1_wrt_ratio_ci={:?}",
+        diff_out.student_ratio_ci(ALPHA),
+        diff_out.student_value_position_wrt_ratio_ci(1.0, ALPHA)
+    );
+    println!(
+        "student_diff_ln_test_lt:{:?}",
+        diff_out.student_diff_ln_test(AltHyp::Lt, ALPHA)
+    );
+    println!(
+        "student_diff_ln_test_eq:{:?}",
+        diff_out.student_diff_ln_test(AltHyp::Ne, ALPHA)
+    );
+    println!(
+        "student_diff_ln_test_gt:{:?}",
+        diff_out.student_diff_ln_test(AltHyp::Gt, ALPHA)
+    );
+    println!();
+    println!("mean_diff_f1_f2={}", diff_out.mean_diff_f1_f2());
+    println!(
+        "diff_ci={:?}, student_position_of_0_wrt_diff_ci={:?}",
+        diff_out.student_diff_ci(ALPHA),
         diff_out.student_value_position_wrt_diff_ci(0.0, ALPHA)
     );
     println!(
-        "student_position_of_1_wrt_ratio_ci={:?}",
-        diff_out.student_value_position_wrt_ratio_ci(1.0, ALPHA)
-    );
-    println!("prob_f1_lt_f2={:?}", diff_out.bernoulli_prob());
-    println!(
-        "prob_f1_lt_f2_position_of_half_wrt_ci={:?}",
-        diff_out.bernoulli_prob_value_position_wrt_ci(0.5, ALPHA)
-    );
-    println!("wilcoxon_rank_sum_z={:?}", diff_out.wilcoxon_rank_sum_z());
-    println!(
-        "wilcoxon_rank_sum_f_ne_f2_p={:?}",
-        diff_out.wilcoxon_rank_sum_p(AltHyp::Ne)
+        "student_diff_test_lt:{:?}",
+        diff_out.student_diff_test(AltHyp::Lt, ALPHA)
     );
     println!(
-        "wilcoxon_rank_sum_f1_lt_f2_p={:?}",
-        diff_out.wilcoxon_rank_sum_p(AltHyp::Lt)
+        "student_diff_test_eq:{:?}",
+        diff_out.student_diff_test(AltHyp::Ne, ALPHA)
     );
     println!(
-        "wilcoxon_rank_sum_f1_gt_f2_p={:?}",
-        diff_out.wilcoxon_rank_sum_p(AltHyp::Gt)
+        "student_diff_test_gt:{:?}",
+        diff_out.student_diff_test(AltHyp::Gt, ALPHA)
+    );
+    println!();
+    println!(
+        "count_f1_lt_f2={}, count_f1_eq_f2={}, count_f1_gt_f2={}",
+        diff_out.count_f1_lt_f2(),
+        diff_out.count_f1_eq_f2(),
+        diff_out.count_f1_gt_f2()
+    );
+    println!(
+        "bernoulli_prob_f1_gt_f2={:?}",
+        diff_out.bernoulli_prob_f1_gt_f2()
+    );
+    println!(
+        "bernoulli_ci={:?}, bernoulli_position_of_half_wrt_ci={:?}",
+        diff_out.bernoulli_ci(ALPHA),
+        diff_out.bernoulli_value_position_wrt_ci(0.5, ALPHA)
+    );
+    println!(
+        "bernoulli_eq_half_test_lt:{:?}",
+        diff_out.bernoulli_eq_half_test(AltHyp::Lt, ALPHA)
+    );
+    println!(
+        "bernoulli_eq_half_test_eq:{:?}",
+        diff_out.bernoulli_eq_half_test(AltHyp::Ne, ALPHA)
+    );
+    println!(
+        "bernoulli_eq_half_test_gt:{:?}",
+        diff_out.bernoulli_eq_half_test(AltHyp::Gt, ALPHA)
+    );
+    println!();
+    println!(
+        "wilcoxon_rank_sum_test_lt:{:?}",
+        diff_out.wilcoxon_rank_sum_test(AltHyp::Lt, ALPHA)
+    );
+    println!(
+        "wilcoxon_rank_sum_test_eq:{:?}",
+        diff_out.wilcoxon_rank_sum_test(AltHyp::Ne, ALPHA)
+    );
+    println!(
+        "wilcoxon_rank_sum_test_gt:{:?}",
+        diff_out.wilcoxon_rank_sum_test(AltHyp::Gt, ALPHA)
     );
     println!();
 }

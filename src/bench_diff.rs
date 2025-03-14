@@ -177,26 +177,26 @@ impl BenchDiffOut {
     }
 
     /// Estimator of mean of Bernoulli distribution.
-    pub fn bernoulli_prob(&self) -> f64 {
-        (self.count_f1_lt_f2() as f64 + self.count_f1_eq_f2 as f64 / 2.0)
+    pub fn bernoulli_prob_f1_gt_f2(&self) -> f64 {
+        (self.count_f1_gt_f2() as f64 + self.count_f1_eq_f2 as f64 / 2.0)
             / (self.count_f1_lt_f2() + self.count_f1_eq_f2 + self.count_f1_gt_f2()) as f64
     }
 
     /// Confidence interval for Bernoulli distribution (Wilson score interval).
-    pub fn bernoulli_prob_ci(&self, alpha: f64) -> (f64, f64) {
-        let p = self.bernoulli_prob();
+    pub fn bernoulli_ci(&self, alpha: f64) -> (f64, f64) {
+        let p_hat = self.bernoulli_prob_f1_gt_f2();
         let n = self.n();
-        bernoulli_psucc_ci(n, p, alpha)
+        bernoulli_psucc_ci(n, p_hat, alpha)
     }
 
-    pub fn bernoulli_prob_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
-        let (low, high) = self.bernoulli_prob_ci(alpha);
+    pub fn bernoulli_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
+        let (low, high) = self.bernoulli_ci(alpha);
         PositionWrtCi::position_of_value(value, low, high)
     }
 
-    pub fn bernoulli_prob_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-        let p_hat = self.bernoulli_prob();
-        bernoulli_test(p_hat, 1.0 / 2.0, alt_hyp, alpha)
+    pub fn bernoulli_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        let p_hat = self.bernoulli_prob_f1_gt_f2();
+        bernoulli_test(self.n(), p_hat, 1.0 / 2.0, alt_hyp, alpha)
     }
 
     /// Welch's t statistic for

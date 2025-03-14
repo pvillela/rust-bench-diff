@@ -133,47 +133,82 @@ pub(super) fn get_fn(name: &str) -> fn(u32, &FnParams) -> MyFnMut {
 
 static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
     let lt_claims_strict = vec![
-        (&claim::WELCH_1_IS_ABOVE_RATIO_CI, true),
-        (&claim::STUDENT_0_IS_ABOVE_DIFF_CI, false),
-        (&claim::STUDENT_1_IS_ABOVE_RATIO_CI, true),
+        (&claim::WELCH_RATIO_LT_1, true),
+        (&claim::STUDENT_DIFF_LT_0, false),
+        (&claim::STUDENT_RATIO_LT_1, true),
         (&claim::WILCOXON_RANK_SUM_F1_LT_F2, true),
-        (&claim::PROB_F1_LT_F2_HALF_IS_BELOW_CI, true),
+        (&claim::BERNOULLI_F1_LT_F2, true),
+        //
+        // (&claim::WELCH_1_IS_ABOVE_RATIO_CI, true),
+        // (&claim::STUDENT_0_IS_ABOVE_DIFF_CI, false),
+        // (&claim::STUDENT_1_IS_ABOVE_RATIO_CI, true),
+        // (&claim::WILCOXON_RANK_SUM_F1_LT_F2, true),
+        // (&claim::PROB_F1_LT_F2_HALF_IS_BELOW_CI, true),
+        //
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
     ];
 
     let lt_claims = vec![
-        (&claim::WELCH_1_IS_ABOVE_RATIO_CI, false),
-        (&claim::STUDENT_0_IS_ABOVE_DIFF_CI, false),
-        (&claim::STUDENT_1_IS_ABOVE_RATIO_CI, false),
+        (&claim::WELCH_RATIO_LT_1, false),
+        (&claim::STUDENT_DIFF_LT_0, false),
+        (&claim::STUDENT_RATIO_LT_1, false),
         (&claim::WILCOXON_RANK_SUM_F1_LT_F2, false),
-        (&claim::PROB_F1_LT_F2_HALF_IS_BELOW_CI, false),
+        (&claim::BERNOULLI_F1_LT_F2, false),
+        //
+        // (&claim::WELCH_1_IS_ABOVE_RATIO_CI, false),
+        // (&claim::STUDENT_0_IS_ABOVE_DIFF_CI, false),
+        // (&claim::STUDENT_1_IS_ABOVE_RATIO_CI, false),
+        // (&claim::WILCOXON_RANK_SUM_F1_LT_F2, false),
+        // (&claim::PROB_F1_LT_F2_HALF_IS_BELOW_CI, false),
+        //
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
     ];
 
     let eq_claims_strict = vec![
-        (&claim::WELCH_1_IS_IN_RATIO_CI, true),
-        (&claim::STUDENT_0_IS_IN_DIFF_CI, false),
-        (&claim::STUDENT_1_IS_IN_RATIO_CI, true),
-        (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, false),
-        (&claim::PROB_F1_LT_F2_HALF_IS_IN_CI, false),
+        (&claim::WELCH_RATIO_EQ_1, true),
+        (&claim::STUDENT_DIFF_EQ_0, false),
+        (&claim::STUDENT_RATIO_EQ_1, true),
+        (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, true),
+        (&claim::BERNOULLI_F1_EQ_F2, true),
+        //
+        // (&claim::WELCH_1_IS_IN_RATIO_CI, true),
+        // (&claim::STUDENT_0_IS_IN_DIFF_CI, false),
+        // (&claim::STUDENT_1_IS_IN_RATIO_CI, true),
+        // (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, false),
+        // (&claim::PROB_F1_LT_F2_HALF_IS_IN_CI, false),
+        //
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
     ];
 
     let eq_claims = vec![
-        (&claim::WELCH_1_IS_IN_RATIO_CI, false),
-        (&claim::STUDENT_0_IS_IN_DIFF_CI, false),
-        (&claim::STUDENT_1_IS_IN_RATIO_CI, false),
+        (&claim::WELCH_RATIO_EQ_1, false),
+        (&claim::STUDENT_DIFF_EQ_0, false),
+        (&claim::STUDENT_RATIO_EQ_1, false),
         (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, false),
-        (&claim::PROB_F1_LT_F2_HALF_IS_IN_CI, false),
+        (&claim::BERNOULLI_F1_EQ_F2, false),
+        //
+        // (&claim::WELCH_1_IS_IN_RATIO_CI, false),
+        // (&claim::STUDENT_0_IS_IN_DIFF_CI, false),
+        // (&claim::STUDENT_1_IS_IN_RATIO_CI, false),
+        // (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, false),
+        // (&claim::PROB_F1_LT_F2_HALF_IS_IN_CI, false),
+        //
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
     ];
 
     let gt_claims_strict = vec![
-        (&claim::WELCH_1_IS_BELOW_RATIO_CI, true),
-        (&claim::STUDENT_0_IS_BELOW_DIFF_CI, false),
-        (&claim::STUDENT_1_IS_BELOW_RATIO_CI, true),
+        (&claim::WELCH_RATIO_GT_1, true),
+        (&claim::STUDENT_DIFF_GT_0, false),
+        (&claim::STUDENT_RATIO_GT_1, true),
         (&claim::WILCOXON_RANK_SUM_F1_GT_F2, true),
-        (&claim::PROB_F1_LT_F2_HALF_IS_ABOVE_CI, true),
+        (&claim::BERNOULLI_F1_GT_F2, true),
+        //
+        // (&claim::WELCH_1_IS_BELOW_RATIO_CI, true),
+        // (&claim::STUDENT_0_IS_BELOW_DIFF_CI, false),
+        // (&claim::STUDENT_1_IS_BELOW_RATIO_CI, true),
+        // (&claim::WILCOXON_RANK_SUM_F1_GT_F2, true),
+        // (&claim::PROB_F1_LT_F2_HALF_IS_ABOVE_CI, true),
+        //
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
     ];
 

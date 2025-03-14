@@ -10,47 +10,49 @@ pub enum AltHyp {
     Ne,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Hyp {
+    Null,
+    Alt(AltHyp),
+}
+
 /// Statistical hypothesis test result
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum HypTestResult {
-    /// Accept the null hypothesis
-    Accept { p: f64, alpha: f64 },
-    /// Reject the null hypothesis
-    Reject { p: f64, alpha: f64 },
+pub struct HypTestResult {
+    p: f64,
+    alpha: f64,
+    alt_hyp: AltHyp,
+    accepted: Hyp,
 }
 
 impl HypTestResult {
-    pub fn from_p_and_alpha(p: f64, alpha: f64) -> HypTestResult {
-        if p < alpha {
-            HypTestResult::Reject { p, alpha }
-        } else {
-            HypTestResult::Accept { p, alpha }
+    pub fn new(p: f64, alpha: f64, alt_hyp: AltHyp) -> HypTestResult {
+        Self {
+            p,
+            alpha,
+            alt_hyp,
+            accepted: if p >= alpha {
+                Hyp::Null
+            } else {
+                Hyp::Alt(alt_hyp)
+            },
         }
     }
 
     pub fn p(&self) -> f64 {
-        match self {
-            Self::Accept { p, .. } => *p,
-            Self::Reject { p, .. } => *p,
-        }
+        self.p
     }
 
     pub fn alpha(&self) -> f64 {
-        match self {
-            Self::Accept { alpha, .. } => *alpha,
-            Self::Reject { alpha, .. } => *alpha,
-        }
+        self.alpha
     }
 
-    pub fn is_accept(&self) -> bool {
-        match self {
-            Self::Accept { .. } => true,
-            _ => false,
-        }
+    pub fn alt_hyp(&self) -> AltHyp {
+        self.alt_hyp
     }
 
-    pub fn is_reject(&self) -> bool {
-        !self.is_accept()
+    pub fn accepted(&self) -> Hyp {
+        self.accepted
     }
 }
 
@@ -60,8 +62,8 @@ pub fn z_to_p(z: f64, alt_hyp: AltHyp) -> f64 {
     let normal = Normal::standard();
 
     match alt_hyp {
-        AltHyp::Lt => normal.cdf(-z),
-        AltHyp::Gt => normal.cdf(z),
+        AltHyp::Lt => normal.cdf(z),
+        AltHyp::Gt => normal.cdf(-z),
         AltHyp::Ne => normal.cdf(-z.abs()) * 2.0,
     }
 }
@@ -72,8 +74,8 @@ pub fn t_to_p(t: f64, deg_freedom: f64, alt_hyp: AltHyp) -> f64 {
     let stud = StudentsT::new(0.0, 1.0, deg_freedom).expect("degrees of freedom must be > 0");
 
     match alt_hyp {
-        AltHyp::Lt => stud.cdf(-t),
-        AltHyp::Gt => stud.cdf(t),
+        AltHyp::Lt => stud.cdf(t),
+        AltHyp::Gt => stud.cdf(-t),
         AltHyp::Ne => stud.cdf(-t.abs()) * 2.0,
     }
 }
@@ -159,8 +161,8 @@ pub fn bernoulli_psucc_ci(n: f64, p_hat: f64, alpha: f64) -> (f64, f64) {
 /// Arguments:
 /// - `p_hat`: estimate of mean of the Bernoulli distribution. See [`bernoulli_p_hat`].
 /// - `p0`: probability of success under null hypothesis.
-pub fn bernoulli_normal_approx_z(p_hat: f64, p0: f64) -> f64 {
-    (p_hat - p0) / (p0 * (1.0 - p0)).sqrt()
+pub fn bernoulli_normal_approx_z(n: f64, p_hat: f64, p0: f64) -> f64 {
+    (p_hat - p0) / (p0 * (1.0 - p0) / n).sqrt()
 }
 
 /// Normal approximation p-value for standardized sample mean of Bernoulli distribution under the hypothesis that
@@ -171,14 +173,14 @@ pub fn bernoulli_normal_approx_z(p_hat: f64, p0: f64) -> f64 {
 /// - `p_hat`: estimate of mean of the Bernoulli distribution. See [`bernoulli_p_hat`].
 /// - `p0`: probability of success under null hypothesis.
 /// - `alt_hyp`: alternative hypothesis.
-pub fn bernoulli_normal_approx_p(p_hat: f64, p0: f64, alt_hyp: AltHyp) -> f64 {
-    let z = bernoulli_normal_approx_z(p_hat, p0);
+pub fn bernoulli_normal_approx_p(n: f64, p_hat: f64, p0: f64, alt_hyp: AltHyp) -> f64 {
+    let z = bernoulli_normal_approx_z(n, p_hat, p0);
     z_to_p(z, alt_hyp)
 }
 
-pub fn bernoulli_test(p_hat: f64, p0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-    let p = bernoulli_normal_approx_p(p_hat, p0, alt_hyp);
-    HypTestResult::from_p_and_alpha(p, alpha)
+pub fn bernoulli_test(n: f64, p_hat: f64, p0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+    let p = bernoulli_normal_approx_p(n, p_hat, p0, alt_hyp);
+    HypTestResult::new(p, alpha, alt_hyp)
 }
 
 pub struct SampleMoments {
@@ -325,7 +327,7 @@ pub fn welch_test(
     alpha: f64,
 ) -> HypTestResult {
     let p = welch_p(&moments_a, &moments_b, alt_hyp);
-    HypTestResult::from_p_and_alpha(p, alpha)
+    HypTestResult::new(p, alpha, alt_hyp)
 }
 
 pub fn student_one_sample_t(moments: &SampleMoments, mu0: f64) -> f64 {
@@ -364,5 +366,5 @@ pub fn student_one_sample_test(
     alpha: f64,
 ) -> HypTestResult {
     let p = student_one_sample_p(&moments, mu0, alt_hyp);
-    HypTestResult::from_p_and_alpha(p, alpha)
+    HypTestResult::new(p, alpha, alt_hyp)
 }

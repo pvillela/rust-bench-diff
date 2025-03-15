@@ -16,7 +16,7 @@ pub(super) struct Claim {
 
 pub(super) mod claim {
     use super::*;
-    use crate::statistics::{AltHyp, Hyp, HypTestResult};
+    use crate::statistics::{AltHyp, Hyp, HypTestResult, PositionWrtCi};
 
     fn check_hyp_test_result(res: HypTestResult, accept_hyp: Hyp) -> Option<String> {
         if res.accepted() == accept_hyp {
@@ -126,6 +126,52 @@ pub(super) mod claim {
                 Some(format!(
                     "ratio_medians_f1_f2={ratio_medians_f1_f2}, ratio_medians_f1_f2_from_lns={ratio_medians_f1_f2_from_lns}"
                 ))
+            }
+        },
+    };
+
+    pub static RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI: Claim = Claim {
+        name: "ratio_medians_f1_f2_in_welch_ratio_ci",
+        f: |out: &BenchDiffOut| {
+            let value = out.ratio_medians_f1_f2();
+            let ci = out.welch_ratio_ci(ALPHA);
+
+            if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
+                None
+            } else {
+                Some(format!(
+                    "ratio_medians_f1_f2={value}, welch_ratio_ci={ci:?}"
+                ))
+            }
+        },
+    };
+
+    pub static RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI: Claim = Claim {
+        name: "ratio_medians_f1_f2_in_student_ratio_ci",
+        f: |out: &BenchDiffOut| {
+            let value = out.ratio_medians_f1_f2();
+            let ci = out.student_ratio_ci(ALPHA);
+
+            if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
+                None
+            } else {
+                Some(format!(
+                    "ratio_medians_f1_f2={value}, student_ratio_ci={ci:?}"
+                ))
+            }
+        },
+    };
+
+    pub static MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI: Claim = Claim {
+        name: "mean_diff_f1_f2_in_student_diff_ci",
+        f: |out: &BenchDiffOut| {
+            let value = out.mean_diff_f1_f2();
+            let ci = out.student_diff_ci(ALPHA);
+
+            if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
+                None
+            } else {
+                Some(format!("mean_diff_f1_f2={value}, student_diff_ci={ci:?}"))
             }
         },
     };

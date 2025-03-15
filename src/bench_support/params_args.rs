@@ -139,13 +139,10 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
         (&claim::WILCOXON_RANK_SUM_F1_LT_F2, true),
         (&claim::BERNOULLI_F1_LT_F2, true),
         //
-        // (&claim::WELCH_1_IS_ABOVE_RATIO_CI, true),
-        // (&claim::STUDENT_0_IS_ABOVE_DIFF_CI, false),
-        // (&claim::STUDENT_1_IS_ABOVE_RATIO_CI, true),
-        // (&claim::WILCOXON_RANK_SUM_F1_LT_F2, true),
-        // (&claim::PROB_F1_LT_F2_HALF_IS_BELOW_CI, true),
-        //
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
+        (&claim::RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI, true),
+        (&claim::RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI, true),
+        (&claim::MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI, true),
     ];
 
     let lt_claims = vec![
@@ -155,13 +152,10 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
         (&claim::WILCOXON_RANK_SUM_F1_LT_F2, false),
         (&claim::BERNOULLI_F1_LT_F2, false),
         //
-        // (&claim::WELCH_1_IS_ABOVE_RATIO_CI, false),
-        // (&claim::STUDENT_0_IS_ABOVE_DIFF_CI, false),
-        // (&claim::STUDENT_1_IS_ABOVE_RATIO_CI, false),
-        // (&claim::WILCOXON_RANK_SUM_F1_LT_F2, false),
-        // (&claim::PROB_F1_LT_F2_HALF_IS_BELOW_CI, false),
-        //
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
+        (&claim::RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI, true),
+        (&claim::RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI, true),
+        (&claim::MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI, true),
     ];
 
     let eq_claims_strict = vec![
@@ -171,13 +165,10 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
         (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, true),
         (&claim::BERNOULLI_F1_EQ_F2, true),
         //
-        // (&claim::WELCH_1_IS_IN_RATIO_CI, true),
-        // (&claim::STUDENT_0_IS_IN_DIFF_CI, false),
-        // (&claim::STUDENT_1_IS_IN_RATIO_CI, true),
-        // (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, false),
-        // (&claim::PROB_F1_LT_F2_HALF_IS_IN_CI, false),
-        //
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
+        (&claim::RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI, true),
+        (&claim::RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI, true),
+        (&claim::MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI, true),
     ];
 
     let eq_claims = vec![
@@ -187,13 +178,10 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
         (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, false),
         (&claim::BERNOULLI_F1_EQ_F2, false),
         //
-        // (&claim::WELCH_1_IS_IN_RATIO_CI, false),
-        // (&claim::STUDENT_0_IS_IN_DIFF_CI, false),
-        // (&claim::STUDENT_1_IS_IN_RATIO_CI, false),
-        // (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, false),
-        // (&claim::PROB_F1_LT_F2_HALF_IS_IN_CI, false),
-        //
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
+        (&claim::RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI, true),
+        (&claim::RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI, true),
+        (&claim::MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI, true),
     ];
 
     let gt_claims_strict = vec![
@@ -203,13 +191,10 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
         (&claim::WILCOXON_RANK_SUM_F1_GT_F2, true),
         (&claim::BERNOULLI_F1_GT_F2, true),
         //
-        // (&claim::WELCH_1_IS_BELOW_RATIO_CI, true),
-        // (&claim::STUDENT_0_IS_BELOW_DIFF_CI, false),
-        // (&claim::STUDENT_1_IS_BELOW_RATIO_CI, true),
-        // (&claim::WILCOXON_RANK_SUM_F1_GT_F2, true),
-        // (&claim::PROB_F1_LT_F2_HALF_IS_ABOVE_CI, true),
-        //
         (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
+        (&claim::RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI, true),
+        (&claim::RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI, true),
+        (&claim::MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI, true),
     ];
 
     [

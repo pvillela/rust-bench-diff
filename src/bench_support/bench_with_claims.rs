@@ -3,7 +3,7 @@
 use super::params_args::{Args, FnParams, get_args, get_fn, get_params, get_spec};
 use crate::{
     BenchDiffOut, bench_diff, bench_diff_print,
-    dev_utils::{ApproxEq, calibrate_real_work},
+    dev_utils::{ApproxEq, calibrate_busy_work},
     statistics::{AltHyp, SampleMoments, collect_moments},
 };
 use std::{
@@ -488,7 +488,7 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
     print_args: impl Fn(),
 ) {
     let unit = fn_params.unit;
-    let base_effort = calibrate_real_work(unit.latency_from_f64(fn_params.base_median));
+    let base_effort = calibrate_busy_work(unit.latency_from_f64(fn_params.base_median));
 
     let mut results = ClaimResults::new();
     let mut ratio_medians_from_lns_noises =

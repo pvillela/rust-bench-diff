@@ -1,7 +1,7 @@
 //! Definition of target functions, test scenarios, and their parameterization.
 
 use super::{Scenario, claim};
-use crate::{LatencyUnit, dev_utils::real_work};
+use crate::{LatencyUnit, dev_utils::busy_work};
 use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
 use rand_distr::LogNormal;
 use std::{env, sync::LazyLock};
@@ -57,7 +57,7 @@ impl MyFnMut {
     pub(super) fn invoke(&mut self) {
         match self {
             Self::Constant { median_effort } => {
-                real_work(*median_effort);
+                busy_work(*median_effort);
             }
 
             Self::Variable {
@@ -67,7 +67,7 @@ impl MyFnMut {
             } => {
                 let factor = lognormal.sample(rng);
                 let effort = (*median_effort as f64) * factor;
-                real_work(effort as u32);
+                busy_work(effort as u32);
             }
         }
     }

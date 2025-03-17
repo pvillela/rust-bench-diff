@@ -1,5 +1,5 @@
-use bench_diff::bench_support::bench_diff_claims_with_args;
+use bench_diff::bench_support::bench_with_claims_and_args;
 
 fn main() {
-    bench_diff_claims_with_args();
+    bench_with_claims_and_args();
 }

@@ -6,7 +6,11 @@ use crate::{
     dev_utils::{ApproxEq, calibrate_real_work},
     statistics::{AltHyp, SampleMoments, collect_moments},
 };
-use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Debug,
+    ops::Deref,
+};
 
 #[derive(Clone)]
 pub(super) struct Claim {
@@ -277,36 +281,44 @@ impl ClaimResult {
     }
 }
 
-struct ClaimFailures(Vec<ClaimResult>);
+struct ClaimResults {
+    scenarios_claims: BTreeSet<(String, &'static str)>,
+    failures: Vec<ClaimResult>,
+}
 
-impl ClaimFailures {
+impl ClaimResults {
     fn new() -> Self {
-        Self(Vec::new())
+        Self {
+            scenarios_claims: BTreeSet::new(),
+            failures: Vec::new(),
+        }
     }
 
-    fn push_failure(&mut self, result: ClaimResult) {
+    fn push_result(&mut self, result: ClaimResult) {
+        self.scenarios_claims
+            .insert((result.scenario_name.clone(), result.claim_name));
         if result.result.is_some() {
-            self.0.push(result)
+            self.failures.push(result)
         };
     }
 
     fn run_scenario(&mut self, scenario: &Scenario, diff_out: &BenchDiffOut) {
         let results = scenario.run(diff_out);
         for result in results {
-            self.push_failure(result);
+            self.push_result(result);
         }
     }
 
     fn failed_must_pass(&self) -> Vec<&ClaimResult> {
-        self.0
+        self.failures
             .iter()
             .filter(|cr| !cr.passed() && cr.must_pass)
             .collect()
     }
 
-    fn summary(&self) -> BTreeMap<(String, &'static str), u32> {
+    fn failure_summary(&self) -> BTreeMap<(String, &'static str), u32> {
         let mut summary = BTreeMap::<(String, &'static str), u32>::new();
-        for result in self.iter() {
+        for result in self.failures.iter() {
             let count = summary
                 .entry((result.scenario_name.clone(), result.claim_name))
                 .or_insert(0);
@@ -314,13 +326,17 @@ impl ClaimFailures {
         }
         summary
     }
-}
 
-impl Deref for ClaimFailures {
-    type Target = Vec<ClaimResult>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    fn success_summary(&self) -> BTreeSet<(String, &'static str)> {
+        let failure_keys: BTreeSet<(String, &'static str)> = self
+            .failure_summary()
+            .keys()
+            .map(|(s, c)| (s.clone(), *c))
+            .collect();
+        self.scenarios_claims
+            .difference(&failure_keys)
+            .cloned()
+            .collect()
     }
 }
 
@@ -443,7 +459,7 @@ fn print_diff_out(diff_out: &BenchDiffOut) {
 /// Runs benchmarks with statistical t-tests for target functions and comparison scenarios defined by
 /// environment variables and command line arguments.
 /// Defaults are provided for environment variables and command line arguments not defined.
-pub fn bench_diff_claims_with_args() {
+pub fn bench_with_claims_and_args() {
     let Args {
         params_name,
         fn_name_pairs,
@@ -451,29 +467,42 @@ pub fn bench_diff_claims_with_args() {
         nrepeats,
     } = get_args();
     let fn_params = get_params(&params_name);
-    bench_diff_with_claims(fn_params, &fn_name_pairs, nrepeats, verbose);
+
+    let print_args = || {
+        println!("PARAMS_NAME=\"{params_name}\"");
+        println!("FN_NAME_PAIRS=\"{fn_name_pairs:?}\"");
+        println!("VERBOSE=\"{verbose}\"");
+        println!("nrepeats={nrepeats}");
+    };
+
+    bench_with_claims(fn_params, &fn_name_pairs, nrepeats, verbose, print_args);
 }
 
 /// Runs benchmarks with statistical t-tests for target functions parameterized by `fn_params`,
 /// with comparison scenarios defined by `fn_name_pairs`.
-pub fn bench_diff_with_claims<T: Deref<Target = str>>(
+pub fn bench_with_claims<T: Deref<Target = str>>(
     fn_params: &FnParams,
     fn_name_pairs: &[(T, T)],
     nrepeats: usize,
     verbose: bool,
+    print_args: impl Fn(),
 ) {
     let unit = fn_params.unit;
     let base_effort = calibrate_real_work(unit.latency_from_f64(fn_params.base_median));
 
-    let mut failures = ClaimFailures::new();
+    let mut results = ClaimResults::new();
     let mut ratio_medians_from_lns_noises =
         BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
     let mut diff_ratio_medians_noises =
         BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
     let mut diff_ln_stdev_noises = BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
 
+    println!();
+    print_args();
+    println!();
+
     for i in 1..=nrepeats {
-        println!("*** iteration = {i} ***");
+        eprintln!("*** iteration = {i} ***");
 
         for (name1, name2) in fn_name_pairs {
             let scenario_name = format!("f1={}, f2={}", name1.deref(), name2.deref());
@@ -523,19 +552,29 @@ pub fn bench_diff_with_claims<T: Deref<Target = str>>(
             collect_moments(diff_ln_stdev_noise, diff_out.stdev_diff_ln_f1_f2());
 
             let scenario = get_spec(name1, name2);
-            failures.run_scenario(scenario, &diff_out);
+            results.run_scenario(scenario, &diff_out);
         }
     }
 
     println!("*** failures ***");
-    for claim_result in failures.iter() {
+    for claim_result in results.failures.iter() {
         println!("{claim_result:?}");
     }
 
     println!();
-    println!("*** failures_summary ***");
-    for ((scenario_name, test), count) in failures.summary() {
-        println!("{scenario_name} | {test} ==> count={count}");
+    print_args();
+    println!();
+
+    println!();
+    println!("*** failure_summary ***");
+    for ((scenario_name, claim_name), count) in results.failure_summary() {
+        println!("{scenario_name} | {claim_name} ==> count={count}");
+    }
+
+    println!();
+    println!("*** success_summary ***");
+    for (scenario_name, claim_name) in results.success_summary() {
+        println!("{scenario_name} | {claim_name}");
     }
 
     println!();
@@ -580,7 +619,7 @@ pub fn bench_diff_with_claims<T: Deref<Target = str>>(
         );
     }
 
-    let failed_must_pass = failures.failed_must_pass();
+    let failed_must_pass = results.failed_must_pass();
 
     assert!(
         failed_must_pass.len() == 0,

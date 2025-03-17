@@ -1,4 +1,4 @@
-mod bench_t;
-pub use bench_t::*;
+mod bench_with_claims;
+pub use bench_with_claims::*;
 
 pub(super) mod params_args;

@@ -132,70 +132,115 @@ pub(super) fn get_fn(name: &str) -> fn(u32, &FnParams) -> MyFnMut {
 }
 
 static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
-    let lt_claims_strict = vec![
-        (&claim::WELCH_RATIO_LT_1, true),
-        (&claim::STUDENT_DIFF_LT_0, false),
-        (&claim::STUDENT_RATIO_LT_1, true),
-        (&claim::WILCOXON_RANK_SUM_F1_LT_F2, true),
-        (&claim::BERNOULLI_F1_LT_F2, true),
-        //
-        (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
-        (&claim::RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI, true),
-        (&claim::RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI, true),
-        (&claim::MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI, true),
-    ];
+    let lt_claims_strict = {
+        let target = 1.0 / 1.01;
+        vec![
+            (claim::welch_ratio_lt_1(), true),
+            (claim::student_diff_lt_0(), false),
+            (claim::student_ratio_lt_1(), true),
+            (claim::wilcoxon_rank_sum_f1_lt_f2(), true),
+            (claim::bernoulli_f1_lt_f2(), true),
+            //
+            (claim::ratio_medians_f1_f2_near_ratio_from_lns(), true),
+            (claim::ratio_medians_f1_f2_near_target(target), true),
+            (
+                claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
+                true,
+            ),
+            (
+                claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
+                true,
+            ),
+        ]
+    };
 
-    let lt_claims = vec![
-        (&claim::WELCH_RATIO_LT_1, false),
-        (&claim::STUDENT_DIFF_LT_0, false),
-        (&claim::STUDENT_RATIO_LT_1, false),
-        (&claim::WILCOXON_RANK_SUM_F1_LT_F2, false),
-        (&claim::BERNOULLI_F1_LT_F2, false),
-        //
-        (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
-        (&claim::RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI, true),
-        (&claim::RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI, true),
-        (&claim::MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI, true),
-    ];
+    let lt_claims = {
+        let target = 1.0 / 1.01;
+        vec![
+            (claim::welch_ratio_lt_1(), false),
+            (claim::student_diff_lt_0(), false),
+            (claim::student_ratio_lt_1(), false),
+            (claim::wilcoxon_rank_sum_f1_lt_f2(), false),
+            (claim::bernoulli_f1_lt_f2(), false),
+            //
+            (claim::ratio_medians_f1_f2_near_ratio_from_lns(), true),
+            (claim::ratio_medians_f1_f2_near_target(target), true),
+            (
+                claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
+                true,
+            ),
+            (
+                claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
+                true,
+            ),
+        ]
+    };
 
-    let eq_claims_strict = vec![
-        (&claim::WELCH_RATIO_EQ_1, true),
-        (&claim::STUDENT_DIFF_EQ_0, false),
-        (&claim::STUDENT_RATIO_EQ_1, true),
-        (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, true),
-        (&claim::BERNOULLI_F1_EQ_F2, true),
-        //
-        (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
-        (&claim::RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI, true),
-        (&claim::RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI, true),
-        (&claim::MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI, true),
-    ];
+    let eq_claims_strict = {
+        let target = 1.0;
+        vec![
+            (claim::welch_ratio_eq_1(), true),
+            (claim::student_diff_eq_0(), false),
+            (claim::student_ratio_eq_1(), true),
+            (claim::wilcoxon_rank_sum_f1_eq_f2(), true),
+            (claim::bernoulli_f1_eq_f2(), true),
+            //
+            (claim::ratio_medians_f1_f2_near_ratio_from_lns(), true),
+            (claim::ratio_medians_f1_f2_near_target(target), true),
+            (
+                claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
+                true,
+            ),
+            (
+                claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
+                true,
+            ),
+        ]
+    };
 
-    let eq_claims = vec![
-        (&claim::WELCH_RATIO_EQ_1, false),
-        (&claim::STUDENT_DIFF_EQ_0, false),
-        (&claim::STUDENT_RATIO_EQ_1, false),
-        (&claim::WILCOXON_RANK_SUM_F1_EQ_F2, false),
-        (&claim::BERNOULLI_F1_EQ_F2, false),
-        //
-        (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
-        (&claim::RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI, true),
-        (&claim::RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI, true),
-        (&claim::MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI, true),
-    ];
+    let eq_claims = {
+        let target = 1.0;
+        vec![
+            (claim::welch_ratio_eq_1(), false),
+            (claim::student_diff_eq_0(), false),
+            (claim::student_ratio_eq_1(), false),
+            (claim::wilcoxon_rank_sum_f1_eq_f2(), false),
+            (claim::bernoulli_f1_eq_f2(), false),
+            //
+            (claim::ratio_medians_f1_f2_near_ratio_from_lns(), true),
+            (claim::ratio_medians_f1_f2_near_target(target), true),
+            (
+                claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
+                true,
+            ),
+            (
+                claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
+                true,
+            ),
+        ]
+    };
 
-    let gt_claims_strict = vec![
-        (&claim::WELCH_RATIO_GT_1, true),
-        (&claim::STUDENT_DIFF_GT_0, false),
-        (&claim::STUDENT_RATIO_GT_1, true),
-        (&claim::WILCOXON_RANK_SUM_F1_GT_F2, true),
-        (&claim::BERNOULLI_F1_GT_F2, true),
-        //
-        (&claim::RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS, true),
-        (&claim::RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI, true),
-        (&claim::RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI, true),
-        (&claim::MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI, true),
-    ];
+    let gt_claims_strict = {
+        let target = 1.01;
+        vec![
+            (claim::welch_ratio_gt_1(), true),
+            (claim::student_diff_gt_0(), false),
+            (claim::student_ratio_gt_1(), true),
+            (claim::wilcoxon_rank_sum_f1_gt_f2(), true),
+            (claim::bernoulli_f1_gt_f2(), true),
+            //
+            (claim::ratio_medians_f1_f2_near_ratio_from_lns(), true),
+            (claim::ratio_medians_f1_f2_near_target(target), true),
+            (
+                claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
+                true,
+            ),
+            (
+                claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
+                true,
+            ),
+        ]
+    };
 
     [
         Scenario::new("base_median_no_var", "base_median_no_var", eq_claims_strict),
@@ -287,23 +332,30 @@ pub(super) struct Args {
     pub(super) fn_name_pairs: Vec<(String, String)>,
     pub(super) verbose: bool,
     pub(super) nrepeats: usize,
+    pub(super) run_name: String,
 }
 
-fn cmd_line_args() -> Option<usize> {
+fn cmd_line_args() -> Option<(usize, String)> {
     let mut args = std::env::args();
 
     let nrepeats = match args.nth(1) {
-        Some(v) if v.eq("--bench") => return None,
-        Some(v) => v
+        Some(v) if v.ne("--bench") => v
             .parse::<usize>()
-            .expect("argument, if provided, must be integer"),
-        None => return None,
+            .expect("1st argument, if provided, must be non-negative integer"),
+        _ => return None,
     };
-    Some(nrepeats)
+
+    let run_name = match args.next() {
+        Some(v) if v.ne("--bench") => v,
+        _ => String::new(),
+    };
+
+    Some((nrepeats, run_name))
 }
 
 pub(super) fn get_args() -> Args {
-    let nrepeats = cmd_line_args().unwrap_or(1);
+    let (nrepeats, run_name) = cmd_line_args().unwrap_or((1, "".to_string()));
+
     let params_name = env::var("PARAMS_NAME").unwrap_or("micros_scale".into());
     let fn_name_pairs_res = env::var("FN_NAME_PAIRS");
     let verbose_str = env::var("VERBOSE").unwrap_or("true".into());
@@ -341,5 +393,6 @@ pub(super) fn get_args() -> Args {
         fn_name_pairs,
         verbose,
         nrepeats,
+        run_name,
     }
 }

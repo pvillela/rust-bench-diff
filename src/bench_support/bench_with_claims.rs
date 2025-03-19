@@ -13,9 +13,24 @@ use std::{
 };
 
 #[derive(Clone)]
+pub(super) enum ClaimRunnable {
+    F0(fn(&BenchDiffOut) -> Option<String>),
+    F1(fn(&BenchDiffOut, f64) -> Option<String>, f64),
+}
+
+impl ClaimRunnable {
+    pub(super) fn invoke(&self, out: &BenchDiffOut) -> Option<String> {
+        match self {
+            Self::F0(f) => f(out),
+            Self::F1(f, arg) => f(out, *arg),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub(super) struct Claim {
     name: &'static str,
-    f: fn(&BenchDiffOut) -> Option<String>,
+    f: ClaimRunnable,
 }
 
 pub(super) mod claim {
@@ -37,215 +52,261 @@ pub(super) mod claim {
         }
     }
 
-    pub static WELCH_RATIO_GT_1: Claim = Claim {
-        name: "welch_ratio_gt_1",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Gt;
-            let res = out.welch_ln_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
+    pub fn welch_ratio_gt_1() -> Claim {
+        Claim {
+            name: "welch_ratio_gt_1",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Gt;
+                let res = out.welch_ln_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Alt(alt_hyp))
+            }),
+        }
+    }
 
-    pub static WELCH_RATIO_EQ_1: Claim = Claim {
-        name: "welch_ratio_eq_1",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Ne;
-            let res = out.welch_ln_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Null)
-        },
-    };
+    pub fn welch_ratio_eq_1() -> Claim {
+        Claim {
+            name: "welch_ratio_eq_1",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Ne;
+                let res = out.welch_ln_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Null)
+            }),
+        }
+    }
 
-    pub static WELCH_RATIO_LT_1: Claim = Claim {
-        name: "welch_ratio_lt_1",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Lt;
-            let res = out.welch_ln_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
+    pub fn welch_ratio_lt_1() -> Claim {
+        Claim {
+            name: "welch_ratio_lt_1",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Lt;
+                let res = out.welch_ln_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Alt(alt_hyp))
+            }),
+        }
+    }
 
-    pub static STUDENT_DIFF_GT_0: Claim = Claim {
-        name: "student_diff_gt_0",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Gt;
-            let res = out.student_diff_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
+    pub fn student_diff_gt_0() -> Claim {
+        Claim {
+            name: "student_diff_gt_0",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Gt;
+                let res = out.student_diff_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Alt(alt_hyp))
+            }),
+        }
+    }
 
-    pub static STUDENT_DIFF_EQ_0: Claim = Claim {
-        name: "student_diff_eq_0",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Gt;
-            let res = out.student_diff_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Null)
-        },
-    };
+    pub fn student_diff_eq_0() -> Claim {
+        Claim {
+            name: "student_diff_eq_0",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Gt;
+                let res = out.student_diff_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Null)
+            }),
+        }
+    }
 
-    pub static STUDENT_DIFF_LT_0: Claim = Claim {
-        name: "student_diff_lt_0",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Lt;
-            let res = out.student_diff_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
+    pub fn student_diff_lt_0() -> Claim {
+        Claim {
+            name: "student_diff_lt_0",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Lt;
+                let res = out.student_diff_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Alt(alt_hyp))
+            }),
+        }
+    }
 
-    pub static STUDENT_RATIO_GT_1: Claim = Claim {
-        name: "student_ratio_gt_1",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Gt;
-            let res = out.student_diff_ln_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
+    pub fn student_ratio_gt_1() -> Claim {
+        Claim {
+            name: "student_ratio_gt_1",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Gt;
+                let res = out.student_diff_ln_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Alt(alt_hyp))
+            }),
+        }
+    }
 
-    pub static STUDENT_RATIO_EQ_1: Claim = Claim {
-        name: "student_ratio_eq_1",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Ne;
-            let res = out.student_diff_ln_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Null)
-        },
-    };
+    pub fn student_ratio_eq_1() -> Claim {
+        Claim {
+            name: "student_ratio_eq_1",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Ne;
+                let res = out.student_diff_ln_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Null)
+            }),
+        }
+    }
 
-    pub static STUDENT_RATIO_LT_1: Claim = Claim {
-        name: "student_ratio_lt_1",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Lt;
-            let res = out.student_diff_ln_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
+    pub fn student_ratio_lt_1() -> Claim {
+        Claim {
+            name: "student_ratio_lt_1",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Lt;
+                let res = out.student_diff_ln_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Alt(alt_hyp))
+            }),
+        }
+    }
 
-    pub static RATIO_MEDIANS_F1_F2_NEAR_RATIO_FROM_LNS: Claim = Claim {
-        name: "ratio_medians_f1_f2_near_ratio_from_lns",
-        f: |out: &BenchDiffOut| {
-            let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
-            let ratio_medians_f1_f2_from_lns = out.ratio_medians_f1_f2_from_lns();
+    pub fn ratio_medians_f1_f2_near_ratio_from_lns() -> Claim {
+        Claim {
+            name: "ratio_medians_f1_f2_near_ratio_from_lns",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
+                let ratio_medians_f1_f2_from_lns = out.ratio_medians_f1_f2_from_lns();
 
-            if ratio_medians_f1_f2.approx_eq(ratio_medians_f1_f2_from_lns, 0.005) {
-                None
-            } else {
-                Some(format!(
-                    "ratio_medians_f1_f2={ratio_medians_f1_f2}, ratio_medians_f1_f2_from_lns={ratio_medians_f1_f2_from_lns}"
-                ))
-            }
-        },
-    };
+                if ratio_medians_f1_f2.approx_eq(ratio_medians_f1_f2_from_lns, 0.005) {
+                    None
+                } else {
+                    Some(format!(
+                        "ratio_medians_f1_f2={ratio_medians_f1_f2}, ratio_medians_f1_f2_from_lns={ratio_medians_f1_f2_from_lns}"
+                    ))
+                }
+            }),
+        }
+    }
 
-    pub static RATIO_MEDIANS_F1_F2_IN_WELCH_RATIO_CI: Claim = Claim {
-        name: "ratio_medians_f1_f2_in_welch_ratio_ci",
-        f: |out: &BenchDiffOut| {
-            let value = out.ratio_medians_f1_f2();
-            let ci = out.welch_ratio_ci(ALPHA);
+    pub fn ratio_medians_f1_f2_near_target(target: f64) -> Claim {
+        Claim {
+            name: "ratio_medians_f1_f2_near_target",
+            f: ClaimRunnable::F1(
+                |out: &BenchDiffOut, value: f64| {
+                    let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
 
-            if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
-                None
-            } else {
-                Some(format!(
-                    "ratio_medians_f1_f2={value}, welch_ratio_ci={ci:?}"
-                ))
-            }
-        },
-    };
+                    if ratio_medians_f1_f2.approx_eq(value, 0.005) {
+                        None
+                    } else {
+                        Some(format!(
+                            "ratio_medians_f1_f2={ratio_medians_f1_f2}, target={value}"
+                        ))
+                    }
+                },
+                target,
+            ),
+        }
+    }
 
-    pub static RATIO_MEDIANS_F1_F2_IN_STUDENT_RATIO_CI: Claim = Claim {
-        name: "ratio_medians_f1_f2_in_student_ratio_ci",
-        f: |out: &BenchDiffOut| {
-            let value = out.ratio_medians_f1_f2();
-            let ci = out.student_ratio_ci(ALPHA);
+    pub fn target_ratio_medians_f1_f2_in_welch_ratio_ci(target: f64) -> Claim {
+        Claim {
+            name: "target_ratio_medians_f1_f2_in_welch_ratio_ci",
+            f: ClaimRunnable::F1(
+                |out: &BenchDiffOut, value: f64| {
+                    let ci = out.welch_ratio_ci(ALPHA);
 
-            if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
-                None
-            } else {
-                Some(format!(
-                    "ratio_medians_f1_f2={value}, student_ratio_ci={ci:?}"
-                ))
-            }
-        },
-    };
+                    if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
+                        None
+                    } else {
+                        Some(format!(
+                            "ratio_medians_f1_f2={value}, welch_ratio_ci={ci:?}"
+                        ))
+                    }
+                },
+                target,
+            ),
+        }
+    }
 
-    pub static MEAN_DIFF_F1_F2_IN_STUDENT_DIFF_CI: Claim = Claim {
-        name: "mean_diff_f1_f2_in_student_diff_ci",
-        f: |out: &BenchDiffOut| {
-            let value = out.mean_diff_f1_f2();
-            let ci = out.student_diff_ci(ALPHA);
+    pub fn target_ratio_medians_f1_f2_in_student_ratio_ci(target: f64) -> Claim {
+        Claim {
+            name: "target_ratio_medians_f1_f2_in_student_ratio_ci",
+            f: ClaimRunnable::F1(
+                |out: &BenchDiffOut, value: f64| {
+                    let ci = out.student_ratio_ci(ALPHA);
 
-            if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
-                None
-            } else {
-                Some(format!("mean_diff_f1_f2={value}, student_diff_ci={ci:?}"))
-            }
-        },
-    };
+                    if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
+                        None
+                    } else {
+                        Some(format!(
+                            "ratio_medians_f1_f2={value}, student_ratio_ci={ci:?}"
+                        ))
+                    }
+                },
+                target,
+            ),
+        }
+    }
 
-    pub static WILCOXON_RANK_SUM_F1_LT_F2: Claim = Claim {
-        name: "wilcoxon_rank_sum_f1_lt_f2",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Lt;
-            let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
+    pub fn wilcoxon_rank_sum_f1_lt_f2() -> Claim {
+        Claim {
+            name: "wilcoxon_rank_sum_f1_lt_f2",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Lt;
+                let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Alt(alt_hyp))
+            }),
+        }
+    }
 
-    pub static WILCOXON_RANK_SUM_F1_EQ_F2: Claim = Claim {
-        name: "wilcoxon_rank_sum_f1_eq_f2",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Ne;
-            let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Null)
-        },
-    };
+    pub fn wilcoxon_rank_sum_f1_eq_f2() -> Claim {
+        Claim {
+            name: "wilcoxon_rank_sum_f1_eq_f2",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Ne;
+                let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Null)
+            }),
+        }
+    }
 
-    pub static WILCOXON_RANK_SUM_F1_GT_F2: Claim = Claim {
-        name: "wilcoxon_rank_sum_f1_gt_f2",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Gt;
-            let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
+    pub fn wilcoxon_rank_sum_f1_gt_f2() -> Claim {
+        Claim {
+            name: "wilcoxon_rank_sum_f1_gt_f2",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Gt;
+                let res = out.wilcoxon_rank_sum_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Alt(alt_hyp))
+            }),
+        }
+    }
 
-    pub static BERNOULLI_F1_GT_F2: Claim = Claim {
-        name: "bernoulli_f1_gt_f2",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Gt;
-            let res = out.bernoulli_eq_half_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
+    pub fn bernoulli_f1_gt_f2() -> Claim {
+        Claim {
+            name: "bernoulli_f1_gt_f2",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Gt;
+                let res = out.bernoulli_eq_half_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Alt(alt_hyp))
+            }),
+        }
+    }
 
-    pub static BERNOULLI_F1_EQ_F2: Claim = Claim {
-        name: "bernoulli_f1_eq_f2",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Ne;
-            let res = out.bernoulli_eq_half_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Null)
-        },
-    };
+    pub fn bernoulli_f1_eq_f2() -> Claim {
+        Claim {
+            name: "bernoulli_f1_eq_f2",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Ne;
+                let res = out.bernoulli_eq_half_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Null)
+            }),
+        }
+    }
 
-    pub static BERNOULLI_F1_LT_F2: Claim = Claim {
-        name: "bernoulli_f1_lt_f2",
-        f: |out: &BenchDiffOut| {
-            let alt_hyp = AltHyp::Lt;
-            let res = out.bernoulli_eq_half_test(alt_hyp, ALPHA);
-            check_hyp_test_result(res, Hyp::Alt(alt_hyp))
-        },
-    };
+    pub fn bernoulli_f1_lt_f2() -> Claim {
+        Claim {
+            name: "bernoulli_f1_lt_f2",
+            f: ClaimRunnable::F0(|out: &BenchDiffOut| {
+                let alt_hyp = AltHyp::Lt;
+                let res = out.bernoulli_eq_half_test(alt_hyp, ALPHA);
+                check_hyp_test_result(res, Hyp::Alt(alt_hyp))
+            }),
+        }
+    }
 }
 
 pub(super) struct Scenario {
     pub(super) name1: &'static str,
     pub(super) name2: &'static str,
-    pub(super) claims: Vec<(&'static Claim, bool)>,
+    pub(super) claims: Vec<(Claim, bool)>,
 }
 
 impl Scenario {
     pub(super) const fn new(
         name1: &'static str,
         name2: &'static str,
-        claims: Vec<(&'static Claim, bool)>,
+        claims: Vec<(Claim, bool)>,
     ) -> Self {
         Self {
             name1,
@@ -260,7 +321,7 @@ impl Scenario {
             .map(|(claim, must_pass)| ClaimResult {
                 scenario_name: format!("fn1={}, fn2={}", self.name1, self.name2),
                 claim_name: claim.name,
-                result: (claim.f)(diff_out),
+                result: claim.f.invoke(diff_out),
                 must_pass: *must_pass,
             })
             .collect()
@@ -342,116 +403,108 @@ impl ClaimResults {
 
 const ALPHA: f64 = 0.05;
 
-fn print_diff_out(diff_out: &BenchDiffOut) {
-    let ratio_medians_f1_f2 = diff_out.ratio_medians_f1_f2();
-    let ratio_medians_f1_f2_from_lns = diff_out.mean_diff_ln_f1_f2().exp();
+fn print_diff_out(out: &BenchDiffOut) {
+    let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
+    let ratio_medians_f1_f2_from_lns = out.mean_diff_ln_f1_f2().exp();
 
     println!();
-    println!("summary_f1={:?}", diff_out.summary_f1());
+    println!("summary_f1={:?}", out.summary_f1());
     println!();
-    println!("summary_f2={:?}", diff_out.summary_f2());
+    println!("summary_f2={:?}", out.summary_f2());
     println!();
     println!(
-        "ratio_median_f1_f2={}, ratio_medians_f1_f2_from_lns={}, diff={}",
+        "ratio_medians_f1_f2={}, ratio_medians_f1_f2_from_lns={}, diff={}",
         ratio_medians_f1_f2,
         ratio_medians_f1_f2_from_lns,
         ratio_medians_f1_f2 - ratio_medians_f1_f2_from_lns
     );
     println!();
-    println!(
-        "welch_ratio_ci={:?}, welch_position_of_1_wrt_ratio_ci={:?}",
-        diff_out.welch_ratio_ci(ALPHA),
-        diff_out.welch_value_position_wrt_ratio_ci(1.0, ALPHA)
-    );
+    println!("welch_ratio_ci={:?}", out.welch_ratio_ci(ALPHA),);
     println!(
         "welch_ln_test_lt:{:?}",
-        diff_out.welch_ln_test(AltHyp::Lt, ALPHA)
+        out.welch_ln_test(AltHyp::Lt, ALPHA)
     );
     println!(
         "welch_ln_test_eq:{:?}",
-        diff_out.welch_ln_test(AltHyp::Ne, ALPHA)
+        out.welch_ln_test(AltHyp::Ne, ALPHA)
     );
     println!(
         "welch_ln_test_gt:{:?}",
-        diff_out.welch_ln_test(AltHyp::Gt, ALPHA)
+        out.welch_ln_test(AltHyp::Gt, ALPHA)
     );
     println!();
-    println!(
-        "student_ratio_ci={:?}, student_position_of_1_wrt_ratio_ci={:?}",
-        diff_out.student_ratio_ci(ALPHA),
-        diff_out.student_value_position_wrt_ratio_ci(1.0, ALPHA)
-    );
+    println!("student_ratio_ci={:?}", out.student_ratio_ci(ALPHA),);
     println!(
         "student_diff_ln_test_lt:{:?}",
-        diff_out.student_diff_ln_test(AltHyp::Lt, ALPHA)
+        out.student_diff_ln_test(AltHyp::Lt, ALPHA)
     );
     println!(
         "student_diff_ln_test_eq:{:?}",
-        diff_out.student_diff_ln_test(AltHyp::Ne, ALPHA)
+        out.student_diff_ln_test(AltHyp::Ne, ALPHA)
     );
     println!(
         "student_diff_ln_test_gt:{:?}",
-        diff_out.student_diff_ln_test(AltHyp::Gt, ALPHA)
+        out.student_diff_ln_test(AltHyp::Gt, ALPHA)
     );
     println!();
-    println!("mean_diff_f1_f2={}", diff_out.mean_diff_f1_f2());
+    println!("mean_diff_f1_f2={}", out.mean_diff_f1_f2());
     println!(
-        "diff_ci={:?}, student_position_of_0_wrt_diff_ci={:?}",
-        diff_out.student_diff_ci(ALPHA),
-        diff_out.student_value_position_wrt_diff_ci(0.0, ALPHA)
+        "relative_mean_diff_f1_f2={}",
+        out.mean_diff_f1_f2() / (out.mean_f1() + out.mean_f2()) * 2.0
+    );
+    println!("diff_medians_f1_f2={}", out.diff_medians_f1_f2());
+    println!(
+        "relative_diff_medians_f1_f2={}",
+        out.diff_medians_f1_f2() / (out.median_f1() + out.median_f2()) * 2.0
     );
     println!(
         "student_diff_test_lt:{:?}",
-        diff_out.student_diff_test(AltHyp::Lt, ALPHA)
+        out.student_diff_test(AltHyp::Lt, ALPHA)
     );
     println!(
         "student_diff_test_eq:{:?}",
-        diff_out.student_diff_test(AltHyp::Ne, ALPHA)
+        out.student_diff_test(AltHyp::Ne, ALPHA)
     );
     println!(
         "student_diff_test_gt:{:?}",
-        diff_out.student_diff_test(AltHyp::Gt, ALPHA)
+        out.student_diff_test(AltHyp::Gt, ALPHA)
     );
     println!();
     println!(
         "count_f1_lt_f2={}, count_f1_eq_f2={}, count_f1_gt_f2={}",
-        diff_out.count_f1_lt_f2(),
-        diff_out.count_f1_eq_f2(),
-        diff_out.count_f1_gt_f2()
+        out.count_f1_lt_f2(),
+        out.count_f1_eq_f2(),
+        out.count_f1_gt_f2()
     );
     println!(
         "bernoulli_prob_f1_gt_f2={:?}",
-        diff_out.bernoulli_prob_f1_gt_f2()
+        out.bernoulli_prob_f1_gt_f2()
     );
-    println!(
-        "bernoulli_ci={:?}, bernoulli_position_of_half_wrt_ci={:?}",
-        diff_out.bernoulli_ci(ALPHA),
-        diff_out.bernoulli_value_position_wrt_ci(0.5, ALPHA)
-    );
+    println!("bernoulli_ci={:?}", out.bernoulli_ci(ALPHA),);
     println!(
         "bernoulli_eq_half_test_lt:{:?}",
-        diff_out.bernoulli_eq_half_test(AltHyp::Lt, ALPHA)
+        out.bernoulli_eq_half_test(AltHyp::Lt, ALPHA)
     );
     println!(
         "bernoulli_eq_half_test_eq:{:?}",
-        diff_out.bernoulli_eq_half_test(AltHyp::Ne, ALPHA)
+        out.bernoulli_eq_half_test(AltHyp::Ne, ALPHA)
     );
     println!(
         "bernoulli_eq_half_test_gt:{:?}",
-        diff_out.bernoulli_eq_half_test(AltHyp::Gt, ALPHA)
+        out.bernoulli_eq_half_test(AltHyp::Gt, ALPHA)
     );
     println!();
     println!(
         "wilcoxon_rank_sum_test_lt:{:?}",
-        diff_out.wilcoxon_rank_sum_test(AltHyp::Lt, ALPHA)
+        out.wilcoxon_rank_sum_test(AltHyp::Lt, ALPHA)
     );
     println!(
         "wilcoxon_rank_sum_test_eq:{:?}",
-        diff_out.wilcoxon_rank_sum_test(AltHyp::Ne, ALPHA)
+        out.wilcoxon_rank_sum_test(AltHyp::Ne, ALPHA)
     );
     println!(
         "wilcoxon_rank_sum_test_gt:{:?}",
-        diff_out.wilcoxon_rank_sum_test(AltHyp::Gt, ALPHA)
+        out.wilcoxon_rank_sum_test(AltHyp::Gt, ALPHA)
     );
     println!();
 }
@@ -465,27 +518,42 @@ pub fn bench_with_claims_and_args() {
         fn_name_pairs,
         verbose,
         nrepeats,
+        run_name,
     } = get_args();
     let fn_params = get_params(&params_name);
 
     let print_args = || {
+        println!("*** arguments ***");
         println!("PARAMS_NAME=\"{params_name}\"");
         println!("FN_NAME_PAIRS=\"{fn_name_pairs:?}\"");
         println!("VERBOSE=\"{verbose}\"");
         println!("nrepeats={nrepeats}");
+        println!("run_name=\"{run_name}\"");
     };
 
-    bench_with_claims(fn_params, &fn_name_pairs, nrepeats, verbose, print_args);
+    bench_with_claims(
+        fn_params,
+        &fn_name_pairs,
+        verbose,
+        nrepeats,
+        print_args,
+        &run_name,
+    );
 }
 
-/// Runs benchmarks with statistical t-tests for target functions parameterized by `fn_params`,
-/// with comparison scenarios defined by `fn_name_pairs`.
+/// Runs benchmarks with statistical tests and other claims for target functions parameterized by `fn_params`,
+/// with comparison scenarios defined by `fn_name_pairs`, repeating the benchmarks `nrepeats` times and collecting summary
+/// results for the claims.
+///
+///  `verbose` determines the verbosity of output, `print_args` is a closure that prints the
+/// configuration arguments for the benchmarks and `run_name` is a string that designates the run in the print-out.
 pub fn bench_with_claims<T: Deref<Target = str>>(
     fn_params: &FnParams,
     fn_name_pairs: &[(T, T)],
-    nrepeats: usize,
     verbose: bool,
+    nrepeats: usize,
     print_args: impl Fn(),
+    run_name: &str,
 ) {
     let unit = fn_params.unit;
     let base_effort = calibrate_busy_work(unit.latency_from_f64(fn_params.base_median));
@@ -502,7 +570,7 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
     println!();
 
     for i in 1..=nrepeats {
-        eprintln!("*** iteration = {i} ***");
+        eprintln!("*** run_name=\"{run_name}\", iteration={i} ***");
 
         for (name1, name2) in fn_name_pairs {
             let scenario_name = format!("f1={}, f2={}", name1.deref(), name2.deref());
@@ -563,7 +631,6 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
 
     println!();
     print_args();
-    println!();
 
     println!();
     println!("*** failure_summary ***");

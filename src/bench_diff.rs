@@ -13,7 +13,7 @@ use core::f64;
 use hdrhistogram::Histogram;
 use std::{
     error::Error,
-    io::{Write, stdout},
+    io::{Write, stderr, stdout},
     time::{Duration, Instant},
 };
 
@@ -158,12 +158,24 @@ impl BenchDiffOut {
         sample_stdev(self.n(), self.sum_diff_ln_f1_f2, self.sum2_diff_ln_f1_f2)
     }
 
+    pub fn mean_f1(&self) -> f64 {
+        self.summary_f1().mean
+    }
+
+    pub fn mean_f2(&self) -> f64 {
+        self.summary_f2().mean
+    }
+
     pub fn median_f1(&self) -> f64 {
         self.summary_f1().median as f64
     }
 
     pub fn median_f2(&self) -> f64 {
         self.summary_f2().median as f64
+    }
+
+    pub fn diff_medians_f1_f2(&self) -> f64 {
+        self.median_f1() - self.median_f2()
     }
 
     // Ratio of medians computed from histograms.
@@ -414,11 +426,11 @@ impl BenchDiffState {
         mut f2: impl FnMut(),
         exec_count: usize,
         pre_exec: impl Fn(),
-        mut exec_status: impl FnMut(usize),
+        mut exec_status: impl FnMut(),
     ) {
         pre_exec();
 
-        for i in 1..=exec_count / 4 {
+        for _ in 1..=exec_count / 4 {
             let pairs = quad_exec(&mut f1, &mut f2);
 
             for (latency1, latency2) in pairs {
@@ -465,7 +477,7 @@ impl BenchDiffState {
                 self.sum2_diff_ln_f1_f2 += diff_ln_f1_f2.powi(2);
             }
 
-            exec_status(i * 4);
+            exec_status();
         }
     }
 
@@ -478,14 +490,7 @@ impl BenchDiffState {
     ) {
         let start = Instant::now();
         for i in 1.. {
-            self.execute(
-                unit,
-                &mut f1,
-                &mut f2,
-                WARMUP_INCREMENT_COUNT,
-                || {},
-                |_| {},
-            );
+            self.execute(unit, &mut f1, &mut f2, WARMUP_INCREMENT_COUNT, || {}, || {});
             let elapsed = Instant::now().duration_since(start);
             warm_up_status(i, elapsed.as_millis() as u64, WARMUP_MILLIS);
             if elapsed.ge(&Duration::from_millis(WARMUP_MILLIS)) {
@@ -538,7 +543,7 @@ pub fn bench_diff_x(
     exec_count: usize,
     mut warm_up_status: impl FnMut(usize, u64, u64),
     pre_exec: impl Fn(),
-    mut exec_status: impl FnMut(usize),
+    mut exec_status: impl FnMut(),
 ) -> BenchDiffOut {
     let exec_count2 = exec_count / 2;
 
@@ -550,21 +555,14 @@ pub fn bench_diff_x(
         &mut f1,
         &mut f2,
         exec_count2,
-        &pre_exec,
+        pre_exec,
         &mut exec_status,
     );
 
     let mut state_rev = BenchDiffState::new();
     // state_rev.warm_up(unit, &mut f2, &mut f1, &mut warm_up_status);
     // state_rev.reset();
-    state_rev.execute(
-        unit,
-        &mut f2,
-        &mut f1,
-        exec_count2,
-        &pre_exec,
-        &mut exec_status,
-    );
+    state_rev.execute(unit, &mut f2, &mut f1, exec_count2, || (), &mut exec_status);
 
     state
         .merge_reversed(state_rev)
@@ -579,7 +577,7 @@ pub fn bench_diff(
     f2: impl FnMut(),
     exec_count: usize,
 ) -> BenchDiffOut {
-    bench_diff_x(unit, f1, f2, exec_count, |_, _, _| {}, || (), |_| ())
+    bench_diff_x(unit, f1, f2, exec_count, |_, _, _| {}, || (), || ())
 }
 
 pub fn bench_diff_print(
@@ -596,45 +594,40 @@ pub fn bench_diff_print(
 
     let warm_up_status = {
         let mut status_len: usize = 0;
-        let mut phase = 1;
 
         move |_: usize, elapsed_millis: u64, warm_up_millis: u64| {
             if status_len == 0 {
-                print!("Phase {phase}: Warming up ... ");
-                phase += 1;
+                print!("Warming up ... ");
                 stdout().flush().expect("unexpected I/O error");
             }
-            print!("{}", "\u{8}".repeat(status_len));
+            eprint!("{}", "\u{8}".repeat(status_len));
             let status = format!("{elapsed_millis} millis of {warm_up_millis}.");
             if elapsed_millis.lt(&warm_up_millis) {
                 status_len = status.len();
             } else {
                 status_len = 0;
             };
-            print!("{status}");
-            stdout().flush().expect("unexpected I/O error");
+            eprint!("{status}");
+            stderr().flush().expect("unexpected I/O error");
         }
     };
 
     let pre_exec = || {
-        print!(" Executing bench_diff: ");
+        print!(" Executing bench_diff ... ");
         stdout().flush().expect("unexpected I/O error");
     };
 
     let exec_status = {
-        let exec_count2 = exec_count / 2;
         let mut status_len: usize = 0;
+        let mut i = 0;
 
-        move |i| {
-            print!("{}", "\u{8}".repeat(status_len));
-            let status = format!("{i}/{exec_count2}.");
+        move || {
+            i += 4;
+            eprint!("{}", "\u{8}".repeat(status_len));
+            let status = format!("{i} of {exec_count}.");
             status_len = status.len();
-            print!("{status}");
+            eprint!("{status}");
             stdout().flush().expect("unexpected I/O error");
-            if i >= exec_count2 {
-                status_len = 0;
-                println!();
-            }
         }
     };
 

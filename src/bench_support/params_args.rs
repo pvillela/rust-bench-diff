@@ -11,19 +11,8 @@ use rand_distr::LogNormal;
 use std::{env, sync::LazyLock};
 
 pub const ALPHA: f64 = 0.05;
-
-pub struct FnParams {
-    pub unit: LatencyUnit,
-    pub exec_count: usize,
-    pub base_median: f64,
-    pub hi_median: f64,
-    pub lo_stdev_log: f64,
-    pub hi_stdev_log: f64,
-}
-
-pub fn default_hi_median_ratio() -> f64 {
-    1.01
-}
+pub const HI_1PCT_FACTOR: f64 = 1.01;
+pub const HI_10PCT_FACTOR: f64 = 1.1;
 
 pub fn default_lo_stdev_log() -> f64 {
     1.2_f64.ln() / 2.0
@@ -33,12 +22,20 @@ pub fn default_hi_stdev_log() -> f64 {
     2.4_f64.ln() / 2.0
 }
 
+pub struct FnParams {
+    pub unit: LatencyUnit,
+    pub exec_count: usize,
+    pub base_median: f64,
+    pub lo_stdev_log: f64,
+    pub hi_stdev_log: f64,
+}
+
 pub enum MyFnMut {
-    Constant {
+    Determ {
         median_effort: u32,
     },
 
-    Variable {
+    Random {
         median_effort: u32,
         lognormal: LogNormal<f64>,
         rng: StdRng,
@@ -47,13 +44,13 @@ pub enum MyFnMut {
 
 impl MyFnMut {
     fn new_constant(median_effort: u32) -> Self {
-        Self::Constant { median_effort }
+        Self::Determ { median_effort }
     }
 
     fn new_variable(median_effort: u32, stdev_log: f64) -> Self {
         let mu = 0.0_f64;
         let sigma = stdev_log;
-        Self::Variable {
+        Self::Random {
             median_effort,
             lognormal: LogNormal::new(mu, sigma).expect("stdev_log must be > 0"),
             rng: StdRng::from_rng(&mut rand::rng()),
@@ -62,11 +59,11 @@ impl MyFnMut {
 
     pub fn invoke(&mut self) {
         match self {
-            Self::Constant { median_effort } => {
+            Self::Determ { median_effort } => {
                 busy_work(*median_effort);
             }
 
-            Self::Variable {
+            Self::Random {
                 median_effort,
                 lognormal,
                 rng,
@@ -84,8 +81,13 @@ fn make_base_median_no_var(base_effort: u32, _: &FnParams) -> MyFnMut {
     MyFnMut::new_constant(effort)
 }
 
-fn make_hi_median_no_var(base_effort: u32, params: &FnParams) -> MyFnMut {
-    let effort = (base_effort as f64 * params.hi_median / params.base_median) as u32;
+fn make_hi_1pct_median_no_var(base_effort: u32, _: &FnParams) -> MyFnMut {
+    let effort = (base_effort as f64 * HI_1PCT_FACTOR) as u32;
+    MyFnMut::new_constant(effort)
+}
+
+fn make_hi_10pct_median_no_var(base_effort: u32, _: &FnParams) -> MyFnMut {
+    let effort = (base_effort as f64 * HI_10PCT_FACTOR) as u32;
     MyFnMut::new_constant(effort)
 }
 
@@ -94,8 +96,13 @@ fn make_base_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     MyFnMut::new_variable(effort, params.lo_stdev_log)
 }
 
-fn make_hi_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
-    let effort = (base_effort as f64 * params.hi_median / params.base_median) as u32;
+fn make_hi_1pct_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
+    let effort = (base_effort as f64 * HI_1PCT_FACTOR) as u32;
+    MyFnMut::new_variable(effort, params.lo_stdev_log)
+}
+
+fn make_hi_10pct_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
+    let effort = (base_effort as f64 * HI_10PCT_FACTOR) as u32;
     MyFnMut::new_variable(effort, params.lo_stdev_log)
 }
 
@@ -104,29 +111,26 @@ fn make_base_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     MyFnMut::new_variable(effort, params.hi_stdev_log)
 }
 
-fn make_hi_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
-    let effort = (base_effort as f64 * params.hi_median / params.base_median) as u32;
+fn make_hi_1pct_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
+    let effort = (base_effort as f64 * HI_1PCT_FACTOR) as u32;
     MyFnMut::new_variable(effort, params.hi_stdev_log)
 }
 
-pub static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
-    ("base_median_no_var", "base_median_no_var"),
-    ("base_median_no_var", "hi_median_no_var"),
-    ("hi_median_no_var", "base_median_no_var"),
-    ("base_median_lo_var", "base_median_lo_var"),
-    ("base_median_lo_var", "base_median_hi_var"),
-    ("base_median_hi_var", "base_median_lo_var"),
-    ("base_median_lo_var", "hi_median_lo_var"),
-    ("base_median_lo_var", "hi_median_hi_var"),
-];
+fn make_hi_10pct_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
+    let effort = (base_effort as f64 * HI_10PCT_FACTOR) as u32;
+    MyFnMut::new_variable(effort, params.hi_stdev_log)
+}
 
-const NAMED_FNS: [(&str, fn(u32, &FnParams) -> MyFnMut); 6] = [
+const NAMED_FNS: [(&str, fn(u32, &FnParams) -> MyFnMut); 9] = [
     ("base_median_no_var", make_base_median_no_var),
-    ("hi_median_no_var", make_hi_median_no_var),
+    ("hi_1pct_median_no_var", make_hi_1pct_median_no_var),
+    ("hi_10pct_median_no_var", make_hi_10pct_median_no_var),
     ("base_median_lo_var", make_base_median_lo_var),
-    ("hi_median_lo_var", make_hi_median_lo_var),
+    ("hi_1pct_median_lo_var", make_hi_1pct_median_lo_var),
+    ("hi_10pct_median_lo_var", make_hi_10pct_median_lo_var),
     ("base_median_hi_var", make_base_median_hi_var),
-    ("hi_median_hi_var", make_hi_median_hi_var),
+    ("hi_1pct_median_hi_var", make_hi_1pct_median_hi_var),
+    ("hi_10pct_median_hi_var", make_hi_10pct_median_hi_var),
 ];
 
 pub fn get_fn(name: &str) -> fn(u32, &FnParams) -> MyFnMut {
@@ -152,7 +156,7 @@ fn claims(accept_hyp: Hyp, target: f64) -> Vec<Claim> {
     ]
 }
 
-static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
+static SCENARIO_SPECS: LazyLock<[Scenario; 11]> = LazyLock::new(|| {
     [
         Scenario::new(
             "base_median_no_var",
@@ -161,11 +165,16 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
         ),
         Scenario::new(
             "base_median_no_var",
-            "hi_median_no_var",
+            "hi_1pct_median_no_var",
             claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.01),
         ),
         Scenario::new(
-            "hi_median_no_var",
+            "base_median_no_var",
+            "hi_10pct_median_no_var",
+            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.1),
+        ),
+        Scenario::new(
+            "hi_1pct_median_no_var",
             "base_median_no_var",
             claims(Hyp::Alt(AltHyp::Gt), 1.01),
         ),
@@ -186,27 +195,40 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
         ),
         Scenario::new(
             "base_median_lo_var",
-            "hi_median_lo_var",
+            "hi_1pct_median_lo_var",
             claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.01),
         ),
         Scenario::new(
             "base_median_lo_var",
-            "hi_median_hi_var",
+            "hi_10pct_median_lo_var",
+            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.1),
+        ),
+        Scenario::new(
+            "base_median_lo_var",
+            "hi_1pct_median_hi_var",
             claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.01),
+        ),
+        Scenario::new(
+            "base_median_lo_var",
+            "hi_10pct_median_hi_var",
+            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.1),
         ),
     ]
 });
 
-pub fn get_spec(name1: &str, name2: &str) -> &'static Scenario {
-    let valid_name_pairs = SCENARIO_SPECS
+pub static FN_NAME_PAIRS: LazyLock<Vec<(&'static str, &'static str)>> = LazyLock::new(|| {
+    SCENARIO_SPECS
         .iter()
         .map(|s| (s.name1, s.name2))
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+});
+
+pub fn get_spec(name1: &str, name2: &str) -> &'static Scenario {
     SCENARIO_SPECS
         .iter()
         .find(|spec| spec.name1 == name1 && spec.name2 == name2)
         .expect(&format!(
-            "invalid fn name pair: ({name1}, {name2}); valid name pairs are: {valid_name_pairs:?}"
+            "invalid fn name pair: ({name1}, {name2}); valid name pairs are: {FN_NAME_PAIRS:?}"
         ))
 }
 
@@ -219,7 +241,6 @@ pub static NAMED_PARAMS: LazyLock<Vec<(&'static str, FnParams)>> = LazyLock::new
                 unit: LatencyUnit::Nano,
                 exec_count: 100_000,
                 base_median,
-                hi_median: base_median * default_hi_median_ratio(),
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),
             }
@@ -231,7 +252,6 @@ pub static NAMED_PARAMS: LazyLock<Vec<(&'static str, FnParams)>> = LazyLock::new
                 unit: LatencyUnit::Nano,
                 exec_count: 10_000,
                 base_median,
-                hi_median: base_median * default_hi_median_ratio(),
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),
             }
@@ -243,7 +263,6 @@ pub static NAMED_PARAMS: LazyLock<Vec<(&'static str, FnParams)>> = LazyLock::new
                 unit: LatencyUnit::Micro,
                 exec_count: 1000,
                 base_median,
-                hi_median: base_median * default_hi_median_ratio(),
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),
             }
@@ -318,7 +337,7 @@ pub fn get_args() -> Args {
         Err(_) => {
             vec![
                 ("base_median_no_var".into(), "base_median_no_var".into()),
-                ("base_median_no_var".into(), "hi_median_no_var".into()),
+                ("base_median_no_var".into(), "hi_1pct_median_no_var".into()),
             ]
         }
     };

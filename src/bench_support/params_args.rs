@@ -1,10 +1,12 @@
 //! Definition of target functions, test scenarios, and their parameterization.
 
-use super::{Scenario, claim};
+use super::scenario::{Scenario, claim};
 use crate::{LatencyUnit, dev_utils::busy_work};
 use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
 use rand_distr::LogNormal;
 use std::{env, sync::LazyLock};
+
+pub const ALPHA: f64 = 0.05;
 
 pub struct FnParams {
     pub unit: LatencyUnit,
@@ -15,19 +17,19 @@ pub struct FnParams {
     pub hi_stdev_log: f64,
 }
 
-pub(super) fn default_hi_median_ratio() -> f64 {
+pub fn default_hi_median_ratio() -> f64 {
     1.01
 }
 
-pub(super) fn default_lo_stdev_log() -> f64 {
+pub fn default_lo_stdev_log() -> f64 {
     1.2_f64.ln() / 2.0
 }
 
-pub(super) fn default_hi_stdev_log() -> f64 {
+pub fn default_hi_stdev_log() -> f64 {
     2.4_f64.ln() / 2.0
 }
 
-pub(super) enum MyFnMut {
+pub enum MyFnMut {
     Constant {
         median_effort: u32,
     },
@@ -54,7 +56,7 @@ impl MyFnMut {
         }
     }
 
-    pub(super) fn invoke(&mut self) {
+    pub fn invoke(&mut self) {
         match self {
             Self::Constant { median_effort } => {
                 busy_work(*median_effort);
@@ -103,7 +105,7 @@ fn make_hi_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     MyFnMut::new_variable(effort, params.hi_stdev_log)
 }
 
-pub(super) static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
+pub static FN_NAME_PAIRS: [(&'static str, &'static str); 8] = [
     ("base_median_no_var", "base_median_no_var"),
     ("base_median_no_var", "hi_median_no_var"),
     ("hi_median_no_var", "base_median_no_var"),
@@ -123,7 +125,7 @@ const NAMED_FNS: [(&str, fn(u32, &FnParams) -> MyFnMut); 6] = [
     ("hi_median_hi_var", make_hi_median_hi_var),
 ];
 
-pub(super) fn get_fn(name: &str) -> fn(u32, &FnParams) -> MyFnMut {
+pub fn get_fn(name: &str) -> fn(u32, &FnParams) -> MyFnMut {
     NAMED_FNS
         .iter()
         .find(|pair| pair.0 == name)
@@ -262,7 +264,7 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
     ]
 });
 
-pub(super) fn get_spec(name1: &str, name2: &str) -> &'static Scenario {
+pub fn get_spec(name1: &str, name2: &str) -> &'static Scenario {
     let valid_name_pairs = SCENARIO_SPECS
         .iter()
         .map(|s| (s.name1, s.name2))
@@ -275,7 +277,7 @@ pub(super) fn get_spec(name1: &str, name2: &str) -> &'static Scenario {
         ))
 }
 
-pub(super) static NAMED_PARAMS: LazyLock<Vec<(&'static str, FnParams)>> = LazyLock::new(|| {
+pub static NAMED_PARAMS: LazyLock<Vec<(&'static str, FnParams)>> = LazyLock::new(|| {
     vec![
         // latency magnitude: nanos
         ("nanos_scale", {
@@ -316,7 +318,7 @@ pub(super) static NAMED_PARAMS: LazyLock<Vec<(&'static str, FnParams)>> = LazyLo
     ]
 });
 
-pub(super) fn get_params(name: &str) -> &FnParams {
+pub fn get_params(name: &str) -> &FnParams {
     let valid_names = NAMED_PARAMS.iter().map(|p| p.0).collect::<Vec<_>>();
     &NAMED_PARAMS
         .iter()
@@ -327,12 +329,12 @@ pub(super) fn get_params(name: &str) -> &FnParams {
         .1
 }
 
-pub(super) struct Args {
-    pub(super) params_name: String,
-    pub(super) fn_name_pairs: Vec<(String, String)>,
-    pub(super) verbose: bool,
-    pub(super) nrepeats: usize,
-    pub(super) run_name: String,
+pub struct Args {
+    pub params_name: String,
+    pub fn_name_pairs: Vec<(String, String)>,
+    pub verbose: bool,
+    pub nrepeats: usize,
+    pub run_name: String,
 }
 
 fn cmd_line_args() -> Option<(usize, String)> {
@@ -353,7 +355,7 @@ fn cmd_line_args() -> Option<(usize, String)> {
     Some((nrepeats, run_name))
 }
 
-pub(super) fn get_args() -> Args {
+pub fn get_args() -> Args {
     let (nrepeats, run_name) = cmd_line_args().unwrap_or((1, "".to_string()));
 
     let params_name = env::var("PARAMS_NAME").unwrap_or("micros_scale".into());

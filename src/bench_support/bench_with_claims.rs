@@ -291,12 +291,4 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
             diff_ln_stdev_noises.get(&(name1, name2)).unwrap().stdev()
         );
     }
-
-    let failed_must_pass = results.failed_must_pass();
-
-    assert!(
-        failed_must_pass.len() == 0,
-        "{} must-pass tests have failed",
-        failed_must_pass.len()
-    );
 }

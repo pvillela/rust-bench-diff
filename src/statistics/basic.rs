@@ -16,6 +16,15 @@ pub enum Hyp {
     Alt(AltHyp),
 }
 
+impl Hyp {
+    pub fn alt_hyp(&self) -> AltHyp {
+        match self {
+            Self::Null => AltHyp::Ne,
+            Self::Alt(h) => *h,
+        }
+    }
+}
+
 /// Statistical hypothesis test result
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct HypTestResult {

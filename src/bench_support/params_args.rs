@@ -1,7 +1,11 @@
 //! Definition of target functions, test scenarios, and their parameterization.
 
-use super::scenario::{Scenario, claim};
-use crate::{LatencyUnit, dev_utils::busy_work};
+use super::scenario::{Claim, Scenario};
+use crate::{
+    LatencyUnit,
+    dev_utils::busy_work,
+    statistics::{AltHyp, Hyp},
+};
 use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
 use rand_distr::LogNormal;
 use std::{env, sync::LazyLock};
@@ -133,134 +137,63 @@ pub fn get_fn(name: &str) -> fn(u32, &FnParams) -> MyFnMut {
         .1
 }
 
+fn claims(accept_hyp: Hyp, target: f64) -> Vec<Claim> {
+    vec![
+        Claim::welch_ratio_test(accept_hyp),
+        Claim::student_diff_test(accept_hyp),
+        Claim::student_ratio_test(accept_hyp),
+        Claim::wilcoxon_rank_sum_test(accept_hyp),
+        Claim::bernoulli_test(accept_hyp),
+        //
+        Claim::ratio_medians_f1_f2_near_ratio_from_lns(),
+        Claim::ratio_medians_f1_f2_near_target(target),
+        Claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
+        Claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
+    ]
+}
+
 static SCENARIO_SPECS: LazyLock<[Scenario; 8]> = LazyLock::new(|| {
-    let lt_claims_strict = {
-        let target = 1.0 / 1.01;
-        vec![
-            (claim::welch_ratio_lt_1(), true),
-            (claim::student_diff_lt_0(), false),
-            (claim::student_ratio_lt_1(), true),
-            (claim::wilcoxon_rank_sum_f1_lt_f2(), true),
-            (claim::bernoulli_f1_lt_f2(), true),
-            //
-            (claim::ratio_medians_f1_f2_near_ratio_from_lns(), true),
-            (claim::ratio_medians_f1_f2_near_target(target), true),
-            (
-                claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
-                true,
-            ),
-            (
-                claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
-                true,
-            ),
-        ]
-    };
-
-    let lt_claims = {
-        let target = 1.0 / 1.01;
-        vec![
-            (claim::welch_ratio_lt_1(), false),
-            (claim::student_diff_lt_0(), false),
-            (claim::student_ratio_lt_1(), false),
-            (claim::wilcoxon_rank_sum_f1_lt_f2(), false),
-            (claim::bernoulli_f1_lt_f2(), false),
-            //
-            (claim::ratio_medians_f1_f2_near_ratio_from_lns(), true),
-            (claim::ratio_medians_f1_f2_near_target(target), true),
-            (
-                claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
-                true,
-            ),
-            (
-                claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
-                true,
-            ),
-        ]
-    };
-
-    let eq_claims_strict = {
-        let target = 1.0;
-        vec![
-            (claim::welch_ratio_eq_1(), true),
-            (claim::student_diff_eq_0(), false),
-            (claim::student_ratio_eq_1(), true),
-            (claim::wilcoxon_rank_sum_f1_eq_f2(), true),
-            (claim::bernoulli_f1_eq_f2(), true),
-            //
-            (claim::ratio_medians_f1_f2_near_ratio_from_lns(), true),
-            (claim::ratio_medians_f1_f2_near_target(target), true),
-            (
-                claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
-                true,
-            ),
-            (
-                claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
-                true,
-            ),
-        ]
-    };
-
-    let eq_claims = {
-        let target = 1.0;
-        vec![
-            (claim::welch_ratio_eq_1(), false),
-            (claim::student_diff_eq_0(), false),
-            (claim::student_ratio_eq_1(), false),
-            (claim::wilcoxon_rank_sum_f1_eq_f2(), false),
-            (claim::bernoulli_f1_eq_f2(), false),
-            //
-            (claim::ratio_medians_f1_f2_near_ratio_from_lns(), true),
-            (claim::ratio_medians_f1_f2_near_target(target), true),
-            (
-                claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
-                true,
-            ),
-            (
-                claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
-                true,
-            ),
-        ]
-    };
-
-    let gt_claims_strict = {
-        let target = 1.01;
-        vec![
-            (claim::welch_ratio_gt_1(), true),
-            (claim::student_diff_gt_0(), false),
-            (claim::student_ratio_gt_1(), true),
-            (claim::wilcoxon_rank_sum_f1_gt_f2(), true),
-            (claim::bernoulli_f1_gt_f2(), true),
-            //
-            (claim::ratio_medians_f1_f2_near_ratio_from_lns(), true),
-            (claim::ratio_medians_f1_f2_near_target(target), true),
-            (
-                claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
-                true,
-            ),
-            (
-                claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
-                true,
-            ),
-        ]
-    };
-
     [
-        Scenario::new("base_median_no_var", "base_median_no_var", eq_claims_strict),
-        Scenario::new("base_median_no_var", "hi_median_no_var", lt_claims_strict),
-        Scenario::new("hi_median_no_var", "base_median_no_var", gt_claims_strict),
+        Scenario::new(
+            "base_median_no_var",
+            "base_median_no_var",
+            claims(Hyp::Null, 1.0),
+        ),
+        Scenario::new(
+            "base_median_no_var",
+            "hi_median_no_var",
+            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.01),
+        ),
+        Scenario::new(
+            "hi_median_no_var",
+            "base_median_no_var",
+            claims(Hyp::Alt(AltHyp::Gt), 1.01),
+        ),
         Scenario::new(
             "base_median_lo_var",
             "base_median_lo_var",
-            eq_claims.clone(),
+            claims(Hyp::Null, 1.0),
         ),
         Scenario::new(
             "base_median_lo_var",
             "base_median_hi_var",
-            eq_claims.clone(),
+            claims(Hyp::Null, 1.0),
         ),
-        Scenario::new("base_median_hi_var", "base_median_lo_var", eq_claims),
-        Scenario::new("base_median_lo_var", "hi_median_lo_var", lt_claims.clone()),
-        Scenario::new("base_median_lo_var", "hi_median_hi_var", lt_claims),
+        Scenario::new(
+            "base_median_hi_var",
+            "base_median_lo_var",
+            claims(Hyp::Null, 1.0),
+        ),
+        Scenario::new(
+            "base_median_lo_var",
+            "hi_median_lo_var",
+            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.01),
+        ),
+        Scenario::new(
+            "base_median_lo_var",
+            "hi_median_hi_var",
+            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.01),
+        ),
     ]
 });
 

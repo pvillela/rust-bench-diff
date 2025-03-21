@@ -293,9 +293,9 @@ fn cmd_line_args() -> Option<(usize, String)> {
     let mut args = std::env::args();
 
     let nrepeats = match args.nth(1) {
-        Some(v) if v.ne("--bench") => v
-            .parse::<usize>()
-            .expect("1st argument, if provided, must be non-negative integer"),
+        Some(v) if v.ne("--bench") => v.parse::<usize>().expect(&format!(
+            "1st argument, if provided, must be non-negative integer; was \"{v}\""
+        )),
         _ => return None,
     };
 

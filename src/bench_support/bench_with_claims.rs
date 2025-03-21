@@ -1,6 +1,6 @@
 //! Implementaton of main benchmarking logic to verify [`bench_diff`].
 
-use super::params_args::{Args, FnParams, get_args, get_fn, get_params, get_spec};
+use super::params_args::{Args, ScaleParams, get_args, get_fn, get_scale_params, get_spec};
 use crate::{
     BenchDiffOut, bench_diff, bench_diff_print,
     bench_support::{params_args::ALPHA, scenario::ClaimResults},
@@ -126,7 +126,7 @@ pub fn bench_with_claims_and_args() {
         nrepeats,
         run_name,
     } = get_args();
-    let fn_params = get_params(&params_name);
+    let fn_params = get_scale_params(&params_name);
 
     let print_args = || {
         println!("*** arguments ***");
@@ -154,15 +154,15 @@ pub fn bench_with_claims_and_args() {
 ///  `verbose` determines the verbosity of output, `print_args` is a closure that prints the
 /// configuration arguments for the benchmarks and `run_name` is a string that designates the run in the print-out.
 pub fn bench_with_claims<T: Deref<Target = str>>(
-    fn_params: &FnParams,
+    scale_params: &ScaleParams,
     fn_name_pairs: &[(T, T)],
     verbose: bool,
     nrepeats: usize,
     print_args: impl Fn(),
     run_name: &str,
 ) {
-    let unit = fn_params.unit;
-    let base_effort = calibrate_busy_work(unit.latency_from_f64(fn_params.base_median));
+    let unit = scale_params.unit;
+    let base_effort = calibrate_busy_work(unit.latency_from_f64(scale_params.base_median));
 
     let mut results = ClaimResults::new();
     let mut ratio_medians_from_lns_noises =
@@ -182,26 +182,26 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
             let scenario_name = format!("f1={}, f2={}", name1.deref(), name2.deref());
 
             let f1 = {
-                let mut my_fn = get_fn(name1)(base_effort, &fn_params);
+                let mut my_fn = get_fn(name1)(base_effort, &scale_params.fn_params);
                 move || my_fn.invoke()
             };
 
             let f2 = {
-                let mut my_fn = get_fn(name2)(base_effort, &fn_params);
+                let mut my_fn = get_fn(name2)(base_effort, &scale_params.fn_params);
                 move || my_fn.invoke()
             };
 
             let diff_out = if verbose {
                 bench_diff_print(
-                    fn_params.unit,
+                    scale_params.unit,
                     f1,
                     f2,
-                    fn_params.exec_count,
+                    scale_params.exec_count,
                     || println!("{scenario_name}"),
                     print_diff_out,
                 )
             } else {
-                bench_diff(fn_params.unit, f1, f2, fn_params.exec_count)
+                bench_diff(scale_params.unit, f1, f2, scale_params.exec_count)
             };
 
             let ratio_medians_from_lns_noise = ratio_medians_from_lns_noises

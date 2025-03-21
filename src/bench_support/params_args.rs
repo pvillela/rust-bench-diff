@@ -22,10 +22,14 @@ pub fn default_hi_stdev_log() -> f64 {
     2.4_f64.ln() / 2.0
 }
 
-pub struct FnParams {
+pub struct ScaleParams {
     pub unit: LatencyUnit,
     pub exec_count: usize,
     pub base_median: f64,
+    pub fn_params: FnParams,
+}
+
+pub struct FnParams {
     pub lo_stdev_log: f64,
     pub hi_stdev_log: f64,
 }
@@ -43,11 +47,11 @@ pub enum MyFnMut {
 }
 
 impl MyFnMut {
-    fn new_constant(median_effort: u32) -> Self {
+    fn new_deterministic(median_effort: u32) -> Self {
         Self::Determ { median_effort }
     }
 
-    fn new_variable(median_effort: u32, stdev_log: f64) -> Self {
+    fn new_random(median_effort: u32, stdev_log: f64) -> Self {
         let mu = 0.0_f64;
         let sigma = stdev_log;
         Self::Random {
@@ -78,47 +82,47 @@ impl MyFnMut {
 
 fn make_base_median_no_var(base_effort: u32, _: &FnParams) -> MyFnMut {
     let effort = base_effort;
-    MyFnMut::new_constant(effort)
+    MyFnMut::new_deterministic(effort)
 }
 
 fn make_hi_1pct_median_no_var(base_effort: u32, _: &FnParams) -> MyFnMut {
     let effort = (base_effort as f64 * HI_1PCT_FACTOR) as u32;
-    MyFnMut::new_constant(effort)
+    MyFnMut::new_deterministic(effort)
 }
 
 fn make_hi_10pct_median_no_var(base_effort: u32, _: &FnParams) -> MyFnMut {
     let effort = (base_effort as f64 * HI_10PCT_FACTOR) as u32;
-    MyFnMut::new_constant(effort)
+    MyFnMut::new_deterministic(effort)
 }
 
 fn make_base_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = base_effort;
-    MyFnMut::new_variable(effort, params.lo_stdev_log)
+    MyFnMut::new_random(effort, params.lo_stdev_log)
 }
 
 fn make_hi_1pct_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = (base_effort as f64 * HI_1PCT_FACTOR) as u32;
-    MyFnMut::new_variable(effort, params.lo_stdev_log)
+    MyFnMut::new_random(effort, params.lo_stdev_log)
 }
 
 fn make_hi_10pct_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = (base_effort as f64 * HI_10PCT_FACTOR) as u32;
-    MyFnMut::new_variable(effort, params.lo_stdev_log)
+    MyFnMut::new_random(effort, params.lo_stdev_log)
 }
 
 fn make_base_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = base_effort;
-    MyFnMut::new_variable(effort, params.hi_stdev_log)
+    MyFnMut::new_random(effort, params.hi_stdev_log)
 }
 
 fn make_hi_1pct_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = (base_effort as f64 * HI_1PCT_FACTOR) as u32;
-    MyFnMut::new_variable(effort, params.hi_stdev_log)
+    MyFnMut::new_random(effort, params.hi_stdev_log)
 }
 
 fn make_hi_10pct_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
     let effort = (base_effort as f64 * HI_10PCT_FACTOR) as u32;
-    MyFnMut::new_variable(effort, params.hi_stdev_log)
+    MyFnMut::new_random(effort, params.hi_stdev_log)
 }
 
 const NAMED_FNS: [(&str, fn(u32, &FnParams) -> MyFnMut); 9] = [
@@ -232,47 +236,53 @@ pub fn get_spec(name1: &str, name2: &str) -> &'static Scenario {
         ))
 }
 
-pub static NAMED_PARAMS: LazyLock<Vec<(&'static str, FnParams)>> = LazyLock::new(|| {
+pub static SCALE_PARAMS: LazyLock<Vec<(&'static str, ScaleParams)>> = LazyLock::new(|| {
     vec![
         // latency magnitude: nanos
         ("nanos_scale", {
             let base_median = 400.0;
-            FnParams {
+            ScaleParams {
                 unit: LatencyUnit::Nano,
                 exec_count: 100_000,
                 base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
+                fn_params: FnParams {
+                    lo_stdev_log: default_lo_stdev_log(),
+                    hi_stdev_log: default_hi_stdev_log(),
+                },
             }
         }),
         // latency magnitude: micros
         ("micros_scale", {
             let base_median = 100_000.0;
-            FnParams {
+            ScaleParams {
                 unit: LatencyUnit::Nano,
                 exec_count: 10_000,
                 base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
+                fn_params: FnParams {
+                    lo_stdev_log: default_lo_stdev_log(),
+                    hi_stdev_log: default_hi_stdev_log(),
+                },
             }
         }),
         // latency magnitude: millis
         ("millis_scale", {
             let base_median = 20_000.0;
-            FnParams {
+            ScaleParams {
                 unit: LatencyUnit::Micro,
                 exec_count: 1000,
                 base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
+                fn_params: FnParams {
+                    lo_stdev_log: default_lo_stdev_log(),
+                    hi_stdev_log: default_hi_stdev_log(),
+                },
             }
         }),
     ]
 });
 
-pub fn get_params(name: &str) -> &FnParams {
-    let valid_names = NAMED_PARAMS.iter().map(|p| p.0).collect::<Vec<_>>();
-    &NAMED_PARAMS
+pub fn get_scale_params(name: &str) -> &ScaleParams {
+    let valid_names = SCALE_PARAMS.iter().map(|p| p.0).collect::<Vec<_>>();
+    &SCALE_PARAMS
         .iter()
         .find(|pair| pair.0 == name)
         .expect(&format!(
@@ -310,7 +320,7 @@ fn cmd_line_args() -> Option<(usize, String)> {
 pub fn get_args() -> Args {
     let (nrepeats, run_name) = cmd_line_args().unwrap_or((1, "".to_string()));
 
-    let params_name = env::var("PARAMS_NAME").unwrap_or("micros_scale".into());
+    let scale_name = env::var("SCALE_NAME").unwrap_or("micros_scale".into());
     let fn_name_pairs_res = env::var("FN_NAME_PAIRS");
     let verbose_str = env::var("VERBOSE").unwrap_or("true".into());
 
@@ -343,7 +353,7 @@ pub fn get_args() -> Args {
     };
 
     Args {
-        params_name,
+        params_name: scale_name,
         fn_name_pairs,
         verbose,
         nrepeats,

@@ -3,7 +3,7 @@
 use super::scenario::{Claim, Scenario};
 use crate::{
     LatencyUnit,
-    dev_utils::busy_work,
+    dev_utils::{busy_work, calibrate_busy_work},
     statistics::{AltHyp, Hyp},
 };
 use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
@@ -26,20 +26,33 @@ pub struct ScaleParams {
     pub unit: LatencyUnit,
     pub exec_count: usize,
     pub base_median: f64,
-    pub fn_params: FnParams,
+    pub lo_stdev_log: f64,
+    pub hi_stdev_log: f64,
 }
 
-pub struct FnParams {
+impl ScaleParams {
+    pub fn to_calibrated_fn_params(&self) -> CalibratedFnParams {
+        let effort = calibrate_busy_work(self.unit.latency_from_f64(self.base_median));
+        CalibratedFnParams {
+            effort,
+            lo_stdev_log: self.lo_stdev_log,
+            hi_stdev_log: self.hi_stdev_log,
+        }
+    }
+}
+
+pub struct CalibratedFnParams {
+    pub effort: u32,
     pub lo_stdev_log: f64,
     pub hi_stdev_log: f64,
 }
 
 pub enum MyFnMut {
-    Determ {
+    Det {
         median_effort: u32,
     },
 
-    Random {
+    NonDet {
         median_effort: u32,
         lognormal: LogNormal<f64>,
         rng: StdRng,
@@ -48,13 +61,13 @@ pub enum MyFnMut {
 
 impl MyFnMut {
     fn new_deterministic(median_effort: u32) -> Self {
-        Self::Determ { median_effort }
+        Self::Det { median_effort }
     }
 
-    fn new_random(median_effort: u32, stdev_log: f64) -> Self {
+    fn new_non_deterministic(median_effort: u32, stdev_log: f64) -> Self {
         let mu = 0.0_f64;
         let sigma = stdev_log;
-        Self::Random {
+        Self::NonDet {
             median_effort,
             lognormal: LogNormal::new(mu, sigma).expect("stdev_log must be > 0"),
             rng: StdRng::from_rng(&mut rand::rng()),
@@ -63,11 +76,11 @@ impl MyFnMut {
 
     pub fn invoke(&mut self) {
         match self {
-            Self::Determ { median_effort } => {
+            Self::Det { median_effort } => {
                 busy_work(*median_effort);
             }
 
-            Self::Random {
+            Self::NonDet {
                 median_effort,
                 lognormal,
                 rng,
@@ -80,64 +93,47 @@ impl MyFnMut {
     }
 }
 
-fn make_base_median_no_var(base_effort: u32, _: &FnParams) -> MyFnMut {
-    let effort = base_effort;
-    MyFnMut::new_deterministic(effort)
-}
+const NAMED_FNS: [(&str, fn(&CalibratedFnParams) -> MyFnMut); 9] = {
+    const fn hi_1pct_effort(c: &CalibratedFnParams) -> u32 {
+        (c.effort as f64 * HI_1PCT_FACTOR) as u32
+    }
 
-fn make_hi_1pct_median_no_var(base_effort: u32, _: &FnParams) -> MyFnMut {
-    let effort = (base_effort as f64 * HI_1PCT_FACTOR) as u32;
-    MyFnMut::new_deterministic(effort)
-}
+    const fn hi_10pct_effort(c: &CalibratedFnParams) -> u32 {
+        (c.effort as f64 * HI_10PCT_FACTOR) as u32
+    }
 
-fn make_hi_10pct_median_no_var(base_effort: u32, _: &FnParams) -> MyFnMut {
-    let effort = (base_effort as f64 * HI_10PCT_FACTOR) as u32;
-    MyFnMut::new_deterministic(effort)
-}
+    [
+        ("base_median_no_var", |c| {
+            MyFnMut::new_deterministic(c.effort)
+        }),
+        ("hi_1pct_median_no_var", |c| {
+            MyFnMut::new_deterministic(hi_1pct_effort(c))
+        }),
+        ("hi_10pct_median_no_var", |c| {
+            MyFnMut::new_deterministic(hi_10pct_effort(c))
+        }),
+        ("base_median_lo_var", |c| {
+            MyFnMut::new_non_deterministic(c.effort, c.lo_stdev_log)
+        }),
+        ("hi_1pct_median_lo_var", |c| {
+            MyFnMut::new_non_deterministic(hi_1pct_effort(c), c.lo_stdev_log)
+        }),
+        ("hi_10pct_median_lo_var", |c| {
+            MyFnMut::new_non_deterministic(hi_10pct_effort(c), c.lo_stdev_log)
+        }),
+        ("base_median_hi_var", |c| {
+            MyFnMut::new_non_deterministic(c.effort, c.hi_stdev_log)
+        }),
+        ("hi_1pct_median_hi_var", |c| {
+            MyFnMut::new_non_deterministic(hi_1pct_effort(c), c.hi_stdev_log)
+        }),
+        ("hi_10pct_median_hi_var", |c| {
+            MyFnMut::new_non_deterministic(hi_10pct_effort(c), c.hi_stdev_log)
+        }),
+    ]
+};
 
-fn make_base_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
-    let effort = base_effort;
-    MyFnMut::new_random(effort, params.lo_stdev_log)
-}
-
-fn make_hi_1pct_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
-    let effort = (base_effort as f64 * HI_1PCT_FACTOR) as u32;
-    MyFnMut::new_random(effort, params.lo_stdev_log)
-}
-
-fn make_hi_10pct_median_lo_var(base_effort: u32, params: &FnParams) -> MyFnMut {
-    let effort = (base_effort as f64 * HI_10PCT_FACTOR) as u32;
-    MyFnMut::new_random(effort, params.lo_stdev_log)
-}
-
-fn make_base_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
-    let effort = base_effort;
-    MyFnMut::new_random(effort, params.hi_stdev_log)
-}
-
-fn make_hi_1pct_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
-    let effort = (base_effort as f64 * HI_1PCT_FACTOR) as u32;
-    MyFnMut::new_random(effort, params.hi_stdev_log)
-}
-
-fn make_hi_10pct_median_hi_var(base_effort: u32, params: &FnParams) -> MyFnMut {
-    let effort = (base_effort as f64 * HI_10PCT_FACTOR) as u32;
-    MyFnMut::new_random(effort, params.hi_stdev_log)
-}
-
-const NAMED_FNS: [(&str, fn(u32, &FnParams) -> MyFnMut); 9] = [
-    ("base_median_no_var", make_base_median_no_var),
-    ("hi_1pct_median_no_var", make_hi_1pct_median_no_var),
-    ("hi_10pct_median_no_var", make_hi_10pct_median_no_var),
-    ("base_median_lo_var", make_base_median_lo_var),
-    ("hi_1pct_median_lo_var", make_hi_1pct_median_lo_var),
-    ("hi_10pct_median_lo_var", make_hi_10pct_median_lo_var),
-    ("base_median_hi_var", make_base_median_hi_var),
-    ("hi_1pct_median_hi_var", make_hi_1pct_median_hi_var),
-    ("hi_10pct_median_hi_var", make_hi_10pct_median_hi_var),
-];
-
-pub fn get_fn(name: &str) -> fn(u32, &FnParams) -> MyFnMut {
+pub fn get_fn(name: &str) -> fn(&CalibratedFnParams) -> MyFnMut {
     NAMED_FNS
         .iter()
         .find(|pair| pair.0 == name)
@@ -245,10 +241,8 @@ pub static SCALE_PARAMS: LazyLock<Vec<(&'static str, ScaleParams)>> = LazyLock::
                 unit: LatencyUnit::Nano,
                 exec_count: 100_000,
                 base_median,
-                fn_params: FnParams {
-                    lo_stdev_log: default_lo_stdev_log(),
-                    hi_stdev_log: default_hi_stdev_log(),
-                },
+                lo_stdev_log: default_lo_stdev_log(),
+                hi_stdev_log: default_hi_stdev_log(),
             }
         }),
         // latency magnitude: micros
@@ -258,10 +252,8 @@ pub static SCALE_PARAMS: LazyLock<Vec<(&'static str, ScaleParams)>> = LazyLock::
                 unit: LatencyUnit::Nano,
                 exec_count: 10_000,
                 base_median,
-                fn_params: FnParams {
-                    lo_stdev_log: default_lo_stdev_log(),
-                    hi_stdev_log: default_hi_stdev_log(),
-                },
+                lo_stdev_log: default_lo_stdev_log(),
+                hi_stdev_log: default_hi_stdev_log(),
             }
         }),
         // latency magnitude: millis
@@ -271,10 +263,8 @@ pub static SCALE_PARAMS: LazyLock<Vec<(&'static str, ScaleParams)>> = LazyLock::
                 unit: LatencyUnit::Micro,
                 exec_count: 1000,
                 base_median,
-                fn_params: FnParams {
-                    lo_stdev_log: default_lo_stdev_log(),
-                    hi_stdev_log: default_hi_stdev_log(),
-                },
+                lo_stdev_log: default_lo_stdev_log(),
+                hi_stdev_log: default_hi_stdev_log(),
             }
         }),
     ]

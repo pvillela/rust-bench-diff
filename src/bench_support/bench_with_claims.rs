@@ -4,7 +4,6 @@ use super::params_args::{Args, ScaleParams, get_args, get_fn, get_scale_params, 
 use crate::{
     BenchDiffOut, bench_diff, bench_diff_print,
     bench_support::{params_args::ALPHA, scenario::ClaimResults},
-    dev_utils::calibrate_busy_work,
     statistics::{AltHyp, SampleMoments, collect_moments},
 };
 use std::{collections::BTreeMap, ops::Deref};
@@ -161,8 +160,7 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
     print_args: impl Fn(),
     run_name: &str,
 ) {
-    let unit = scale_params.unit;
-    let base_effort = calibrate_busy_work(unit.latency_from_f64(scale_params.base_median));
+    let calibrated_fn_params = ScaleParams::to_calibrated_fn_params(scale_params);
 
     let mut results = ClaimResults::new();
     let mut ratio_medians_from_lns_noises =
@@ -182,12 +180,12 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
             let scenario_name = format!("f1={}, f2={}", name1.deref(), name2.deref());
 
             let f1 = {
-                let mut my_fn = get_fn(name1)(base_effort, &scale_params.fn_params);
+                let mut my_fn = get_fn(name1)(&calibrated_fn_params);
                 move || my_fn.invoke()
             };
 
             let f2 = {
-                let mut my_fn = get_fn(name2)(base_effort, &scale_params.fn_params);
+                let mut my_fn = get_fn(name2)(&calibrated_fn_params);
                 move || my_fn.invoke()
             };
 

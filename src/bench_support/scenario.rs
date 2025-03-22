@@ -234,53 +234,59 @@ pub struct ClaimResult {
 }
 
 pub struct ClaimResults {
-    pub scenarios_claims: BTreeSet<(String, &'static str)>,
-    pub failures: Vec<ClaimResult>,
+    failures: Vec<ClaimResult>,
+    summary: BTreeMap<(String, &'static str), u32>,
 }
 
 impl ClaimResults {
     pub fn new() -> Self {
         Self {
-            scenarios_claims: BTreeSet::new(),
             failures: Vec::new(),
+            summary: BTreeMap::new(),
         }
     }
 
-    pub fn push_result(&mut self, result: ClaimResult) {
-        self.scenarios_claims
-            .insert((result.scenario_name.clone(), result.claim_name));
+    pub fn push_result(&mut self, result: ClaimResult, verbose: bool) {
+        let value = self
+            .summary
+            .entry((result.scenario_name.clone(), result.claim_name))
+            .or_insert(0);
         if result.result.is_some() {
-            self.failures.push(result)
+            *value += 1;
+            if verbose {
+                self.failures.push(result);
+            }
         };
     }
 
-    pub fn run_scenario(&mut self, scenario: &Scenario, diff_out: &BenchDiffOut) {
+    pub fn run_scenario(&mut self, scenario: &Scenario, diff_out: &BenchDiffOut, verbose: bool) {
         let results = scenario.run(diff_out);
         for result in results {
-            self.push_result(result);
+            self.push_result(result, verbose);
         }
+    }
+
+    pub fn summary(&self) -> &BTreeMap<(String, &'static str), u32> {
+        &self.summary
+    }
+
+    pub fn failures(&self) -> &Vec<ClaimResult> {
+        &self.failures
     }
 
     pub fn failure_summary(&self) -> BTreeMap<(String, &'static str), u32> {
-        let mut summary = BTreeMap::<(String, &'static str), u32>::new();
-        for result in self.failures.iter() {
-            let count = summary
-                .entry((result.scenario_name.clone(), result.claim_name))
-                .or_insert(0);
-            *count += 1;
-        }
-        summary
+        self.summary
+            .iter()
+            .filter(|(_, v)| **v > 0)
+            .map(|(k, v)| (k.clone(), *v))
+            .collect()
     }
 
     pub fn success_summary(&self) -> BTreeSet<(String, &'static str)> {
-        let failure_keys: BTreeSet<(String, &'static str)> = self
-            .failure_summary()
-            .keys()
-            .map(|(s, c)| (s.clone(), *c))
-            .collect();
-        self.scenarios_claims
-            .difference(&failure_keys)
-            .cloned()
+        self.summary
+            .iter()
+            .filter(|(_, v)| **v == 0)
+            .map(|(k, _)| k.clone())
             .collect()
     }
 }

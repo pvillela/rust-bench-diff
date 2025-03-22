@@ -228,28 +228,35 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
             collect_moments(diff_ln_stdev_noise, diff_out.stdev_diff_ln_f1_f2());
 
             let scenario = get_spec(name1, name2);
-            results.run_scenario(scenario, &diff_out);
+            results.run_scenario(scenario, &diff_out, verbose);
         }
     }
 
-    println!("*** failures ***");
-    for claim_result in results.failures.iter() {
-        println!("{claim_result:?}");
-    }
+    if verbose {
+        println!("*** failures ***");
+        for claim_result in results.failures().iter() {
+            println!("{claim_result:?}");
+        }
 
-    println!();
-    print_args();
+        println!();
+        print_args();
 
-    println!();
-    println!("*** failure_summary ***");
-    for ((scenario_name, claim_name), count) in results.failure_summary() {
-        println!("{scenario_name} | {claim_name} ==> count={count}");
-    }
+        println!();
+        println!("*** failure_summary ***");
+        for ((scenario_name, claim_name), count) in results.failure_summary() {
+            println!("{scenario_name} | {claim_name} ==> count={count}");
+        }
 
-    println!();
-    println!("*** success_summary ***");
-    for (scenario_name, claim_name) in results.success_summary() {
-        println!("{scenario_name} | {claim_name}");
+        println!();
+        println!("*** success_summary ***");
+        for (scenario_name, claim_name) in results.success_summary() {
+            println!("{scenario_name} | {claim_name}");
+        }
+    } else {
+        println!("*** claim_summary ***");
+        for ((scenario_name, claim_name), count) in results.summary() {
+            println!("{scenario_name} | {claim_name} ==> count={count}");
+        }
     }
 
     println!();

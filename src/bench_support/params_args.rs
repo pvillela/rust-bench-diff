@@ -314,6 +314,7 @@ pub struct Args {
     pub scale_name: String,
     pub fn_name_pairs: Vec<(String, String)>,
     pub verbose: bool,
+    pub noise_stats: bool,
     pub nrepeats: usize,
     pub run_name: String,
 }
@@ -340,41 +341,53 @@ pub fn get_args() -> Args {
     let (nrepeats, run_name) = cmd_line_args().unwrap_or((1, "".to_string()));
 
     let scale_name = env::var("SCALE_NAME").unwrap_or("micros_scale".into());
-    let fn_name_pairs_res = env::var("FN_NAME_PAIRS");
-    let verbose_str = env::var("VERBOSE").unwrap_or("true".into());
 
-    let verbose: bool = verbose_str
-        .parse()
-        .expect("VERBOSE environment variable has invalid string representation of boolean");
-
-    let fn_name_pairs: Vec<(String, String)> = match &fn_name_pairs_res {
-        Ok(s) if s == "all" => FN_NAME_PAIRS
-            .iter()
-            .map(|(name1, name2)| (name1.to_string(), name2.to_string()))
-            .collect(),
-        Ok(s) => s
-            .split_whitespace()
-            .map(|x| {
-                let pair_v = x.split("/").collect::<Vec<_>>();
-                let err_msg =
+    let fn_name_pairs: Vec<(String, String)> = {
+        let fn_name_pairs_res = env::var("FN_NAME_PAIRS");
+        match &fn_name_pairs_res {
+            Ok(s) if s == "all" => FN_NAME_PAIRS
+                .iter()
+                .map(|(name1, name2)| (name1.to_string(), name2.to_string()))
+                .collect(),
+            Ok(s) => s
+                .split_whitespace()
+                .map(|x| {
+                    let pair_v = x.split("/").collect::<Vec<_>>();
+                    let err_msg =
                     "properly formatted function name pair must contain one `/` and no whitespace: "
                         .to_string() + x;
-                assert!(pair_v.len() == 2, "{err_msg}");
-                (pair_v[0].to_string(), pair_v[1].to_string())
-            })
-            .collect::<Vec<_>>(),
-        Err(_) => {
-            vec![
-                ("base_median_no_var".into(), "base_median_no_var".into()),
-                ("base_median_no_var".into(), "hi_1pct_median_no_var".into()),
-            ]
+                    assert!(pair_v.len() == 2, "{err_msg}");
+                    (pair_v[0].to_string(), pair_v[1].to_string())
+                })
+                .collect::<Vec<_>>(),
+            Err(_) => {
+                vec![
+                    ("base_median_no_var".into(), "base_median_no_var".into()),
+                    ("base_median_no_var".into(), "hi_1pct_median_no_var".into()),
+                ]
+            }
         }
+    };
+
+    let verbose: bool = {
+        let verbose_str = env::var("VERBOSE").unwrap_or("true".into());
+        verbose_str
+            .parse()
+            .expect("VERBOSE environment variable has invalid string representation of boolean")
+    };
+
+    let noise_stats: bool = {
+        let noise_stats_str = env::var("NOISE_STATS").unwrap_or("true".into());
+        noise_stats_str
+            .parse()
+            .expect("NOISE_STATS environment variable has invalid string representation of boolean")
     };
 
     Args {
         scale_name,
         fn_name_pairs,
         verbose,
+        noise_stats,
         nrepeats,
         run_name,
     }

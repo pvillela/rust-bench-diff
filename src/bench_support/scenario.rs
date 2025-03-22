@@ -214,7 +214,7 @@ impl Scenario {
         }
     }
 
-    pub fn run(&self, diff_out: &BenchDiffOut) -> Vec<ClaimResult> {
+    pub fn check_claims(&self, diff_out: &BenchDiffOut) -> Vec<ClaimResult> {
         self.claims
             .iter()
             .map(|claim| ClaimResult {
@@ -259,8 +259,8 @@ impl ClaimResults {
         };
     }
 
-    pub fn run_scenario(&mut self, scenario: &Scenario, diff_out: &BenchDiffOut, verbose: bool) {
-        let results = scenario.run(diff_out);
+    pub fn add_scenario(&mut self, scenario: &Scenario, diff_out: &BenchDiffOut, verbose: bool) {
+        let results = scenario.check_claims(diff_out);
         for result in results {
             self.push_result(result, verbose);
         }

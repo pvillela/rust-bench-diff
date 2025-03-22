@@ -122,6 +122,7 @@ pub fn bench_with_claims_and_args() {
         scale_name,
         fn_name_pairs,
         verbose,
+        noise_stats,
         nrepeats,
         run_name,
     } = get_args();
@@ -136,6 +137,7 @@ pub fn bench_with_claims_and_args() {
         );
         println!("FN_NAME_PAIRS=\"{fn_name_pairs:?}\"");
         println!("VERBOSE=\"{verbose}\"");
+        println!("NOISE_STATS=\"{noise_stats}\"");
         println!("nrepeats={nrepeats}");
         println!("run_name=\"{run_name}\"");
     };
@@ -144,6 +146,7 @@ pub fn bench_with_claims_and_args() {
         scale_params,
         &fn_name_pairs,
         verbose,
+        noise_stats,
         nrepeats,
         print_args,
         &run_name,
@@ -160,6 +163,7 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
     scale_params: &ScaleParams,
     fn_name_pairs: &[(T, T)],
     verbose: bool,
+    noise_stats: bool,
     nrepeats: usize,
     print_args: impl Fn(),
     run_name: &str,
@@ -167,6 +171,7 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
     let calibrated_fn_params = ScaleParams::to_calibrated_fn_params(scale_params);
 
     let mut results = ClaimResults::new();
+
     let mut ratio_medians_from_lns_noises =
         BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
     let mut diff_ratio_medians_noises =
@@ -182,6 +187,7 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
 
         for (name1, name2) in fn_name_pairs {
             let scenario_name = format!("f1={}, f2={}", name1.deref(), name2.deref());
+            let scenario = get_spec(name1, name2);
 
             let f1 = {
                 let mut my_fn = get_fn(name1)(&calibrated_fn_params);
@@ -206,29 +212,30 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
                 bench_diff(scale_params.unit, f1, f2, scale_params.exec_count)
             };
 
-            let ratio_medians_from_lns_noise = ratio_medians_from_lns_noises
-                .entry((name1, name2))
-                .or_insert_with(|| SampleMoments::default());
-            collect_moments(
-                ratio_medians_from_lns_noise,
-                diff_out.mean_diff_ln_f1_f2().exp(),
-            );
+            results.add_scenario(scenario, &diff_out, verbose);
 
-            let diff_ratio_medians_noise = diff_ratio_medians_noises
-                .entry((name1, name2))
-                .or_insert_with(|| SampleMoments::default());
-            collect_moments(
-                diff_ratio_medians_noise,
-                diff_out.ratio_medians_f1_f2() - diff_out.ratio_medians_f1_f2_from_lns(),
-            );
+            if noise_stats {
+                let ratio_medians_from_lns_noise = ratio_medians_from_lns_noises
+                    .entry((name1, name2))
+                    .or_insert_with(|| SampleMoments::default());
+                collect_moments(
+                    ratio_medians_from_lns_noise,
+                    diff_out.mean_diff_ln_f1_f2().exp(),
+                );
 
-            let diff_ln_stdev_noise = diff_ln_stdev_noises
-                .entry((name1, name2))
-                .or_insert_with(|| SampleMoments::default());
-            collect_moments(diff_ln_stdev_noise, diff_out.stdev_diff_ln_f1_f2());
+                let diff_ratio_medians_noise = diff_ratio_medians_noises
+                    .entry((name1, name2))
+                    .or_insert_with(|| SampleMoments::default());
+                collect_moments(
+                    diff_ratio_medians_noise,
+                    diff_out.ratio_medians_f1_f2() - diff_out.ratio_medians_f1_f2_from_lns(),
+                );
 
-            let scenario = get_spec(name1, name2);
-            results.run_scenario(scenario, &diff_out, verbose);
+                let diff_ln_stdev_noise = diff_ln_stdev_noises
+                    .entry((name1, name2))
+                    .or_insert_with(|| SampleMoments::default());
+                collect_moments(diff_ln_stdev_noise, diff_out.stdev_diff_ln_f1_f2());
+            }
         }
     }
 
@@ -259,45 +266,47 @@ pub fn bench_with_claims<T: Deref<Target = str>>(
         }
     }
 
-    println!();
-    println!("*** noise ***");
-    for (name1, name2) in fn_name_pairs {
+    if noise_stats {
         println!();
-        println!("scenario: fn1={}, fn2={}", name1.deref(), name2.deref());
-        println!(
-            "ratio_medians_from_lns_noise_mean={}, ratio_medians_from_lns_noise_stdev={}",
-            ratio_medians_from_lns_noises
-                .get(&(name1, name2))
-                .unwrap()
-                .mean(),
-            ratio_medians_from_lns_noises
-                .get(&(name1, name2))
-                .unwrap()
-                .stdev()
-        );
-        println!(
-            "diff_ratio_medians_noise_mean={}, diff_ratio_medians_noise_stdev={}, diff_ratio_medians_noise_min={}, diff_ratio_medians_noise_max={}",
-            diff_ratio_medians_noises
-                .get(&(name1, name2))
-                .unwrap()
-                .mean(),
-            diff_ratio_medians_noises
-                .get(&(name1, name2))
-                .unwrap()
-                .stdev(),
-            diff_ratio_medians_noises
-                .get(&(name1, name2))
-                .unwrap()
-                .min(),
-            diff_ratio_medians_noises
-                .get(&(name1, name2))
-                .unwrap()
-                .max()
-        );
-        println!(
-            "diff_ln_stdev_noise_mean={}, diff_ln_stdev_noise_stdev={}",
-            diff_ln_stdev_noises.get(&(name1, name2)).unwrap().mean(),
-            diff_ln_stdev_noises.get(&(name1, name2)).unwrap().stdev()
-        );
+        println!("*** noise statistics ***");
+        for (name1, name2) in fn_name_pairs {
+            println!();
+            println!("scenario: fn1={}, fn2={}", name1.deref(), name2.deref());
+            println!(
+                "ratio_medians_from_lns_noise_mean={}, ratio_medians_from_lns_noise_stdev={}",
+                ratio_medians_from_lns_noises
+                    .get(&(name1, name2))
+                    .unwrap()
+                    .mean(),
+                ratio_medians_from_lns_noises
+                    .get(&(name1, name2))
+                    .unwrap()
+                    .stdev()
+            );
+            println!(
+                "diff_ratio_medians_noise_mean={}, diff_ratio_medians_noise_stdev={}, diff_ratio_medians_noise_min={}, diff_ratio_medians_noise_max={}",
+                diff_ratio_medians_noises
+                    .get(&(name1, name2))
+                    .unwrap()
+                    .mean(),
+                diff_ratio_medians_noises
+                    .get(&(name1, name2))
+                    .unwrap()
+                    .stdev(),
+                diff_ratio_medians_noises
+                    .get(&(name1, name2))
+                    .unwrap()
+                    .min(),
+                diff_ratio_medians_noises
+                    .get(&(name1, name2))
+                    .unwrap()
+                    .max()
+            );
+            println!(
+                "diff_ln_stdev_noise_mean={}, diff_ln_stdev_noise_stdev={}",
+                diff_ln_stdev_noises.get(&(name1, name2)).unwrap().mean(),
+                diff_ln_stdev_noises.get(&(name1, name2)).unwrap().stdev()
+            );
+        }
     }
 }

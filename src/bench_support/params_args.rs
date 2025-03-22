@@ -13,6 +13,7 @@ use std::{env, sync::LazyLock};
 pub const ALPHA: f64 = 0.05;
 pub const HI_1PCT_FACTOR: f64 = 1.01;
 pub const HI_10PCT_FACTOR: f64 = 1.1;
+pub const HI_25PCT_FACTOR: f64 = 1.25;
 
 pub fn default_lo_stdev_log() -> f64 {
     1.2_f64.ln() / 2.0
@@ -93,13 +94,17 @@ impl MyFnMut {
     }
 }
 
-const NAMED_FNS: [(&str, fn(&CalibratedFnParams) -> MyFnMut); 9] = {
+const NAMED_FNS: [(&str, fn(&CalibratedFnParams) -> MyFnMut); 12] = {
     const fn hi_1pct_effort(c: &CalibratedFnParams) -> u32 {
         (c.effort as f64 * HI_1PCT_FACTOR) as u32
     }
 
     const fn hi_10pct_effort(c: &CalibratedFnParams) -> u32 {
         (c.effort as f64 * HI_10PCT_FACTOR) as u32
+    }
+
+    const fn hi_25pct_effort(c: &CalibratedFnParams) -> u32 {
+        (c.effort as f64 * HI_25PCT_FACTOR) as u32
     }
 
     [
@@ -112,6 +117,9 @@ const NAMED_FNS: [(&str, fn(&CalibratedFnParams) -> MyFnMut); 9] = {
         ("hi_10pct_median_no_var", |c| {
             MyFnMut::new_deterministic(hi_10pct_effort(c))
         }),
+        ("hi_25pct_median_no_var", |c| {
+            MyFnMut::new_deterministic(hi_25pct_effort(c))
+        }),
         ("base_median_lo_var", |c| {
             MyFnMut::new_non_deterministic(c.effort, c.lo_stdev_log)
         }),
@@ -121,6 +129,9 @@ const NAMED_FNS: [(&str, fn(&CalibratedFnParams) -> MyFnMut); 9] = {
         ("hi_10pct_median_lo_var", |c| {
             MyFnMut::new_non_deterministic(hi_10pct_effort(c), c.lo_stdev_log)
         }),
+        ("hi_25pct_median_lo_var", |c| {
+            MyFnMut::new_non_deterministic(hi_25pct_effort(c), c.lo_stdev_log)
+        }),
         ("base_median_hi_var", |c| {
             MyFnMut::new_non_deterministic(c.effort, c.hi_stdev_log)
         }),
@@ -129,6 +140,9 @@ const NAMED_FNS: [(&str, fn(&CalibratedFnParams) -> MyFnMut); 9] = {
         }),
         ("hi_10pct_median_hi_var", |c| {
             MyFnMut::new_non_deterministic(hi_10pct_effort(c), c.hi_stdev_log)
+        }),
+        ("hi_25pct_median_hi_var", |c| {
+            MyFnMut::new_non_deterministic(hi_25pct_effort(c), c.hi_stdev_log)
         }),
     ]
 };
@@ -156,7 +170,7 @@ fn claims(accept_hyp: Hyp, target: f64) -> Vec<Claim> {
     ]
 }
 
-static SCENARIO_SPECS: LazyLock<[Scenario; 11]> = LazyLock::new(|| {
+static SCENARIO_SPECS: LazyLock<[Scenario; 14]> = LazyLock::new(|| {
     [
         Scenario::new(
             "base_median_no_var",
@@ -172,6 +186,11 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 11]> = LazyLock::new(|| {
             "base_median_no_var",
             "hi_10pct_median_no_var",
             claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.1),
+        ),
+        Scenario::new(
+            "base_median_no_var",
+            "hi_25pct_median_no_var",
+            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.25),
         ),
         Scenario::new(
             "hi_1pct_median_no_var",
@@ -205,6 +224,11 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 11]> = LazyLock::new(|| {
         ),
         Scenario::new(
             "base_median_lo_var",
+            "hi_25pct_median_lo_var",
+            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.25),
+        ),
+        Scenario::new(
+            "base_median_lo_var",
             "hi_1pct_median_hi_var",
             claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.01),
         ),
@@ -212,6 +236,11 @@ static SCENARIO_SPECS: LazyLock<[Scenario; 11]> = LazyLock::new(|| {
             "base_median_lo_var",
             "hi_10pct_median_hi_var",
             claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.1),
+        ),
+        Scenario::new(
+            "base_median_lo_var",
+            "hi_25pct_median_hi_var",
+            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.25),
         ),
     ]
 });
@@ -258,10 +287,10 @@ pub static SCALE_PARAMS: LazyLock<Vec<(&'static str, ScaleParams)>> = LazyLock::
         }),
         // latency magnitude: millis
         ("millis_scale", {
-            let base_median = 20_000.0;
+            let base_median = 10_000.0;
             ScaleParams {
                 unit: LatencyUnit::Micro,
-                exec_count: 1000,
+                exec_count: 600,
                 base_median,
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),
@@ -282,7 +311,7 @@ pub fn get_scale_params(name: &str) -> &ScaleParams {
 }
 
 pub struct Args {
-    pub params_name: String,
+    pub scale_name: String,
     pub fn_name_pairs: Vec<(String, String)>,
     pub verbose: bool,
     pub nrepeats: usize,
@@ -343,7 +372,7 @@ pub fn get_args() -> Args {
     };
 
     Args {
-        params_name: scale_name,
+        scale_name,
         fn_name_pairs,
         verbose,
         nrepeats,

@@ -119,17 +119,21 @@ fn print_diff_out(out: &BenchDiffOut) {
 /// Defaults are provided for environment variables and command line arguments not defined.
 pub fn bench_with_claims_and_args() {
     let Args {
-        params_name,
+        scale_name,
         fn_name_pairs,
         verbose,
         nrepeats,
         run_name,
     } = get_args();
-    let fn_params = get_scale_params(&params_name);
+    let scale_params = get_scale_params(&scale_name);
 
     let print_args = || {
         println!("*** arguments ***");
-        println!("PARAMS_NAME=\"{params_name}\"");
+        println!("SCALE_NAME=\"{scale_name}\"");
+        println!(
+            "unit={:?}, exec_count={}, base_median={}",
+            scale_params.unit, scale_params.exec_count, scale_params.base_median
+        );
         println!("FN_NAME_PAIRS=\"{fn_name_pairs:?}\"");
         println!("VERBOSE=\"{verbose}\"");
         println!("nrepeats={nrepeats}");
@@ -137,7 +141,7 @@ pub fn bench_with_claims_and_args() {
     };
 
     bench_with_claims(
-        fn_params,
+        scale_params,
         &fn_name_pairs,
         verbose,
         nrepeats,

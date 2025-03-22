@@ -24,6 +24,7 @@ pub fn default_hi_stdev_log() -> f64 {
 }
 
 pub struct ScaleParams {
+    pub name: String,
     pub unit: LatencyUnit,
     pub exec_count: usize,
     pub base_median: f64,
@@ -261,53 +262,58 @@ pub fn get_spec(name1: &str, name2: &str) -> &'static Scenario {
         ))
 }
 
-pub static SCALE_PARAMS: LazyLock<Vec<(&'static str, ScaleParams)>> = LazyLock::new(|| {
+pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
     vec![
         // latency magnitude: nanos
-        ("nanos_scale", {
+        {
             let base_median = 400.0;
             ScaleParams {
+                name: "nanos_scale".into(),
                 unit: LatencyUnit::Nano,
                 exec_count: 100_000,
                 base_median,
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),
             }
-        }),
+        },
         // latency magnitude: micros
-        ("micros_scale", {
+        {
             let base_median = 100_000.0;
             ScaleParams {
+                name: "micros_scale".into(),
                 unit: LatencyUnit::Nano,
                 exec_count: 10_000,
                 base_median,
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),
             }
-        }),
+        },
         // latency magnitude: millis
-        ("millis_scale", {
+        {
             let base_median = 10_000.0;
             ScaleParams {
+                name: "millis_scale".into(),
                 unit: LatencyUnit::Micro,
                 exec_count: 600,
                 base_median,
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),
             }
-        }),
+        },
     ]
 });
 
 pub fn get_scale_params(name: &str) -> &ScaleParams {
-    let valid_names = SCALE_PARAMS.iter().map(|p| p.0).collect::<Vec<_>>();
+    let valid_names = SCALE_PARAMS
+        .iter()
+        .map(|p| p.name.clone())
+        .collect::<Vec<_>>();
     &SCALE_PARAMS
         .iter()
-        .find(|pair| pair.0 == name)
+        .find(|pair| pair.name == name)
         .expect(&format!(
             "invalid params name: {name}; valid names are: {valid_names:?}"
         ))
-        .1
 }
 
 pub struct Args {

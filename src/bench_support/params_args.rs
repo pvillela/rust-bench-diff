@@ -264,23 +264,13 @@ pub fn get_spec(name1: &str, name2: &str) -> &'static Scenario {
 
 pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
     vec![
-        // latency magnitude: nanos
+        //
+        // Revised params.
+        //
         {
             let base_median = 400.0;
             ScaleParams {
                 name: "nanos_scale".into(),
-                unit: LatencyUnit::Nano,
-                exec_count: 100_000,
-                base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
-            }
-        },
-        // latency magnitude: micros
-        {
-            let base_median = 100_000.0;
-            ScaleParams {
-                name: "micros_scale".into(),
                 unit: LatencyUnit::Nano,
                 exec_count: 10_000,
                 base_median,
@@ -288,11 +278,57 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
                 hi_stdev_log: default_hi_stdev_log(),
             }
         },
-        // latency magnitude: millis
+        {
+            let base_median = 100_000.0;
+            ScaleParams {
+                name: "micros_scale".into(),
+                unit: LatencyUnit::Nano,
+                exec_count: 1_000,
+                base_median,
+                lo_stdev_log: default_lo_stdev_log(),
+                hi_stdev_log: default_hi_stdev_log(),
+            }
+        },
+        {
+            let base_median = 5_000.0;
+            ScaleParams {
+                name: "millis_scale".into(),
+                unit: LatencyUnit::Micro,
+                exec_count: 200,
+                base_median,
+                lo_stdev_log: default_lo_stdev_log(),
+                hi_stdev_log: default_hi_stdev_log(),
+            }
+        },
+        //
+        // Original params.
+        //
+        {
+            let base_median = 400.0;
+            ScaleParams {
+                name: "nanos_scale_original".into(),
+                unit: LatencyUnit::Nano,
+                exec_count: 100_000,
+                base_median,
+                lo_stdev_log: default_lo_stdev_log(),
+                hi_stdev_log: default_hi_stdev_log(),
+            }
+        },
+        {
+            let base_median = 100_000.0;
+            ScaleParams {
+                name: "micros_scale_original".into(),
+                unit: LatencyUnit::Nano,
+                exec_count: 10_000,
+                base_median,
+                lo_stdev_log: default_lo_stdev_log(),
+                hi_stdev_log: default_hi_stdev_log(),
+            }
+        },
         {
             let base_median = 10_000.0;
             ScaleParams {
-                name: "millis_scale".into(),
+                name: "millis_scale_original".into(),
                 unit: LatencyUnit::Micro,
                 exec_count: 600,
                 base_median,

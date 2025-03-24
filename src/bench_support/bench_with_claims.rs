@@ -1,10 +1,10 @@
 //! Implementaton of main benchmarking logic to verify [`bench_diff`].
 
-use super::params_args::{Args, ScaleParams, get_args, get_fn, get_scale_params, get_spec};
+use super::params_args::{Args, calibrated_fn_params, get_args, get_fn};
 use crate::{
     BenchDiffOut, bench_diff, bench_diff_print,
-    bench_support::{params_args::ALPHA, scenario::ClaimResults},
     statistics::{AltHyp, SampleMoments, collect_moments},
+    test_support::{ALPHA, ClaimResults, ScaleParams, get_scale_params, get_scenario},
 };
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
@@ -166,7 +166,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
         println!("run_name=\"{run_name}\"");
     };
 
-    let calibrated_fn_params = ScaleParams::to_calibrated_fn_params(scale_params);
+    let calibrated_fn_params = calibrated_fn_params(scale_params);
 
     println!();
     print_args();
@@ -177,7 +177,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
 
     for (name1, name2) in fn_name_pairs {
         let scenario_name = format!("f1={}, f2={}", name1.deref(), name2.deref());
-        let scenario = get_spec(name1, name2);
+        let scenario = get_scenario(name1, name2);
 
         let mut f1 = {
             let mut my_fn = get_fn(name1)(&calibrated_fn_params);
@@ -217,7 +217,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
                 bench_diff(scale_params.unit, &mut f1, &mut f2, scale_params.exec_count)
             };
 
-            results.add_scenario(scenario, &diff_out, verbose);
+            scenario.check_claims(&mut results, &diff_out, verbose);
 
             if noise_stats {
                 let ratio_medians_from_lns_noise = ratio_medians_from_lns_noises

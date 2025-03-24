@@ -1,30 +1,29 @@
-//! Definition of [`Scenario`] and [`Claim`] types to support
-//! implementaton of main benchmarking logic to verify [`bench_diff`].
-
-use crate::{
-    BenchDiffOut,
-    bench_support::params_args::ALPHA,
-    dev_utils::ApproxEq,
-    statistics::{Hyp, HypTestResult, PositionWrtCi},
-};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt::Debug,
 };
 
+use crate::{
+    BenchDiffOut,
+    dev_utils::ApproxEq,
+    statistics::{Hyp, HypTestResult, PositionWrtCi},
+};
+
 #[derive(Clone)]
 enum ClaimFn {
     Nullary(fn(&BenchDiffOut) -> Option<String>),
-    Hyp(fn(&BenchDiffOut, Hyp) -> Option<String>, Hyp),
-    Target(fn(&BenchDiffOut, f64) -> Option<String>, f64),
+    Hyp(fn(&BenchDiffOut, Hyp, f64) -> Option<String>, Hyp, f64),
+    Arity1(fn(&BenchDiffOut, f64) -> Option<String>, f64),
+    Arity2(fn(&BenchDiffOut, f64, f64) -> Option<String>, f64, f64),
 }
 
 impl ClaimFn {
     fn invoke(&self, out: &BenchDiffOut) -> Option<String> {
         match self {
             Self::Nullary(f) => f(out),
-            Self::Hyp(f, accept_hyp) => f(out, *accept_hyp),
-            Self::Target(f, arg) => f(out, *arg),
+            Self::Hyp(f, accept_hyp, alpha) => f(out, *accept_hyp, *alpha),
+            Self::Arity1(f, arg) => f(out, *arg),
+            Self::Arity2(f, arg1, arg2) => f(out, *arg1, *arg2),
         }
     }
 }
@@ -55,41 +54,44 @@ impl Claim {
         self.f.invoke(out)
     }
 
-    pub fn welch_ratio_test(accept_hyp: Hyp) -> Claim {
+    pub fn welch_ratio_test(accept_hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "welch_ratio_test",
             f: ClaimFn::Hyp(
-                |out: &BenchDiffOut, accept_hyp: Hyp| {
-                    let res = out.welch_ln_test(accept_hyp.alt_hyp(), ALPHA);
+                |out: &BenchDiffOut, accept_hyp: Hyp, alpha: f64| {
+                    let res = out.welch_ln_test(accept_hyp.alt_hyp(), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
+                alpha,
             ),
         }
     }
 
-    pub fn student_diff_test(accept_hyp: Hyp) -> Claim {
+    pub fn student_diff_test(accept_hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "student_diff_test",
             f: ClaimFn::Hyp(
-                |out: &BenchDiffOut, accept_hyp: Hyp| {
-                    let res = out.student_diff_test(accept_hyp.alt_hyp(), ALPHA);
+                |out: &BenchDiffOut, accept_hyp: Hyp, alpha: f64| {
+                    let res = out.student_diff_test(accept_hyp.alt_hyp(), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
+                alpha,
             ),
         }
     }
 
-    pub fn student_ratio_test(accept_hyp: Hyp) -> Claim {
+    pub fn student_ratio_test(accept_hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "student_ratio_test",
             f: ClaimFn::Hyp(
-                |out: &BenchDiffOut, accept_hyp: Hyp| {
-                    let res = out.student_diff_ln_test(accept_hyp.alt_hyp(), ALPHA);
+                |out: &BenchDiffOut, accept_hyp: Hyp, alpha: f64| {
+                    let res = out.student_diff_ln_test(accept_hyp.alt_hyp(), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
+                alpha,
             ),
         }
     }
@@ -115,7 +117,7 @@ impl Claim {
     pub fn ratio_medians_f1_f2_near_target(target: f64) -> Claim {
         Claim {
             name: "ratio_medians_f1_f2_near_target",
-            f: ClaimFn::Target(
+            f: ClaimFn::Arity1(
                 |out: &BenchDiffOut, value: f64| {
                     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
 
@@ -132,12 +134,12 @@ impl Claim {
         }
     }
 
-    pub fn target_ratio_medians_f1_f2_in_welch_ratio_ci(target: f64) -> Claim {
+    pub fn target_ratio_medians_f1_f2_in_welch_ratio_ci(target: f64, alpha: f64) -> Claim {
         Claim {
             name: "target_ratio_medians_f1_f2_in_welch_ratio_ci",
-            f: ClaimFn::Target(
-                |out: &BenchDiffOut, value: f64| {
-                    let ci = out.welch_ratio_ci(ALPHA);
+            f: ClaimFn::Arity2(
+                |out: &BenchDiffOut, value: f64, alpha: f64| {
+                    let ci = out.welch_ratio_ci(alpha);
 
                     if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
                         None
@@ -148,16 +150,17 @@ impl Claim {
                     }
                 },
                 target,
+                alpha,
             ),
         }
     }
 
-    pub fn target_ratio_medians_f1_f2_in_student_ratio_ci(target: f64) -> Claim {
+    pub fn target_ratio_medians_f1_f2_in_student_ratio_ci(target: f64, alpha: f64) -> Claim {
         Claim {
             name: "target_ratio_medians_f1_f2_in_student_ratio_ci",
-            f: ClaimFn::Target(
-                |out: &BenchDiffOut, value: f64| {
-                    let ci = out.student_ratio_ci(ALPHA);
+            f: ClaimFn::Arity2(
+                |out: &BenchDiffOut, value: f64, alpha: f64| {
+                    let ci = out.student_ratio_ci(alpha);
 
                     if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
                         None
@@ -168,65 +171,57 @@ impl Claim {
                     }
                 },
                 target,
+                alpha,
             ),
         }
     }
 
-    pub fn wilcoxon_rank_sum_test(accept_hyp: Hyp) -> Claim {
+    pub fn wilcoxon_rank_sum_test(accept_hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "wilcoxon_rank_sum_test",
             f: ClaimFn::Hyp(
-                |out: &BenchDiffOut, accept_hyp: Hyp| {
-                    let res = out.wilcoxon_rank_sum_test(accept_hyp.alt_hyp(), ALPHA);
+                |out: &BenchDiffOut, accept_hyp: Hyp, alpha: f64| {
+                    let res = out.wilcoxon_rank_sum_test(accept_hyp.alt_hyp(), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
+                alpha,
             ),
         }
     }
 
-    pub fn bernoulli_test(accept_hyp: Hyp) -> Claim {
+    pub fn bernoulli_test(accept_hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "bernoulli_test",
             f: ClaimFn::Hyp(
-                |out: &BenchDiffOut, accept_hyp: Hyp| {
-                    let res = out.bernoulli_eq_half_test(accept_hyp.alt_hyp(), ALPHA);
+                |out: &BenchDiffOut, accept_hyp: Hyp, alpha: f64| {
+                    let res = out.bernoulli_eq_half_test(accept_hyp.alt_hyp(), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
+                alpha,
             ),
         }
     }
-}
 
-pub struct Scenario {
-    pub name1: &'static str,
-    pub name2: &'static str,
-    pub claims: Vec<Claim>,
-}
-
-impl Scenario {
-    pub const fn new(name1: &'static str, name2: &'static str, claims: Vec<Claim>) -> Self {
-        Self {
-            name1,
-            name2,
-            claims,
-        }
-    }
-
-    pub fn check_claims(&self, diff_out: &BenchDiffOut) -> Vec<ClaimResult> {
-        self.claims
-            .iter()
-            .map(|claim| ClaimResult {
-                scenario_name: format!("fn1={}, fn2={}", self.name1, self.name2),
-                claim_name: claim.name,
-                result: claim.invoke(diff_out),
-            })
-            .collect()
+    pub fn claims(accept_hyp: Hyp, target: f64, alpha: f64) -> Vec<Claim> {
+        vec![
+            Claim::welch_ratio_test(accept_hyp, alpha),
+            Claim::student_diff_test(accept_hyp, alpha),
+            Claim::student_ratio_test(accept_hyp, alpha),
+            Claim::wilcoxon_rank_sum_test(accept_hyp, alpha),
+            Claim::bernoulli_test(accept_hyp, alpha),
+            //
+            Claim::ratio_medians_f1_f2_near_ratio_from_lns(),
+            Claim::ratio_medians_f1_f2_near_target(target),
+            Claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target, alpha),
+            Claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target, alpha),
+        ]
     }
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct ClaimResult {
     scenario_name: String,
     claim_name: &'static str,
@@ -246,24 +241,28 @@ impl ClaimResults {
         }
     }
 
-    pub fn push_result(&mut self, result: ClaimResult, verbose: bool) {
+    pub fn push_claim(
+        &mut self,
+        scenario_name: String,
+        claim: &Claim,
+        diff_out: &BenchDiffOut,
+        verbose: bool,
+    ) {
         let value = self
             .summary
-            .entry((result.scenario_name.clone(), result.claim_name))
+            .entry((scenario_name.clone(), claim.name))
             .or_insert(0);
-        if result.result.is_some() {
+        let result = claim.invoke(diff_out);
+        if result.is_some() {
             *value += 1;
             if verbose {
-                self.failures.push(result);
+                self.failures.push(ClaimResult {
+                    scenario_name,
+                    claim_name: claim.name,
+                    result,
+                });
             }
         };
-    }
-
-    pub fn add_scenario(&mut self, scenario: &Scenario, diff_out: &BenchDiffOut, verbose: bool) {
-        let results = scenario.check_claims(diff_out);
-        for result in results {
-            self.push_result(result, verbose);
-        }
     }
 
     pub fn summary(&self) -> &BTreeMap<(String, &'static str), u32> {

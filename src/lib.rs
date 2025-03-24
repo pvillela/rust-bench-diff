@@ -14,4 +14,8 @@ pub mod dev_utils;
 
 // intended only to be used by benches
 #[cfg(feature = "bench")]
+#[cfg(feature = "test_support")]
 pub mod bench_support;
+
+#[cfg(feature = "test_support")]
+pub mod test_support;

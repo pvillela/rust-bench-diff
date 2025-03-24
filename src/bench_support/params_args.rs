@@ -1,45 +1,19 @@
 //! Definition of target functions, test scenarios, and their parameterization.
 
-use super::scenario::{Claim, Scenario};
 use crate::{
-    LatencyUnit,
     dev_utils::{busy_work, calibrate_busy_work},
-    statistics::{AltHyp, Hyp},
+    test_support::{FN_NAME_PAIRS, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams},
 };
 use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
 use rand_distr::LogNormal;
-use std::{env, sync::LazyLock};
+use std::env;
 
-pub const ALPHA: f64 = 0.05;
-pub const HI_1PCT_FACTOR: f64 = 1.01;
-pub const HI_10PCT_FACTOR: f64 = 1.1;
-pub const HI_25PCT_FACTOR: f64 = 1.25;
-
-pub fn default_lo_stdev_log() -> f64 {
-    1.2_f64.ln() / 2.0
-}
-
-pub fn default_hi_stdev_log() -> f64 {
-    2.4_f64.ln() / 2.0
-}
-
-pub struct ScaleParams {
-    pub name: String,
-    pub unit: LatencyUnit,
-    pub exec_count: usize,
-    pub base_median: f64,
-    pub lo_stdev_log: f64,
-    pub hi_stdev_log: f64,
-}
-
-impl ScaleParams {
-    pub fn to_calibrated_fn_params(&self) -> CalibratedFnParams {
-        let effort = calibrate_busy_work(self.unit.latency_from_f64(self.base_median));
-        CalibratedFnParams {
-            effort,
-            lo_stdev_log: self.lo_stdev_log,
-            hi_stdev_log: self.hi_stdev_log,
-        }
+pub fn calibrated_fn_params(s: &ScaleParams) -> CalibratedFnParams {
+    let effort = calibrate_busy_work(s.unit.latency_from_f64(s.base_median));
+    CalibratedFnParams {
+        effort,
+        lo_stdev_log: s.lo_stdev_log,
+        hi_stdev_log: s.hi_stdev_log,
     }
 }
 
@@ -154,202 +128,6 @@ pub fn get_fn(name: &str) -> fn(&CalibratedFnParams) -> MyFnMut {
         .find(|pair| pair.0 == name)
         .expect(&format!("invalid fn name: {name}"))
         .1
-}
-
-fn claims(accept_hyp: Hyp, target: f64) -> Vec<Claim> {
-    vec![
-        Claim::welch_ratio_test(accept_hyp),
-        Claim::student_diff_test(accept_hyp),
-        Claim::student_ratio_test(accept_hyp),
-        Claim::wilcoxon_rank_sum_test(accept_hyp),
-        Claim::bernoulli_test(accept_hyp),
-        //
-        Claim::ratio_medians_f1_f2_near_ratio_from_lns(),
-        Claim::ratio_medians_f1_f2_near_target(target),
-        Claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target),
-        Claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target),
-    ]
-}
-
-static SCENARIO_SPECS: LazyLock<[Scenario; 14]> = LazyLock::new(|| {
-    [
-        Scenario::new(
-            "base_median_no_var",
-            "base_median_no_var",
-            claims(Hyp::Null, 1.0),
-        ),
-        Scenario::new(
-            "base_median_no_var",
-            "hi_1pct_median_no_var",
-            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.01),
-        ),
-        Scenario::new(
-            "base_median_no_var",
-            "hi_10pct_median_no_var",
-            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.1),
-        ),
-        Scenario::new(
-            "base_median_no_var",
-            "hi_25pct_median_no_var",
-            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.25),
-        ),
-        Scenario::new(
-            "hi_1pct_median_no_var",
-            "base_median_no_var",
-            claims(Hyp::Alt(AltHyp::Gt), 1.01),
-        ),
-        Scenario::new(
-            "base_median_lo_var",
-            "base_median_lo_var",
-            claims(Hyp::Null, 1.0),
-        ),
-        Scenario::new(
-            "base_median_lo_var",
-            "base_median_hi_var",
-            claims(Hyp::Null, 1.0),
-        ),
-        Scenario::new(
-            "base_median_hi_var",
-            "base_median_lo_var",
-            claims(Hyp::Null, 1.0),
-        ),
-        Scenario::new(
-            "base_median_lo_var",
-            "hi_1pct_median_lo_var",
-            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.01),
-        ),
-        Scenario::new(
-            "base_median_lo_var",
-            "hi_10pct_median_lo_var",
-            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.1),
-        ),
-        Scenario::new(
-            "base_median_lo_var",
-            "hi_25pct_median_lo_var",
-            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.25),
-        ),
-        Scenario::new(
-            "base_median_lo_var",
-            "hi_1pct_median_hi_var",
-            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.01),
-        ),
-        Scenario::new(
-            "base_median_lo_var",
-            "hi_10pct_median_hi_var",
-            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.1),
-        ),
-        Scenario::new(
-            "base_median_lo_var",
-            "hi_25pct_median_hi_var",
-            claims(Hyp::Alt(AltHyp::Lt), 1.0 / 1.25),
-        ),
-    ]
-});
-
-pub static FN_NAME_PAIRS: LazyLock<Vec<(&'static str, &'static str)>> = LazyLock::new(|| {
-    SCENARIO_SPECS
-        .iter()
-        .map(|s| (s.name1, s.name2))
-        .collect::<Vec<_>>()
-});
-
-pub fn get_spec(name1: &str, name2: &str) -> &'static Scenario {
-    SCENARIO_SPECS
-        .iter()
-        .find(|spec| spec.name1 == name1 && spec.name2 == name2)
-        .expect(&format!(
-            "invalid fn name pair: ({name1}, {name2}); valid name pairs are: {FN_NAME_PAIRS:?}"
-        ))
-}
-
-pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
-    vec![
-        //
-        // Revised params.
-        //
-        {
-            let base_median = 400.0;
-            ScaleParams {
-                name: "nanos_scale".into(),
-                unit: LatencyUnit::Nano,
-                exec_count: 10_000,
-                base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
-            }
-        },
-        {
-            let base_median = 100_000.0;
-            ScaleParams {
-                name: "micros_scale".into(),
-                unit: LatencyUnit::Nano,
-                exec_count: 1_000,
-                base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
-            }
-        },
-        {
-            let base_median = 5_000.0;
-            ScaleParams {
-                name: "millis_scale".into(),
-                unit: LatencyUnit::Micro,
-                exec_count: 200,
-                base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
-            }
-        },
-        //
-        // Original params.
-        //
-        {
-            let base_median = 400.0;
-            ScaleParams {
-                name: "nanos_scale_original".into(),
-                unit: LatencyUnit::Nano,
-                exec_count: 100_000,
-                base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
-            }
-        },
-        {
-            let base_median = 100_000.0;
-            ScaleParams {
-                name: "micros_scale_original".into(),
-                unit: LatencyUnit::Nano,
-                exec_count: 10_000,
-                base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
-            }
-        },
-        {
-            let base_median = 10_000.0;
-            ScaleParams {
-                name: "millis_scale_original".into(),
-                unit: LatencyUnit::Micro,
-                exec_count: 600,
-                base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
-            }
-        },
-    ]
-});
-
-pub fn get_scale_params(name: &str) -> &ScaleParams {
-    let valid_names = SCALE_PARAMS
-        .iter()
-        .map(|p| p.name.clone())
-        .collect::<Vec<_>>();
-    &SCALE_PARAMS
-        .iter()
-        .find(|pair| pair.name == name)
-        .expect(&format!(
-            "invalid params name: {name}; valid names are: {valid_names:?}"
-        ))
 }
 
 pub struct Args {

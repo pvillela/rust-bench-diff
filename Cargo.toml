@@ -36,6 +36,7 @@ polars = "0.43" # required by hypors
 [features]
 bench = []               # intended only to be used by benches
 dev_utils = ["dep:sha2"] # utilities for creation of synthetic benchmarks
+test_support = []        # intended only for tests and benches
 wilcoxon = []            # to enable Wilcoxon rank sum test functionality
 
 [[bench]]

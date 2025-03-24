@@ -101,6 +101,38 @@ pub struct BenchDiffOut {
 }
 
 impl BenchDiffOut {
+    pub fn new() -> Self {
+        let hist_f1 = new_timing(20 * 1000 * 1000, 5);
+        let hist_f2 = Histogram::<u64>::new_from(&hist_f1);
+        let hist_f1_lt_f2 = Histogram::<u64>::new_from(&hist_f1);
+        let count_f1_eq_f2 = 0;
+        let hist_f1_gt_f2 = Histogram::<u64>::new_from(&hist_f1);
+        let sum_ln_f1 = 0.0_f64;
+        let sum2_ln_f1 = 0.0_f64;
+        let sum_ln_f2 = 0.0_f64;
+        let sum2_ln_f2 = 0.0_f64;
+        let sum_diff_f1_f2 = 0.0_f64;
+        let sum2_diff_f1_f2 = 0.0_f64;
+        let sum_diff_ln_f1_f2 = 0.0_f64;
+        let sum2_diff_ln_f1_f2 = 0.0_f64;
+
+        Self {
+            hist_f1,
+            hist_f2,
+            hist_f1_lt_f2,
+            count_f1_eq_f2,
+            hist_f1_gt_f2,
+            sum_ln_f1,
+            sum2_ln_f1,
+            sum_ln_f2,
+            sum2_ln_f2,
+            sum_diff_f1_f2,
+            sum2_diff_f1_f2,
+            sum_diff_ln_f1_f2,
+            sum2_diff_ln_f1_f2,
+        }
+    }
+
     #[inline(always)]
     pub fn n(&self) -> f64 {
         self.hist_f1.len() as f64
@@ -371,38 +403,6 @@ impl BenchDiffOut {
 type BenchDiffState = BenchDiffOut;
 
 impl BenchDiffState {
-    fn new() -> BenchDiffState {
-        let hist_f1 = new_timing(20 * 1000 * 1000, 5);
-        let hist_f2 = Histogram::<u64>::new_from(&hist_f1);
-        let hist_f1_lt_f2 = Histogram::<u64>::new_from(&hist_f1);
-        let count_f1_eq_f2 = 0;
-        let hist_f1_gt_f2 = Histogram::<u64>::new_from(&hist_f1);
-        let sum_ln_f1 = 0.0_f64;
-        let sum2_ln_f1 = 0.0_f64;
-        let sum_ln_f2 = 0.0_f64;
-        let sum2_ln_f2 = 0.0_f64;
-        let sum_diff_f1_f2 = 0.0_f64;
-        let sum2_diff_f1_f2 = 0.0_f64;
-        let sum_diff_ln_f1_f2 = 0.0_f64;
-        let sum2_diff_ln_f1_f2 = 0.0_f64;
-
-        Self {
-            hist_f1,
-            hist_f2,
-            hist_f1_lt_f2,
-            count_f1_eq_f2,
-            hist_f1_gt_f2,
-            sum_ln_f1,
-            sum2_ln_f1,
-            sum_ln_f2,
-            sum2_ln_f2,
-            sum_diff_f1_f2,
-            sum2_diff_f1_f2,
-            sum_diff_ln_f1_f2,
-            sum2_diff_ln_f1_f2,
-        }
-    }
-
     fn reset(&mut self) {
         self.hist_f1.reset();
         self.hist_f2.reset();
@@ -644,4 +644,270 @@ pub fn bench_diff_print(
     print_stats(&diff_out);
 
     diff_out
+}
+
+#[cfg(test)]
+#[cfg(feature = "test_support")]
+mod test {
+    use super::*;
+    use crate::test_support::{
+        ClaimResults, FN_NAME_PAIRS, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR,
+        SCALE_PARAMS, ScaleParams, default_hi_stdev_log, default_lo_stdev_log, get_scenario,
+    };
+    use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
+    use rand_distr::LogNormal;
+    use std::{fmt::Debug, ops::Deref};
+
+    enum MyFnMut {
+        Det {
+            median: f64,
+        },
+
+        NonDet {
+            median: f64,
+            lognormal: LogNormal<f64>,
+            rng: StdRng,
+        },
+    }
+
+    impl MyFnMut {
+        fn new_deterministic(median: f64) -> Self {
+            Self::Det { median }
+        }
+
+        fn new_non_deterministic(median: f64, stdev_log: f64) -> Self {
+            let mu = 0.0_f64;
+            let sigma = stdev_log;
+            Self::NonDet {
+                median,
+                lognormal: LogNormal::new(mu, sigma).expect("stdev_log must be > 0"),
+                rng: StdRng::from_rng(&mut rand::rng()),
+            }
+        }
+
+        pub fn invoke(&mut self) -> f64 {
+            match self {
+                Self::Det { median } => *median,
+
+                Self::NonDet {
+                    median,
+                    lognormal,
+                    rng,
+                } => {
+                    let factor = lognormal.sample(rng);
+                    *median * factor
+                }
+            }
+        }
+    }
+
+    const NAMED_FNS: [(&str, fn(f64) -> MyFnMut); 12] = {
+        [
+            ("base_median_no_var", |base_median| {
+                MyFnMut::new_deterministic(base_median)
+            }),
+            ("hi_1pct_median_no_var", |base_median| {
+                MyFnMut::new_deterministic(base_median * HI_1PCT_FACTOR)
+            }),
+            ("hi_10pct_median_no_var", |base_median| {
+                MyFnMut::new_deterministic(base_median * HI_10PCT_FACTOR)
+            }),
+            ("hi_25pct_median_no_var", |base_median| {
+                MyFnMut::new_deterministic(base_median * HI_25PCT_FACTOR)
+            }),
+            ("base_median_lo_var", |base_median| {
+                MyFnMut::new_non_deterministic(base_median, default_lo_stdev_log())
+            }),
+            ("hi_1pct_median_lo_var", |base_median| {
+                MyFnMut::new_non_deterministic(base_median * HI_1PCT_FACTOR, default_lo_stdev_log())
+            }),
+            ("hi_10pct_median_lo_var", |base_median| {
+                MyFnMut::new_non_deterministic(
+                    base_median * HI_10PCT_FACTOR,
+                    default_lo_stdev_log(),
+                )
+            }),
+            ("hi_25pct_median_lo_var", |base_median| {
+                MyFnMut::new_non_deterministic(
+                    base_median * HI_25PCT_FACTOR,
+                    default_lo_stdev_log(),
+                )
+            }),
+            ("base_median_hi_var", |base_median| {
+                MyFnMut::new_non_deterministic(base_median, default_hi_stdev_log())
+            }),
+            ("hi_1pct_median_hi_var", |base_median| {
+                MyFnMut::new_non_deterministic(base_median * HI_1PCT_FACTOR, default_hi_stdev_log())
+            }),
+            ("hi_10pct_median_hi_var", |base_median| {
+                MyFnMut::new_non_deterministic(
+                    base_median * HI_10PCT_FACTOR,
+                    default_hi_stdev_log(),
+                )
+            }),
+            ("hi_25pct_median_hi_var", |base_median| {
+                MyFnMut::new_non_deterministic(
+                    base_median * HI_25PCT_FACTOR,
+                    default_hi_stdev_log(),
+                )
+            }),
+        ]
+    };
+
+    fn get_fn(name: &str) -> fn(f64) -> MyFnMut {
+        NAMED_FNS
+            .iter()
+            .find(|pair| pair.0 == name)
+            .expect(&format!("invalid fn name: {name}"))
+            .1
+    }
+
+    fn diff_x(
+        mut f1: impl FnMut() -> f64,
+        mut f2: impl FnMut() -> f64,
+        exec_count: usize,
+    ) -> BenchDiffOut {
+        let mut state = BenchDiffState::new();
+
+        for _ in 1..=exec_count {
+            let (elapsed1, elapsed2) = (f1() as u64, f2() as u64);
+
+            state
+                .hist_f1
+                .record(elapsed1)
+                .expect("can't happen: histogram is auto-resizable");
+            state
+                .hist_f2
+                .record(elapsed2)
+                .expect("can't happen: histogram is auto-resizable");
+
+            let diff = elapsed1 as i64 - elapsed2 as i64;
+
+            if diff < 0 {
+                state
+                    .hist_f1_lt_f2
+                    .record(diff as u64)
+                    .expect("can't happen: histogram is auto-resizable");
+            } else if diff > 0 {
+                state
+                    .hist_f1_gt_f2
+                    .record(-diff as u64)
+                    .expect("can't happen: histogram is auto-resizable");
+            } else {
+                state.count_f1_eq_f2 += 1;
+            }
+
+            assert!(elapsed1 > 0, "f1 latency must be > 0");
+            let ln_f1 = (elapsed1 as f64).ln();
+            state.sum_ln_f1 += ln_f1;
+            state.sum2_ln_f1 += ln_f1.powi(2);
+
+            assert!(elapsed2 > 0, "f2 latency must be > 0");
+            let ln_f2 = (elapsed2 as f64).ln();
+            state.sum_ln_f2 += ln_f2;
+            state.sum2_ln_f2 += ln_f2.powi(2);
+
+            let diff_f1_f2 = elapsed1 as f64 - elapsed2 as f64;
+            state.sum_diff_f1_f2 += diff_f1_f2;
+            state.sum2_diff_f1_f2 += diff_f1_f2.powi(2);
+
+            let diff_ln_f1_f2 = ln_f1 - ln_f2;
+            state.sum_diff_ln_f1_f2 += diff_ln_f1_f2;
+            state.sum2_diff_ln_f1_f2 += diff_ln_f1_f2.powi(2);
+        }
+
+        state
+    }
+
+    pub fn run_with_claims<T: Deref<Target = str> + Debug>(
+        scale_params: &ScaleParams,
+        fn_name_pairs: &[(T, T)],
+        verbose: bool,
+        nrepeats: usize,
+        run_name: &str,
+    ) {
+        let print_args = || {
+            println!("*** arguments ***");
+            println!("SCALE_NAME=\"{}\"", scale_params.name);
+            println!(
+                "unit={:?}, exec_count={}, base_median={}",
+                scale_params.unit, scale_params.exec_count, scale_params.base_median
+            );
+            println!("FN_NAME_PAIRS=\"{fn_name_pairs:?}\"");
+            println!("VERBOSE=\"{verbose}\"");
+            println!("nrepeats={nrepeats}");
+            println!("run_name=\"{run_name}\"");
+        };
+
+        println!();
+        print_args();
+        println!();
+
+        let total_iterations = nrepeats * fn_name_pairs.len();
+        let mut cumulative_iter = 0;
+
+        for (name1, name2) in fn_name_pairs {
+            let scenario_name = format!("f1={}, f2={}", name1.deref(), name2.deref());
+            let scenario = get_scenario(name1, name2);
+
+            let mut f1 = {
+                let mut my_fn = get_fn(name1)(scale_params.base_median);
+                move || my_fn.invoke()
+            };
+
+            let mut f2 = {
+                let mut my_fn = get_fn(name2)(scale_params.base_median);
+                move || my_fn.invoke()
+            };
+
+            let mut results = ClaimResults::new();
+
+            for i in 1..=nrepeats {
+                cumulative_iter += 1;
+                eprintln!(
+                    "*** run_name=\"{run_name}\", scenario=\"{scenario_name}\", scenario_iteration={i}, ({cumulative_iter} of {total_iterations}) ***"
+                );
+
+                let diff_out = diff_x(&mut f1, &mut f2, scale_params.exec_count);
+
+                scenario.check_claims(&mut results, &diff_out, verbose);
+            }
+
+            if verbose {
+                println!("*** failures ***");
+                for claim_result in results.failures().iter() {
+                    println!("{claim_result:?}");
+                }
+
+                println!();
+                print_args();
+
+                println!();
+                println!("*** failure_summary ***");
+                for ((scenario_name, claim_name), count) in results.failure_summary() {
+                    println!("{scenario_name} | {claim_name} ==> count={count}");
+                }
+
+                println!();
+                println!("*** success_summary ***");
+                for (scenario_name, claim_name) in results.success_summary() {
+                    println!("{scenario_name} | {claim_name}");
+                }
+            } else {
+                println!("*** claim_summary ***");
+                for ((scenario_name, claim_name), count) in results.summary() {
+                    println!("{scenario_name} | {claim_name} ==> count={count}");
+                }
+            }
+
+            assert!(results.failures().is_empty(), "failures not empty");
+        }
+    }
+
+    #[test]
+    fn test_claims() {
+        for scale in SCALE_PARAMS.iter() {
+            run_with_claims(scale, &FN_NAME_PAIRS, false, 100, "test");
+        }
+    }
 }

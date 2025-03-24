@@ -254,19 +254,19 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
 
             println!();
             println!("*** failure_summary ***");
-            for ((scenario_name, claim_name), count) in results.failure_summary() {
-                println!("{scenario_name} | {claim_name} ==> count={count}");
+            for ((name_pair, claim_name), count) in results.failure_summary() {
+                println!("{name_pair:?} | {claim_name} ==> count={count}");
             }
 
             println!();
             println!("*** success_summary ***");
-            for (scenario_name, claim_name) in results.success_summary() {
-                println!("{scenario_name} | {claim_name}");
+            for (name_pair, claim_name) in results.success_summary() {
+                println!("{name_pair:?} | {claim_name}");
             }
         } else {
             println!("*** claim_summary ***");
-            for ((scenario_name, claim_name), count) in results.summary() {
-                println!("{scenario_name} | {claim_name} ==> count={count}");
+            for ((name_pair, claim_name), count) in results.summary() {
+                println!("{name_pair:?} | {claim_name} ==> count={count}");
             }
         }
 

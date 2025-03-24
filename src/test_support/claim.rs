@@ -223,14 +223,15 @@ impl Claim {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct ClaimResult {
-    scenario_name: String,
+    name1: &'static str,
+    name2: &'static str,
     claim_name: &'static str,
     result: Option<String>,
 }
 
 pub struct ClaimResults {
     failures: Vec<ClaimResult>,
-    summary: BTreeMap<(String, &'static str), u32>,
+    summary: BTreeMap<((&'static str, &'static str), &'static str), u32>,
 }
 
 impl ClaimResults {
@@ -243,21 +244,23 @@ impl ClaimResults {
 
     pub fn push_claim(
         &mut self,
-        scenario_name: String,
+        name1: &'static str,
+        name2: &'static str,
         claim: &Claim,
         diff_out: &BenchDiffOut,
         verbose: bool,
     ) {
         let value = self
             .summary
-            .entry((scenario_name.clone(), claim.name))
+            .entry(((name1, name2), claim.name))
             .or_insert(0);
         let result = claim.invoke(diff_out);
         if result.is_some() {
             *value += 1;
             if verbose {
                 self.failures.push(ClaimResult {
-                    scenario_name,
+                    name1,
+                    name2,
                     claim_name: claim.name,
                     result,
                 });
@@ -265,7 +268,7 @@ impl ClaimResults {
         };
     }
 
-    pub fn summary(&self) -> &BTreeMap<(String, &'static str), u32> {
+    pub fn summary(&self) -> &BTreeMap<((&'static str, &'static str), &'static str), u32> {
         &self.summary
     }
 
@@ -273,7 +276,7 @@ impl ClaimResults {
         &self.failures
     }
 
-    pub fn failure_summary(&self) -> BTreeMap<(String, &'static str), u32> {
+    pub fn failure_summary(&self) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
         self.summary
             .iter()
             .filter(|(_, v)| **v > 0)
@@ -281,7 +284,7 @@ impl ClaimResults {
             .collect()
     }
 
-    pub fn success_summary(&self) -> BTreeSet<(String, &'static str)> {
+    pub fn success_summary(&self) -> BTreeSet<((&'static str, &'static str), &'static str)> {
         self.summary
             .iter()
             .filter(|(_, v)| **v == 0)

@@ -24,9 +24,8 @@ impl Scenario {
     }
 
     pub fn check_claims(&self, results: &mut ClaimResults, diff_out: &BenchDiffOut, verbose: bool) {
-        let scenario_name = format!("fn1={}, fn2={}", self.name1, self.name2);
         for claim in &self.claims {
-            results.push_claim(scenario_name.clone(), claim, diff_out, verbose);
+            results.push_claim(self.name1, self.name2, claim, diff_out, verbose);
         }
     }
 }

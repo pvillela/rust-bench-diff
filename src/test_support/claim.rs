@@ -1,12 +1,11 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt::Debug,
-};
-
 use crate::{
     BenchDiffOut,
     dev_utils::ApproxEq,
     statistics::{Hyp, HypTestResult, PositionWrtCi},
+};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Debug,
 };
 
 #[derive(Clone)]
@@ -289,6 +288,58 @@ impl ClaimResults {
             .iter()
             .filter(|(_, v)| **v == 0)
             .map(|(k, _)| k.clone())
+            .collect()
+    }
+
+    pub fn type_i_and_ii_errors(
+        &self,
+        alpha: f64,
+        beta: f64,
+        nrepeats: usize,
+    ) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
+        let eq_claim_names = [
+            "welch_ratio_test",
+            "student_diff_test",
+            "student_ratio_test",
+            "wilcoxon_rank_sum_test",
+            "bernoulli_test",
+            "target_ratio_medians_f1_f2_in_welch_ratio_ci",
+            "target_ratio_medians_f1_f2_in_student_ratio_ci",
+        ];
+        let ne_claim_names = eq_claim_names;
+        let alpha_count = (nrepeats as f64 * alpha).ceil() as u32 + 1;
+        let beta_count = (nrepeats as f64 * beta).ceil() as u32 + 1;
+
+        let predicate = |name1: &'static str,
+                         name2: &'static str,
+                         claim_name: &'static str,
+                         count: u32|
+         -> bool {
+            match (name1, name2, claim_name, count) {
+                _ if name1[..5] == name2[..5]
+                    && eq_claim_names.contains(&claim_name)
+                    && count > alpha_count =>
+                {
+                    true
+                }
+
+                _ if name1[..5] != name2[..5]
+                    && ne_claim_names.contains(&claim_name)
+                    && count > beta_count =>
+                {
+                    true
+                }
+
+                _ => false,
+            }
+        };
+
+        self.summary
+            .iter()
+            .filter(|(((name1, name2), claim_name), count)| {
+                predicate(name1, name2, claim_name, **count)
+            })
+            .map(|(k, v)| (k.clone(), *v))
             .collect()
     }
 }

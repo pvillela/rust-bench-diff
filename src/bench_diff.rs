@@ -651,7 +651,7 @@ pub fn bench_diff_print(
 mod test {
     use super::*;
     use crate::test_support::{
-        ClaimResults, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams,
+        ALPHA, BETA, ClaimResults, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams,
         default_hi_stdev_log, default_lo_stdev_log, get_scale_params, get_scenario,
     };
     use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
@@ -905,10 +905,10 @@ mod test {
             }
         }
 
-        let failure_summary = results.failure_summary();
+        let type_i_and_ii_errors = results.type_i_and_ii_errors(ALPHA, BETA, nrepeats);
         assert!(
-            failure_summary.is_empty(),
-            "\n*** there are failures: {failure_summary:?}\n"
+            type_i_and_ii_errors.is_empty(),
+            "\n*** type_i_and_ii_errors: {type_i_and_ii_errors:?}\n"
         );
     }
 

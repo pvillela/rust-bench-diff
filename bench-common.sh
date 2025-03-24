@@ -16,6 +16,8 @@ export RUSTFLAGS="-Awarnings"
 export VERBOSE="false"
 export NOISE_STATS="false"
 
+echo "Started at: `date +"%H:%M:%S"`"
+
 FN_NAME_PAIRS="base_median_no_var/base_median_no_var base_median_no_var/hi_1pct_median_no_var hi_1pct_median_no_var/base_median_no_var" \
 cargo bench --bench bench_t --all-features --target-dir target/bench-target -- $1 default
 
@@ -30,3 +32,7 @@ cargo bench --bench bench_t --all-features --target-dir target/bench-target -- $
 
 FN_NAME_PAIRS="all" \
 cargo bench --bench bench_t --all-features --target-dir target/bench-target -- $1 all
+
+echo ""
+echo "Finished at: `date +"%H:%M:%S"`"
+

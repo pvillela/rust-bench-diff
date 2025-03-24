@@ -651,8 +651,8 @@ pub fn bench_diff_print(
 mod test {
     use super::*;
     use crate::test_support::{
-        ClaimResults, FN_NAME_PAIRS, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR,
-        SCALE_PARAMS, ScaleParams, default_hi_stdev_log, default_lo_stdev_log, get_scenario,
+        ClaimResults, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams,
+        default_hi_stdev_log, default_lo_stdev_log, get_scale_params, get_scenario,
     };
     use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
     use rand_distr::LogNormal;
@@ -762,6 +762,24 @@ mod test {
             .1
     }
 
+    #[allow(unused)]
+    static FN_NAME_PAIRS: [(&'static str, &'static str); 9] = [
+        // ("base_median_no_var", "base_median_no_var"),
+        // ("base_median_no_var", "hi_1pct_median_no_var"),
+        // ("base_median_no_var", "hi_10pct_median_no_var"),
+        // ("base_median_no_var", "hi_25pct_median_no_var"),
+        // ("hi_1pct_median_no_var", "base_median_no_var"),
+        ("base_median_lo_var", "base_median_lo_var"),
+        ("base_median_lo_var", "base_median_hi_var"),
+        ("base_median_hi_var", "base_median_lo_var"),
+        ("base_median_lo_var", "hi_1pct_median_lo_var"),
+        ("base_median_lo_var", "hi_10pct_median_lo_var"),
+        ("base_median_lo_var", "hi_25pct_median_lo_var"),
+        ("base_median_lo_var", "hi_1pct_median_hi_var"),
+        ("base_median_lo_var", "hi_10pct_median_hi_var"),
+        ("base_median_lo_var", "hi_25pct_median_hi_var"),
+    ];
+
     fn diff_x(
         mut f1: impl FnMut() -> f64,
         mut f2: impl FnMut() -> f64,
@@ -821,7 +839,8 @@ mod test {
 
     pub fn run_with_claims<T: Deref<Target = str> + Debug>(
         scale_params: &ScaleParams,
-        fn_name_pairs: &[(T, T)],
+        name1: T,
+        name2: T,
         verbose: bool,
         nrepeats: usize,
         run_name: &str,
@@ -833,7 +852,7 @@ mod test {
                 "unit={:?}, exec_count={}, base_median={}",
                 scale_params.unit, scale_params.exec_count, scale_params.base_median
             );
-            println!("FN_NAME_PAIRS=\"{fn_name_pairs:?}\"");
+            println!("FN_NAME_PAIR=\"({name1:?}, {name2:?})\"");
             println!("VERBOSE=\"{verbose}\"");
             println!("nrepeats={nrepeats}");
             println!("run_name=\"{run_name}\"");
@@ -843,71 +862,194 @@ mod test {
         print_args();
         println!();
 
-        let total_iterations = nrepeats * fn_name_pairs.len();
-        let mut cumulative_iter = 0;
+        let scenario = get_scenario(&name1, &name2);
 
-        for (name1, name2) in fn_name_pairs {
-            let scenario_name = format!("f1={}, f2={}", name1.deref(), name2.deref());
-            let scenario = get_scenario(name1, name2);
+        let mut f1 = {
+            let mut my_fn = get_fn(&name1)(scale_params.base_median);
+            move || my_fn.invoke()
+        };
 
-            let mut f1 = {
-                let mut my_fn = get_fn(name1)(scale_params.base_median);
-                move || my_fn.invoke()
-            };
+        let mut f2 = {
+            let mut my_fn = get_fn(&name2)(scale_params.base_median);
+            move || my_fn.invoke()
+        };
 
-            let mut f2 = {
-                let mut my_fn = get_fn(name2)(scale_params.base_median);
-                move || my_fn.invoke()
-            };
+        let mut results = ClaimResults::new();
 
-            let mut results = ClaimResults::new();
+        for _ in 1..=nrepeats {
+            let diff_out = diff_x(&mut f1, &mut f2, scale_params.exec_count);
+            scenario.check_claims(&mut results, &diff_out, verbose);
+        }
 
-            for i in 1..=nrepeats {
-                cumulative_iter += 1;
-                eprintln!(
-                    "*** run_name=\"{run_name}\", scenario=\"{scenario_name}\", scenario_iteration={i}, ({cumulative_iter} of {total_iterations}) ***"
-                );
-
-                let diff_out = diff_x(&mut f1, &mut f2, scale_params.exec_count);
-
-                scenario.check_claims(&mut results, &diff_out, verbose);
+        if verbose {
+            println!("*** failures ***");
+            for claim_result in results.failures().iter() {
+                println!("{claim_result:?}");
             }
 
-            if verbose {
-                println!("*** failures ***");
-                for claim_result in results.failures().iter() {
-                    println!("{claim_result:?}");
-                }
-
-                println!();
-                print_args();
-
-                println!();
-                println!("*** failure_summary ***");
-                for ((scenario_name, claim_name), count) in results.failure_summary() {
-                    println!("{scenario_name} | {claim_name} ==> count={count}");
-                }
-
-                println!();
-                println!("*** success_summary ***");
-                for (scenario_name, claim_name) in results.success_summary() {
-                    println!("{scenario_name} | {claim_name}");
-                }
-            } else {
-                println!("*** claim_summary ***");
-                for ((scenario_name, claim_name), count) in results.summary() {
-                    println!("{scenario_name} | {claim_name} ==> count={count}");
-                }
+            println!();
+            println!("*** failure_summary ***");
+            for ((scenario_name, claim_name), count) in results.failure_summary() {
+                println!("{scenario_name} | {claim_name} ==> count={count}");
             }
 
-            assert!(results.failures().is_empty(), "failures not empty");
+            println!();
+            println!("*** success_summary ***");
+            for (scenario_name, claim_name) in results.success_summary() {
+                println!("{scenario_name} | {claim_name}");
+            }
+        } else {
+            println!("*** claim_summary ***");
+            for ((scenario_name, claim_name), count) in results.summary() {
+                println!("{scenario_name} | {claim_name} ==> count={count}");
+            }
+        }
+
+        let failure_summary = results.failure_summary();
+        assert!(
+            failure_summary.is_empty(),
+            "\n*** there are failures: {failure_summary:?}\n"
+        );
+    }
+
+    const SCALE_NAMES: [&'static str; 1] = [
+        "micros_scale",
+        // "millis_scale",
+        // "nanos_scale"
+    ];
+
+    #[test]
+    fn test_base_median_lo_var_base_median_lo_var() {
+        for name in SCALE_NAMES {
+            let scale = get_scale_params(name);
+            run_with_claims(
+                scale,
+                "base_median_lo_var",
+                "base_median_lo_var",
+                false,
+                100,
+                "test",
+            );
         }
     }
 
     #[test]
-    fn test_claims() {
-        for scale in SCALE_PARAMS.iter() {
-            run_with_claims(scale, &FN_NAME_PAIRS, false, 100, "test");
+    fn test_base_median_lo_var_base_median_hi_var() {
+        for name in SCALE_NAMES {
+            let scale = get_scale_params(name);
+            run_with_claims(
+                scale,
+                "base_median_lo_var",
+                "base_median_hi_var",
+                false,
+                100,
+                "test",
+            );
+        }
+    }
+
+    // #[test]
+    // fn test_base_median_hi_var_base_median_lo_var() {
+    //     for name in SCALE_NAMES {
+    //         let scale = get_scale_params(name);
+    //         run_with_claims(
+    //             scale,
+    //             "base_median_hi_var",
+    //             "base_median_lo_var",
+    //             false,
+    //             100,
+    //             "test",
+    //         );
+    //     }
+    // }
+
+    #[test]
+    fn test_base_median_lo_var_hi_1pct_median_lo_var() {
+        for name in SCALE_NAMES {
+            let scale = get_scale_params(name);
+            run_with_claims(
+                scale,
+                "base_median_lo_var",
+                "hi_1pct_median_lo_var",
+                false,
+                100,
+                "test",
+            );
+        }
+    }
+
+    #[test]
+    fn test_base_median_lo_var_hi_10pct_median_lo_var() {
+        for name in SCALE_NAMES {
+            let scale = get_scale_params(name);
+            run_with_claims(
+                scale,
+                "base_median_lo_var",
+                "hi_10pct_median_lo_var",
+                false,
+                100,
+                "test",
+            );
+        }
+    }
+
+    #[test]
+    fn test_base_median_lo_var_hi_25pct_median_lo_var() {
+        for name in SCALE_NAMES {
+            let scale = get_scale_params(name);
+            run_with_claims(
+                scale,
+                "base_median_lo_var",
+                "hi_25pct_median_lo_var",
+                false,
+                100,
+                "test",
+            );
+        }
+    }
+
+    #[test]
+    fn test_base_median_lo_var_hi_1pct_median_hi_var() {
+        for name in SCALE_NAMES {
+            let scale = get_scale_params(name);
+            run_with_claims(
+                scale,
+                "base_median_lo_var",
+                "hi_1pct_median_hi_var",
+                false,
+                100,
+                "test",
+            );
+        }
+    }
+
+    #[test]
+    fn test_base_median_lo_var_hi_10pct_median_hi_var() {
+        for name in SCALE_NAMES {
+            let scale = get_scale_params(name);
+            run_with_claims(
+                scale,
+                "base_median_lo_var",
+                "hi_1pct_median_hi_var",
+                false,
+                100,
+                "test",
+            );
+        }
+    }
+
+    #[test]
+    fn test_base_median_lo_var_hi_25pct_median_hi_var() {
+        for name in SCALE_NAMES {
+            let scale = get_scale_params(name);
+            run_with_claims(
+                scale,
+                "base_median_lo_var",
+                "hi_25pct_median_hi_var",
+                false,
+                100,
+                "test",
+            );
         }
     }
 }

@@ -340,6 +340,6 @@ impl ClaimResults {
                 predicate(name1, name2, claim_name, **count)
             })
             .map(|(k, v)| (k.clone(), *v))
-            .collect()
+            .collect::<BTreeMap<_, _>>()
     }
 }

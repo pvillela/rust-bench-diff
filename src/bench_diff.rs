@@ -652,7 +652,7 @@ mod test {
     use super::*;
     use crate::test_support::{
         ALPHA, BETA, ClaimResults, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams,
-        default_hi_stdev_log, default_lo_stdev_log, get_scale_params, get_scenario,
+        default_hi_stdev_log, default_lo_stdev_log, get_scale_params, get_scenario, nest_btree_map,
     };
     use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
     use rand_distr::LogNormal;
@@ -908,7 +908,8 @@ mod test {
         let type_i_and_ii_errors = results.type_i_and_ii_errors(ALPHA, BETA, nrepeats);
         assert!(
             type_i_and_ii_errors.is_empty(),
-            "\n*** type_i_and_ii_errors: {type_i_and_ii_errors:?}\n"
+            "\n*** type_i_and_ii_errors: {:?}\n",
+            nest_btree_map(type_i_and_ii_errors)
         );
     }
 

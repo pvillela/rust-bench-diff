@@ -2,13 +2,13 @@
 
 use super::params_args::{Args, calibrated_fn_params, get_args, get_fn};
 use crate::{
-    BenchDiffOut, bench_diff, bench_diff_print,
+    DiffOut, bench_diff, bench_diff_print,
     statistics::{AltHyp, SampleMoments, collect_moments},
     test_support::{ALPHA, ClaimResults, ScaleParams, get_scale_params, get_scenario},
 };
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
-fn print_diff_out(out: &BenchDiffOut) {
+fn print_diff_out(out: &DiffOut) {
     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
     let ratio_medians_f1_f2_from_lns = out.mean_diff_ln_f1_f2().exp();
 

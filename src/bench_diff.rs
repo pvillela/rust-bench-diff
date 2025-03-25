@@ -81,7 +81,7 @@ fn quad_exec(mut f1: impl FnMut(), mut f2: impl FnMut()) -> [(Duration, Duration
     [(l01, l02), (l11, l12), (l21, l22), (l31, l32)]
 }
 
-pub struct BenchDiffOut {
+pub struct DiffOut {
     hist_f1: Timing,
     hist_f2: Timing,
     hist_f1_lt_f2: Timing, //todo: replace with count, sum and sum of squares of ratios
@@ -97,7 +97,7 @@ pub struct BenchDiffOut {
     sum2_diff_ln_f1_f2: f64,
 }
 
-impl BenchDiffOut {
+impl DiffOut {
     pub fn new() -> Self {
         let hist_f1 = new_timing(20 * 1000 * 1000, 5);
         let hist_f2 = Histogram::<u64>::new_from(&hist_f1);
@@ -393,9 +393,9 @@ impl BenchDiffOut {
     }
 }
 
-type BenchDiffState = BenchDiffOut;
+type DiffState = DiffOut;
 
-impl BenchDiffState {
+impl DiffState {
     fn reset(&mut self) {
         self.hist_f1.reset();
         self.hist_f2.reset();
@@ -496,7 +496,7 @@ impl BenchDiffState {
         }
     }
 
-    fn merge_reversed(&mut self, other: BenchDiffState) -> Result<(), Box<dyn Error>> {
+    fn merge_reversed(&mut self, other: DiffState) -> Result<(), Box<dyn Error>> {
         self.hist_f1.add(other.hist_f2)?;
         self.hist_f2.add(other.hist_f1)?;
         self.hist_f1_lt_f2.add(other.hist_f1_gt_f2)?;
@@ -541,10 +541,10 @@ pub fn bench_diff_x(
     mut warm_up_status: impl FnMut(usize, u64, u64),
     pre_exec: impl Fn(),
     mut exec_status: impl FnMut(),
-) -> BenchDiffOut {
+) -> DiffOut {
     let exec_count2 = exec_count / 2;
 
-    let mut state = BenchDiffState::new();
+    let mut state = DiffState::new();
     state.warm_up(unit, &mut f1, &mut f2, &mut warm_up_status);
     state.reset();
     state.execute(
@@ -556,7 +556,7 @@ pub fn bench_diff_x(
         &mut exec_status,
     );
 
-    let mut state_rev = BenchDiffState::new();
+    let mut state_rev = DiffState::new();
     // state_rev.warm_up(unit, &mut f2, &mut f1, &mut warm_up_status);
     // state_rev.reset();
     state_rev.execute(unit, &mut f2, &mut f1, exec_count2, || (), &mut exec_status);
@@ -573,7 +573,7 @@ pub fn bench_diff(
     f1: impl FnMut(),
     f2: impl FnMut(),
     exec_count: usize,
-) -> BenchDiffOut {
+) -> DiffOut {
     bench_diff_x(unit, f1, f2, exec_count, |_, _, _| {}, || (), || ())
 }
 
@@ -583,8 +583,8 @@ pub fn bench_diff_print(
     f2: impl FnMut(),
     exec_count: usize,
     print_sub_header: impl Fn(),
-    print_stats: impl Fn(&BenchDiffOut),
-) -> BenchDiffOut {
+    print_stats: impl Fn(&DiffOut),
+) -> DiffOut {
     println!("\n>>> bench_diff: unit={unit:?}, exec_count={exec_count}");
     print_sub_header();
     println!();
@@ -763,8 +763,8 @@ mod test {
         mut f1: impl FnMut() -> f64,
         mut f2: impl FnMut() -> f64,
         exec_count: usize,
-    ) -> BenchDiffOut {
-        let mut state = BenchDiffState::new();
+    ) -> DiffOut {
+        let mut state = DiffState::new();
 
         for _ in 1..=exec_count {
             let (elapsed1, elapsed2) = (f1() as u64, f2() as u64);

@@ -3,7 +3,7 @@
 
 use super::{ALPHA, Claim, ClaimResults};
 use crate::{
-    BenchDiffOut,
+    DiffOut,
     statistics::{AltHyp, Hyp},
 };
 use std::sync::LazyLock;
@@ -23,7 +23,7 @@ impl Scenario {
         }
     }
 
-    pub fn check_claims(&self, results: &mut ClaimResults, diff_out: &BenchDiffOut, verbose: bool) {
+    pub fn check_claims(&self, results: &mut ClaimResults, diff_out: &DiffOut, verbose: bool) {
         for claim in &self.claims {
             results.push_claim(self.name1, self.name2, claim, diff_out, verbose);
         }

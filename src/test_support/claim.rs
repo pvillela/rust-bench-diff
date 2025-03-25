@@ -1,5 +1,5 @@
 use crate::{
-    BenchDiffOut,
+    DiffOut,
     dev_utils::ApproxEq,
     statistics::{Hyp, HypTestResult, PositionWrtCi},
 };
@@ -10,14 +10,14 @@ use std::{
 
 #[derive(Clone)]
 enum ClaimFn {
-    Nullary(fn(&BenchDiffOut) -> Option<String>),
-    Hyp(fn(&BenchDiffOut, Hyp, f64) -> Option<String>, Hyp, f64),
-    Arity1(fn(&BenchDiffOut, f64) -> Option<String>, f64),
-    Arity2(fn(&BenchDiffOut, f64, f64) -> Option<String>, f64, f64),
+    Nullary(fn(&DiffOut) -> Option<String>),
+    Hyp(fn(&DiffOut, Hyp, f64) -> Option<String>, Hyp, f64),
+    Arity1(fn(&DiffOut, f64) -> Option<String>, f64),
+    Arity2(fn(&DiffOut, f64, f64) -> Option<String>, f64, f64),
 }
 
 impl ClaimFn {
-    fn invoke(&self, out: &BenchDiffOut) -> Option<String> {
+    fn invoke(&self, out: &DiffOut) -> Option<String> {
         match self {
             Self::Nullary(f) => f(out),
             Self::Hyp(f, accept_hyp, alpha) => f(out, *accept_hyp, *alpha),
@@ -49,7 +49,7 @@ fn check_hyp_test_result(res: HypTestResult, accept_hyp: Hyp) -> Option<String> 
 }
 
 impl Claim {
-    pub fn invoke(&self, out: &BenchDiffOut) -> Option<String> {
+    pub fn invoke(&self, out: &DiffOut) -> Option<String> {
         self.f.invoke(out)
     }
 
@@ -57,7 +57,7 @@ impl Claim {
         Claim {
             name: "welch_ratio_test",
             f: ClaimFn::Hyp(
-                |out: &BenchDiffOut, accept_hyp: Hyp, alpha: f64| {
+                |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
                     let res = out.welch_ln_test(accept_hyp.alt_hyp(), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
@@ -71,7 +71,7 @@ impl Claim {
         Claim {
             name: "student_diff_test",
             f: ClaimFn::Hyp(
-                |out: &BenchDiffOut, accept_hyp: Hyp, alpha: f64| {
+                |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
                     let res = out.student_diff_test(accept_hyp.alt_hyp(), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
@@ -85,7 +85,7 @@ impl Claim {
         Claim {
             name: "student_ratio_test",
             f: ClaimFn::Hyp(
-                |out: &BenchDiffOut, accept_hyp: Hyp, alpha: f64| {
+                |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
                     let res = out.student_diff_ln_test(accept_hyp.alt_hyp(), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
@@ -98,7 +98,7 @@ impl Claim {
     pub fn ratio_medians_f1_f2_near_ratio_from_lns() -> Claim {
         Claim {
             name: "ratio_medians_f1_f2_near_ratio_from_lns",
-            f: ClaimFn::Nullary(|out: &BenchDiffOut| {
+            f: ClaimFn::Nullary(|out: &DiffOut| {
                 let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
                 let ratio_medians_f1_f2_from_lns = out.ratio_medians_f1_f2_from_lns();
 
@@ -117,7 +117,7 @@ impl Claim {
         Claim {
             name: "ratio_medians_f1_f2_near_target",
             f: ClaimFn::Arity1(
-                |out: &BenchDiffOut, value: f64| {
+                |out: &DiffOut, value: f64| {
                     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
 
                     if ratio_medians_f1_f2.approx_eq(value, 0.005) {
@@ -137,7 +137,7 @@ impl Claim {
         Claim {
             name: "target_ratio_medians_f1_f2_in_welch_ratio_ci",
             f: ClaimFn::Arity2(
-                |out: &BenchDiffOut, value: f64, alpha: f64| {
+                |out: &DiffOut, value: f64, alpha: f64| {
                     let ci = out.welch_ratio_ci(alpha);
 
                     if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
@@ -158,7 +158,7 @@ impl Claim {
         Claim {
             name: "target_ratio_medians_f1_f2_in_student_ratio_ci",
             f: ClaimFn::Arity2(
-                |out: &BenchDiffOut, value: f64, alpha: f64| {
+                |out: &DiffOut, value: f64, alpha: f64| {
                     let ci = out.student_ratio_ci(alpha);
 
                     if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
@@ -179,7 +179,7 @@ impl Claim {
         Claim {
             name: "wilcoxon_rank_sum_test",
             f: ClaimFn::Hyp(
-                |out: &BenchDiffOut, accept_hyp: Hyp, alpha: f64| {
+                |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
                     let res = out.wilcoxon_rank_sum_test(accept_hyp.alt_hyp(), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
@@ -193,7 +193,7 @@ impl Claim {
         Claim {
             name: "bernoulli_test",
             f: ClaimFn::Hyp(
-                |out: &BenchDiffOut, accept_hyp: Hyp, alpha: f64| {
+                |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
                     let res = out.bernoulli_eq_half_test(accept_hyp.alt_hyp(), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
@@ -246,7 +246,7 @@ impl ClaimResults {
         name1: &'static str,
         name2: &'static str,
         claim: &Claim,
-        diff_out: &BenchDiffOut,
+        diff_out: &DiffOut,
         verbose: bool,
     ) {
         let value = self

@@ -2,5 +2,5 @@
 
 export RUSTFLAGS="-Awarnings"
 
-cargo nextest run --lib --bins --examples --tests --all-features --target-dir target/test-target
-# cargo test --doc --all-features
+cargo nextest run --lib --bins --examples --tests --features test_support --target-dir target/test-target
+cargo test --doc --features test_support

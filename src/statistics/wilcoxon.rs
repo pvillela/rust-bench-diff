@@ -420,6 +420,7 @@ mod base_test {
 }
 
 #[cfg(test)]
+#[cfg(feature = "hypors")]
 mod test_with_hypors {
     use crate::{
         dev_utils::ApproxEq,

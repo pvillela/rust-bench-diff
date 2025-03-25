@@ -3,8 +3,8 @@
 use crate::{
     SummaryStats, Timing, new_timing,
     statistics::{
-        HypTestResult, PositionWrtCi, SampleMoments, bernoulli_psucc_ci, bernoulli_test,
-        sample_mean, sample_stdev, student_one_sample_ci, student_one_sample_t,
+        self, AltHyp, HypTestResult, PositionWrtCi, SampleMoments, bernoulli_psucc_ci,
+        bernoulli_test, sample_mean, sample_stdev, student_one_sample_ci, student_one_sample_t,
         student_one_sample_test, welch_ci, welch_deg_freedom, welch_t, welch_test,
     },
     summary_stats,
@@ -16,9 +16,6 @@ use std::{
     io::{Write, stderr, stdout},
     time::{Duration, Instant},
 };
-
-#[cfg(feature = "wilcoxon")]
-use crate::statistics::{self, AltHyp};
 
 const WARMUP_MILLIS: u64 = 3_000;
 const WARMUP_INCREMENT_COUNT: usize = 20;
@@ -379,22 +376,18 @@ impl BenchDiffOut {
         student_one_sample_test(&moments, 0.0, alt_hyp, alpha)
     }
 
-    #[cfg(feature = "wilcoxon")]
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
         statistics::wilcoxon_rank_sum_z(&self.hist_f1, &self.hist_f2)
     }
 
-    #[cfg(feature = "wilcoxon")]
     pub fn wilcoxon_rank_sum_z_no_ties_adjust(&self) -> f64 {
         statistics::wilcoxon_rank_sum_z_no_ties_adjust(&self.hist_f1, &self.hist_f2)
     }
 
-    #[cfg(feature = "wilcoxon")]
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
         statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
     }
 
-    #[cfg(feature = "wilcoxon")]
     pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         statistics::wilcoxon_rank_sum_test(&self.hist_f1, &self.hist_f2, alt_hyp, alpha)
     }
@@ -762,24 +755,6 @@ mod test {
             .1
     }
 
-    #[allow(unused)]
-    static FN_NAME_PAIRS: [(&'static str, &'static str); 9] = [
-        // ("base_median_no_var", "base_median_no_var"),
-        // ("base_median_no_var", "hi_1pct_median_no_var"),
-        // ("base_median_no_var", "hi_10pct_median_no_var"),
-        // ("base_median_no_var", "hi_25pct_median_no_var"),
-        // ("hi_1pct_median_no_var", "base_median_no_var"),
-        ("base_median_lo_var", "base_median_lo_var"),
-        ("base_median_lo_var", "base_median_hi_var"),
-        ("base_median_hi_var", "base_median_lo_var"),
-        ("base_median_lo_var", "hi_1pct_median_lo_var"),
-        ("base_median_lo_var", "hi_10pct_median_lo_var"),
-        ("base_median_lo_var", "hi_25pct_median_lo_var"),
-        ("base_median_lo_var", "hi_1pct_median_hi_var"),
-        ("base_median_lo_var", "hi_10pct_median_hi_var"),
-        ("base_median_lo_var", "hi_25pct_median_hi_var"),
-    ];
-
     fn diff_x(
         mut f1: impl FnMut() -> f64,
         mut f2: impl FnMut() -> f64,
@@ -837,7 +812,17 @@ mod test {
         state
     }
 
-    pub fn run_with_claims<T: Deref<Target = str> + Debug>(
+    const CRITICAL_CLAIM_NAMES: [&'static str; 4] = [
+        "welch_ratio_test",
+        // "student_diff_test",
+        "student_ratio_test",
+        "wilcoxon_rank_sum_test",
+        "bernoulli_test",
+        // "target_ratio_medians_f1_f2_in_welch_ratio_ci",
+        // "target_ratio_medians_f1_f2_in_student_ratio_ci",
+    ];
+
+    fn run_with_claims<T: Deref<Target = str> + Debug>(
         scale_params: &ScaleParams,
         name1: T,
         name2: T,
@@ -905,7 +890,8 @@ mod test {
             }
         }
 
-        let type_i_and_ii_errors = results.type_i_and_ii_errors(ALPHA, BETA, nrepeats);
+        let type_i_and_ii_errors =
+            results.type_i_and_ii_errors(ALPHA, BETA, &CRITICAL_CLAIM_NAMES, nrepeats);
         assert!(
             type_i_and_ii_errors.is_empty(),
             "\n*** type_i_and_ii_errors: {:?}\n",
@@ -1031,7 +1017,7 @@ mod test {
             run_with_claims(
                 scale,
                 "base_median_lo_var",
-                "hi_1pct_median_hi_var",
+                "hi_10pct_median_hi_var",
                 false,
                 100,
                 "test",

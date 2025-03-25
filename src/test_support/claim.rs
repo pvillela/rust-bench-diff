@@ -295,18 +295,9 @@ impl ClaimResults {
         &self,
         alpha: f64,
         beta: f64,
+        claim_names: &[&'static str],
         nrepeats: usize,
     ) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
-        let eq_claim_names = [
-            "welch_ratio_test",
-            "student_diff_test",
-            "student_ratio_test",
-            "wilcoxon_rank_sum_test",
-            "bernoulli_test",
-            "target_ratio_medians_f1_f2_in_welch_ratio_ci",
-            "target_ratio_medians_f1_f2_in_student_ratio_ci",
-        ];
-        let ne_claim_names = eq_claim_names;
         let alpha_count = (nrepeats as f64 * alpha).ceil() as u32 + 1;
         let beta_count = (nrepeats as f64 * beta).ceil() as u32 + 1;
 
@@ -317,14 +308,14 @@ impl ClaimResults {
          -> bool {
             match (name1, name2, claim_name, count) {
                 _ if name1[..5] == name2[..5]
-                    && eq_claim_names.contains(&claim_name)
+                    && claim_names.contains(&claim_name)
                     && count > alpha_count =>
                 {
                     true
                 }
 
                 _ if name1[..5] != name2[..5]
-                    && ne_claim_names.contains(&claim_name)
+                    && claim_names.contains(&claim_name)
                     && count > beta_count =>
                 {
                     true

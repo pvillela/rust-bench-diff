@@ -412,6 +412,48 @@ impl BenchDiffState {
         self.sum2_diff_ln_f1_f2 = 0.0;
     }
 
+    #[inline(always)]
+    fn capture_data(&mut self, elapsed1: u64, elapsed2: u64) {
+        self.hist_f1
+            .record(elapsed1)
+            .expect("can't happen: histogram is auto-resizable");
+        self.hist_f2
+            .record(elapsed2)
+            .expect("can't happen: histogram is auto-resizable");
+
+        let diff = elapsed1 as i64 - elapsed2 as i64;
+
+        if diff < 0 {
+            self.hist_f1_lt_f2
+                .record(diff as u64)
+                .expect("can't happen: histogram is auto-resizable");
+        } else if diff > 0 {
+            self.hist_f1_gt_f2
+                .record(-diff as u64)
+                .expect("can't happen: histogram is auto-resizable");
+        } else {
+            self.count_f1_eq_f2 += 1;
+        }
+
+        assert!(elapsed1 > 0, "f1 latency must be > 0");
+        let ln_f1 = (elapsed1 as f64).ln();
+        self.sum_ln_f1 += ln_f1;
+        self.sum2_ln_f1 += ln_f1.powi(2);
+
+        assert!(elapsed2 > 0, "f2 latency must be > 0");
+        let ln_f2 = (elapsed2 as f64).ln();
+        self.sum_ln_f2 += ln_f2;
+        self.sum2_ln_f2 += ln_f2.powi(2);
+
+        let diff_f1_f2 = elapsed1 as f64 - elapsed2 as f64;
+        self.sum_diff_f1_f2 += diff_f1_f2;
+        self.sum2_diff_f1_f2 += diff_f1_f2.powi(2);
+
+        let diff_ln_f1_f2 = ln_f1 - ln_f2;
+        self.sum_diff_ln_f1_f2 += diff_ln_f1_f2;
+        self.sum2_diff_ln_f1_f2 += diff_ln_f1_f2.powi(2);
+    }
+
     fn execute(
         &mut self,
         unit: LatencyUnit,
@@ -429,45 +471,7 @@ impl BenchDiffState {
             for (latency1, latency2) in pairs {
                 let elapsed1 = unit.latency_as_u64(latency1);
                 let elapsed2 = unit.latency_as_u64(latency2);
-
-                self.hist_f1
-                    .record(elapsed1)
-                    .expect("can't happen: histogram is auto-resizable");
-                self.hist_f2
-                    .record(elapsed2)
-                    .expect("can't happen: histogram is auto-resizable");
-
-                let diff = elapsed1 as i64 - elapsed2 as i64;
-
-                if diff < 0 {
-                    self.hist_f1_lt_f2
-                        .record(diff as u64)
-                        .expect("can't happen: histogram is auto-resizable");
-                } else if diff > 0 {
-                    self.hist_f1_gt_f2
-                        .record(-diff as u64)
-                        .expect("can't happen: histogram is auto-resizable");
-                } else {
-                    self.count_f1_eq_f2 += 1;
-                }
-
-                assert!(elapsed1 > 0, "f1 latency must be > 0");
-                let ln_f1 = (elapsed1 as f64).ln();
-                self.sum_ln_f1 += ln_f1;
-                self.sum2_ln_f1 += ln_f1.powi(2);
-
-                assert!(elapsed2 > 0, "f2 latency must be > 0");
-                let ln_f2 = (elapsed2 as f64).ln();
-                self.sum_ln_f2 += ln_f2;
-                self.sum2_ln_f2 += ln_f2.powi(2);
-
-                let diff_f1_f2 = elapsed1 as f64 - elapsed2 as f64;
-                self.sum_diff_f1_f2 += diff_f1_f2;
-                self.sum2_diff_f1_f2 += diff_f1_f2.powi(2);
-
-                let diff_ln_f1_f2 = ln_f1 - ln_f2;
-                self.sum_diff_ln_f1_f2 += diff_ln_f1_f2;
-                self.sum2_diff_ln_f1_f2 += diff_ln_f1_f2.powi(2);
+                self.capture_data(elapsed1, elapsed2);
             }
 
             exec_status();
@@ -764,49 +768,7 @@ mod test {
 
         for _ in 1..=exec_count {
             let (elapsed1, elapsed2) = (f1() as u64, f2() as u64);
-
-            state
-                .hist_f1
-                .record(elapsed1)
-                .expect("can't happen: histogram is auto-resizable");
-            state
-                .hist_f2
-                .record(elapsed2)
-                .expect("can't happen: histogram is auto-resizable");
-
-            let diff = elapsed1 as i64 - elapsed2 as i64;
-
-            if diff < 0 {
-                state
-                    .hist_f1_lt_f2
-                    .record(diff as u64)
-                    .expect("can't happen: histogram is auto-resizable");
-            } else if diff > 0 {
-                state
-                    .hist_f1_gt_f2
-                    .record(-diff as u64)
-                    .expect("can't happen: histogram is auto-resizable");
-            } else {
-                state.count_f1_eq_f2 += 1;
-            }
-
-            assert!(elapsed1 > 0, "f1 latency must be > 0");
-            let ln_f1 = (elapsed1 as f64).ln();
-            state.sum_ln_f1 += ln_f1;
-            state.sum2_ln_f1 += ln_f1.powi(2);
-
-            assert!(elapsed2 > 0, "f2 latency must be > 0");
-            let ln_f2 = (elapsed2 as f64).ln();
-            state.sum_ln_f2 += ln_f2;
-            state.sum2_ln_f2 += ln_f2.powi(2);
-
-            let diff_f1_f2 = elapsed1 as f64 - elapsed2 as f64;
-            state.sum_diff_f1_f2 += diff_f1_f2;
-            state.sum2_diff_f1_f2 += diff_f1_f2.powi(2);
-
-            let diff_ln_f1_f2 = ln_f1 - ln_f2;
-            state.sum_diff_ln_f1_f2 += diff_ln_f1_f2;
-            state.sum2_diff_ln_f1_f2 += diff_ln_f1_f2.powi(2);
+            state.capture_data(elapsed1, elapsed2);
         }
 
         state

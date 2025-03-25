@@ -1,4 +1,5 @@
 //! Example demonstrating `busy_work` and `calibrate_busy_work`.
+//! This example requires the undocumented feature "dev_utils".
 //!
 //! To run the example:
 //! ```

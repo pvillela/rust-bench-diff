@@ -812,14 +812,14 @@ mod test {
         state
     }
 
-    const CRITICAL_CLAIM_NAMES: [&'static str; 4] = [
+    const CRITICAL_CLAIM_NAMES: [&'static str; 5] = [
         "welch_ratio_test",
         // "student_diff_test",
         "student_ratio_test",
         "wilcoxon_rank_sum_test",
-        "bernoulli_test",
-        // "target_ratio_medians_f1_f2_in_welch_ratio_ci",
-        // "target_ratio_medians_f1_f2_in_student_ratio_ci",
+        // "bernoulli_test",
+        "target_ratio_medians_f1_f2_in_welch_ratio_ci",
+        "target_ratio_medians_f1_f2_in_student_ratio_ci",
     ];
 
     fn run_with_claims<T: Deref<Target = str> + Debug>(

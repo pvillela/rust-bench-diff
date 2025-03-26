@@ -1,4 +1,4 @@
-use super::{AltHyp, HypTestResult};
+use super::{AltHyp, Ci, HypTestResult};
 use core::f64;
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 
@@ -75,13 +75,13 @@ pub fn bernoulli_p_hat(n: f64, successes: f64) -> f64 {
 /// - `n`: number of trials.
 /// - `p_hat`: estimate of mean of the Bernoulli distribution. See [`bernoulli_p_hat`].
 /// - `alpha`: confidence level.
-pub fn bernoulli_psucc_ci(n: f64, p_hat: f64, alpha: f64) -> (f64, f64) {
+pub fn bernoulli_psucc_ci(n: f64, p_hat: f64, alpha: f64) -> Ci {
     let p = p_hat;
     let z_alpha_2 = z_alpha(alpha / 2.0);
     let mid = p + z_alpha_2.powi(2) / (2.0 * n);
     let delta = z_alpha_2 * (p * (1.0 - p) / n + z_alpha_2.powi(2) / (4.0 * n.powi(2))).sqrt();
     let denom = 1.0 + z_alpha_2.powi(2) / n;
-    ((mid - delta) / denom, (mid + delta) / denom)
+    Ci((mid - delta) / denom, (mid + delta) / denom)
 }
 
 /// Normal approximation z-value for standardized sample mean of Bernoulli distribution under the hypothesis that
@@ -230,7 +230,7 @@ pub fn welch_p(moments_a: &SampleMoments, moments_b: &SampleMoments, alt_hyp: Al
     t_to_p(t, deg_freedom, alt_hyp)
 }
 
-pub fn welch_ci(moments_a: &SampleMoments, moments_b: &SampleMoments, alpha: f64) -> (f64, f64) {
+pub fn welch_ci(moments_a: &SampleMoments, moments_b: &SampleMoments, alpha: f64) -> Ci {
     let n_a = moments_a.n();
     let n_b = moments_b.n();
     let dx = moments_a.mean() - moments_b.mean();
@@ -246,7 +246,7 @@ pub fn welch_ci(moments_a: &SampleMoments, moments_b: &SampleMoments, alpha: f64
     let mid = dx;
     let radius = (s2_mean_a + s2_mean_b).sqrt() * t;
 
-    (mid - radius, mid + radius)
+    Ci(mid - radius, mid + radius)
 }
 
 pub fn welch_test(
@@ -276,7 +276,7 @@ pub fn student_one_sample_p(moments: &SampleMoments, mu0: f64, alt_hyp: AltHyp) 
     t_to_p(t, deg_freedom, alt_hyp)
 }
 
-pub fn student_one_sample_ci(moments: &SampleMoments, alpha: f64) -> (f64, f64) {
+pub fn student_one_sample_ci(moments: &SampleMoments, alpha: f64) -> Ci {
     let nu = student_one_sample_deg_freedom(moments);
     let stud = StudentsT::new(0.0, 1.0, nu)
         .expect("can't happen: degrees of freedom is always >= 3 by construction");
@@ -285,7 +285,7 @@ pub fn student_one_sample_ci(moments: &SampleMoments, alpha: f64) -> (f64, f64) 
     let mid = moments.mean();
     let radius = (moments.stdev() / moments.n().sqrt()) * t;
 
-    (mid - radius, mid + radius)
+    Ci(mid - radius, mid + radius)
 }
 
 pub fn student_one_sample_test(

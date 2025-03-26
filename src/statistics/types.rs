@@ -62,17 +62,28 @@ impl HypTestResult {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
+/// Represents the position of a value with respect to a confidence interval.
 pub enum PositionWrtCi {
     Below,
     In,
     Above,
 }
 
-impl PositionWrtCi {
-    pub fn position_of_value(value: f64, low: f64, high: f64) -> Self {
+#[derive(Debug, PartialEq, Clone, Copy)]
+/// Confidence interval.
+pub struct Ci(
+    /// Low end of interval.
+    pub f64,
+    /// High end of interval.
+    pub f64,
+);
+
+impl Ci {
+    /// Returns the position of `value` with respect to `self`.
+    pub fn position_of(&self, value: f64) -> PositionWrtCi {
         match value {
-            _ if value <= low => PositionWrtCi::Below,
-            _ if low < value && value < high => PositionWrtCi::In,
+            _ if value <= self.0 => PositionWrtCi::Below,
+            _ if self.0 < value && value < self.1 => PositionWrtCi::In,
             _ => PositionWrtCi::Above,
         }
     }

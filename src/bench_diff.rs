@@ -3,7 +3,7 @@
 use crate::{
     SummaryStats, Timing, new_timing,
     statistics::{
-        self, AltHyp, HypTestResult, PositionWrtCi, SampleMoments, bernoulli_psucc_ci,
+        self, AltHyp, Ci, HypTestResult, PositionWrtCi, SampleMoments, bernoulli_psucc_ci,
         bernoulli_test, sample_mean, sample_stdev, student_one_sample_ci, student_one_sample_t,
         student_one_sample_test, welch_ci, welch_deg_freedom, welch_t, welch_test,
     },
@@ -226,7 +226,7 @@ impl DiffOut {
 
     #[doc(hidden)]
     /// Confidence interval for Bernoulli distribution (Wilson score interval).
-    pub fn bernoulli_ci(&self, alpha: f64) -> (f64, f64) {
+    pub fn bernoulli_ci(&self, alpha: f64) -> Ci {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
         let n = self.n();
         bernoulli_psucc_ci(n, p_hat, alpha)
@@ -234,8 +234,8 @@ impl DiffOut {
 
     #[doc(hidden)]
     pub fn bernoulli_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
-        let (low, high) = self.bernoulli_ci(alpha);
-        PositionWrtCi::position_of_value(value, low, high)
+        let ci = self.bernoulli_ci(alpha);
+        ci.position_of(value)
     }
 
     #[doc(hidden)]
@@ -272,7 +272,7 @@ impl DiffOut {
     /// performance analysis theory and empirical data.
     ///
     /// This is also the confidence interval for the difference of medians of logarithms under the above assumption.
-    pub fn welch_ln_ci(&self, alpha: f64) -> (f64, f64) {
+    pub fn welch_ln_ci(&self, alpha: f64) -> Ci {
         let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
         let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
         welch_ci(&moments1, &moments2, alpha)
@@ -284,16 +284,16 @@ impl DiffOut {
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
     /// performance analysis theory and empirical data.
-    pub fn welch_ratio_ci(&self, alpha: f64) -> (f64, f64) {
-        let (log_low, log_high) = self.welch_ln_ci(alpha);
+    pub fn welch_ratio_ci(&self, alpha: f64) -> Ci {
+        let Ci(log_low, log_high) = self.welch_ln_ci(alpha);
         let low = log_low.exp();
         let high = log_high.exp();
-        (low, high)
+        Ci(low, high)
     }
 
     pub fn welch_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
-        let (low, high) = self.welch_ratio_ci(alpha);
-        PositionWrtCi::position_of_value(value, low, high)
+        let ci = self.welch_ratio_ci(alpha);
+        ci.position_of(value)
     }
 
     pub fn welch_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
@@ -318,7 +318,7 @@ impl DiffOut {
     }
 
     #[doc(hidden)]
-    pub fn student_diff_ci(&self, alpha: f64) -> (f64, f64) {
+    pub fn student_diff_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
             self.sum_diff_f1_f2,
@@ -329,8 +329,8 @@ impl DiffOut {
 
     #[doc(hidden)]
     pub fn student_value_position_wrt_diff_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
-        let (low, high) = self.student_diff_ci(alpha);
-        PositionWrtCi::position_of_value(value, low, high)
+        let ci = self.student_diff_ci(alpha);
+        ci.position_of(value)
     }
 
     #[doc(hidden)]
@@ -356,7 +356,7 @@ impl DiffOut {
         self.n() - 1.0
     }
 
-    pub fn student_diff_ln_ci(&self, alpha: f64) -> (f64, f64) {
+    pub fn student_diff_ln_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
             self.sum_diff_ln_f1_f2,
@@ -364,16 +364,16 @@ impl DiffOut {
         );
         student_one_sample_ci(&moments, alpha)
     }
-    pub fn student_ratio_ci(&self, alpha: f64) -> (f64, f64) {
-        let (log_low, log_high) = self.student_diff_ln_ci(alpha);
+    pub fn student_ratio_ci(&self, alpha: f64) -> Ci {
+        let Ci(log_low, log_high) = self.student_diff_ln_ci(alpha);
         let low = log_low.exp();
         let high = log_high.exp();
-        (low, high)
+        Ci(low, high)
     }
 
     pub fn student_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
-        let (low, high) = self.student_ratio_ci(alpha);
-        PositionWrtCi::position_of_value(value, low, high)
+        let ci = self.student_ratio_ci(alpha);
+        ci.position_of(value)
     }
 
     pub fn student_diff_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {

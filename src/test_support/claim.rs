@@ -140,7 +140,7 @@ impl Claim {
                 |out: &DiffOut, value: f64, alpha: f64| {
                     let ci = out.welch_ratio_ci(alpha);
 
-                    if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
+                    if ci.position_of(value) == PositionWrtCi::In {
                         None
                     } else {
                         Some(format!(
@@ -161,7 +161,7 @@ impl Claim {
                 |out: &DiffOut, value: f64, alpha: f64| {
                     let ci = out.student_ratio_ci(alpha);
 
-                    if PositionWrtCi::position_of_value(value, ci.0, ci.1) == PositionWrtCi::In {
+                    if ci.position_of(value) == PositionWrtCi::In {
                         None
                     } else {
                         Some(format!(

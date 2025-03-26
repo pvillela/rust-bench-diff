@@ -18,17 +18,17 @@ export NOISE_STATS="false"
 
 echo "Started at: `date +"%H:%M:%S"`"
 
-FN_NAME_PAIRS="base_median_no_var/base_median_no_var base_median_no_var/hi_1pct_median_no_var hi_1pct_median_no_var/base_median_no_var" \
-cargo bench --bench bench_t --features bench --target-dir target/bench-target -- $1 default
+# FN_NAME_PAIRS="base_median_no_var/base_median_no_var base_median_no_var/hi_1pct_median_no_var hi_1pct_median_no_var/base_median_no_var" \
+# cargo bench --bench bench_t --features bench --target-dir target/bench-target -- $1 default
 
-FN_NAME_PAIRS="base_median_no_var/base_median_no_var" \
-cargo bench --bench bench_t --features bench --target-dir target/bench-target -- $1 base-no-var/base-no-var
+# FN_NAME_PAIRS="base_median_no_var/base_median_no_var" \
+# cargo bench --bench bench_t --features bench --target-dir target/bench-target -- $1 base-no-var/base-no-var
 
-FN_NAME_PAIRS="base_median_no_var/hi_1pct_median_no_var" \
-cargo bench --bench bench_t --features bench --target-dir target/bench-target -- $1 base-no-var/hi-1pct-no-var
+# FN_NAME_PAIRS="base_median_no_var/hi_1pct_median_no_var" \
+# cargo bench --bench bench_t --features bench --target-dir target/bench-target -- $1 base-no-var/hi-1pct-no-var
 
-FN_NAME_PAIRS="hi_1pct_median_no_var/base_median_no_var" \
-cargo bench --bench bench_t --features bench --target-dir target/bench-target -- $1 hi-1pct-no-var/base-no-var
+# FN_NAME_PAIRS="hi_1pct_median_no_var/base_median_no_var" \
+# cargo bench --bench bench_t --features bench --target-dir target/bench-target -- $1 hi-1pct-no-var/base-no-var
 
 FN_NAME_PAIRS="all" \
 cargo bench --bench bench_t --features bench --target-dir target/bench-target -- $1 all

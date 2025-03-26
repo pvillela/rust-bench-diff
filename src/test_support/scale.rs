@@ -34,7 +34,7 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
             ScaleParams {
                 name: "micros_scale".into(),
                 unit: LatencyUnit::Nano,
-                exec_count: 1_000,
+                exec_count: 2_000,
                 base_median,
                 lo_stdev_log: default_lo_stdev_log(),
                 hi_stdev_log: default_hi_stdev_log(),

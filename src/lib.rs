@@ -10,7 +10,7 @@
 //! ## A More Elaborate `print_diff_out` Function
 //!
 //! The above example can be easily modified to use the following more elaborate `print_diff_out` function. This
-//! function prints a comprehensive suite of descriptive statistics and statistical hypothesis test results.
+//! function prints a broad suite of descriptive and inferential statistics.
 //! See the [`DiffOut`] documentation for further details on the available methods.
 //!
 //! ```rust

@@ -29,10 +29,16 @@ The present library provides a quick and convenient alternative to the above cum
 
 # Examples
 
-To run a benchmark with `bench_diff`, create in `Cargo.toml` a `bench` section corresponding to the bench file. For example, if we have a file `benches/simple_doc_bench.rs`, we would add the following to `Cargo.toml`:
+To run a benchmark with `bench_diff`, create in `Cargo.toml` a `bench` section corresponding to the bench file. For example, given a file `benches/simple_doc_bench.rs`, add the following to `Cargo.toml`:
 
 ```toml
 [[bench]]
 name = "simple_doc_bench"
 harness = false
+```
+
+and execute the benchmark the usual way with:
+
+```bash
+cargo bench --bench simple_doc_bench
 ```

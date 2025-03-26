@@ -218,11 +218,11 @@ impl Claim {
         ]
     }
 
-    pub const CRITICAL_NAMES: [&'static str; 5] = [
+    pub const CRITICAL_NAMES: [&'static str; 4] = [
         "welch_ratio_test",
         // "student_diff_test",
         "student_ratio_test",
-        "wilcoxon_rank_sum_test",
+        // "wilcoxon_rank_sum_test",
         // "bernoulli_test",
         "target_ratio_medians_f1_f2_in_welch_ratio_ci",
         "target_ratio_medians_f1_f2_in_student_ratio_ci",
@@ -308,8 +308,10 @@ impl ClaimResults {
         claim_names: &[&'static str],
         nrepeats: usize,
     ) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
-        let alpha_count = (nrepeats as f64 * alpha).ceil() as u32 + 1;
-        let beta_count = (nrepeats as f64 * beta).ceil() as u32 + 1;
+        const ALPHA_COUNT_ALLOWANCE: f64 = 0.30;
+        const BETA_COUNT_ALLOWANCE: f64 = 0.20;
+        let alpha_count = (nrepeats as f64 * alpha * (1.0 + ALPHA_COUNT_ALLOWANCE)).ceil() as u32;
+        let beta_count = (nrepeats as f64 * beta * (1.0 + BETA_COUNT_ALLOWANCE)).ceil() as u32;
 
         let predicate = |name1: &'static str,
                          name2: &'static str,

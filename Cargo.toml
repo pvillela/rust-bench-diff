@@ -48,7 +48,11 @@ name = "main_bench"
 harness = false
 
 [[bench]]
-name = "doc_bench"
+name = "simple_doc_bench"
+harness = false
+
+[[bench]]
+name = "elaborate_doc_bench"
 harness = false
 
 [[bench]]

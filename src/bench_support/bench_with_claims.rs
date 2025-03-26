@@ -206,14 +206,15 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             );
 
             let diff_out = if verbose {
-                bench_diff_print(
+                let out = bench_diff_print(
                     scale_params.unit,
                     &mut f1,
                     &mut f2,
                     scale_params.exec_count,
                     || println!("{scenario_name}"),
-                    print_diff_out,
-                )
+                );
+                print_diff_out(&out);
+                out
             } else {
                 bench_diff(scale_params.unit, &mut f1, &mut f2, scale_params.exec_count)
             };

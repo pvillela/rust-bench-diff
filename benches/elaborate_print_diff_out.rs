@@ -1,45 +1,8 @@
-use bench_diff::{DiffOut, LatencyUnit, bench_diff_print, statistics::AltHyp};
-use std::{thread, time::Duration};
-
-fn f1() {
-    thread::sleep(Duration::from_micros(100));
-}
-
-fn f2() {
-    thread::sleep(Duration::from_micros(105));
-}
-
-fn main() {
-    println!("*** 1st benchmark ***");
-    {
-        let out: DiffOut = bench_diff_print(
-            LatencyUnit::Nano,
-            f1,
-            f2,
-            1000,
-            || println!("Comparing latency of f1 vs. f2."),
-            |_| (),
-        );
-        print_diff_out(&out);
-    }
-
-    println!("*** 2nd benchmark ***");
-    {
-        let out: DiffOut = bench_diff_print(
-            LatencyUnit::Nano,
-            f1,
-            f1,
-            1000,
-            || println!("Comparing latency of f1 vs. f1."),
-            |_| (),
-        );
-        print_diff_out(&out);
-    }
-}
+use bench_diff::{DiffOut, statistics::AltHyp};
 
 const ALPHA: f64 = 0.05;
 
-fn print_diff_out(out: &DiffOut) {
+pub fn print_diff_out(out: &DiffOut) {
     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
     let ratio_medians_f1_f2_from_lns = out.mean_diff_ln_f1_f2().exp();
 

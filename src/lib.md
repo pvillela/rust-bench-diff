@@ -26,3 +26,13 @@ The present library provides a quick and convenient alternative to the above cum
 - The inner loops address the noise problem by computing the respective means over a substantial number of iterations and assigning the resulting difference to either `hist_f1_ge_f2` or `hist_f1_lt_f2`.
 - A simple comparison of the number of observations in `hist_f1_ge_f2` and `hist_f1_lt_f2` yields a reliable indicator of which function is faster, provided that the number of outer and inner loop iterations are reasonably large. If the count in `hist_f1_lt_f2` is higher then `f1` is faster, and vice-versa.
 - The summary statistics for the four histograms are generated as well, but the key hypothesis testing purpose of this library is addressed by the above point.
+
+# Examples
+
+To run a benchmark with `bench_diff`, create in `Cargo.toml` a `bench` section corresponding to the bench file. For example, if we have a file `benches/simple_doc_bench.rs`, we would add the following to `Cargo.toml`:
+
+```toml
+[[bench]]
+name = "simple_doc_bench"
+harness = false
+```

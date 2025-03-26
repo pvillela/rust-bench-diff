@@ -14,6 +14,7 @@ struct RankedItem {
 }
 
 #[cfg(test)]
+#[allow(unused)]
 fn wilcoxon_ranked_items_ties_sum_prod(
     hist_a: &Histogram<u64>,
     hist_b: &Histogram<u64>,
@@ -286,6 +287,7 @@ fn wilcoxon_rank_sum_ties_sum_prod(hist_a: &Histogram<u64>, hist_b: &Histogram<u
 }
 
 #[cfg(test)]
+#[cfg(feature = "hypors")]
 fn mann_whitney_u_b(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let (w, _) = wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b);
     let n_b = hist_b.len() as f64;
@@ -293,6 +295,7 @@ fn mann_whitney_u_b(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
 }
 
 #[cfg(test)]
+#[cfg(feature = "hypors")]
 fn mann_whitney_u_a(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;
@@ -300,6 +303,7 @@ fn mann_whitney_u_a(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
 }
 
 #[cfg(test)]
+#[cfg(feature = "hypors")]
 fn mann_whitney_u(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     mann_whitney_u_b(hist_a, hist_b).min(mann_whitney_u_a(hist_a, hist_b))
 }

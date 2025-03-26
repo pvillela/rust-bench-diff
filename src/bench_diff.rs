@@ -592,7 +592,6 @@ pub fn bench_diff_print(
     f2: impl FnMut(),
     exec_count: usize,
     print_sub_header: impl Fn(),
-    print_stats: impl Fn(&DiffOut),
 ) -> DiffOut {
     println!("\n>>> bench_diff: unit={unit:?}, exec_count={exec_count}");
     print_sub_header();
@@ -647,7 +646,7 @@ pub fn bench_diff_print(
         exec_status,
     );
 
-    print_stats(&diff_out);
+    println!();
 
     diff_out
 }

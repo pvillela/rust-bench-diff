@@ -3,9 +3,9 @@
 use crate::{
     SummaryStats, Timing, new_timing,
     statistics::{
-        self, AltHyp, Ci, HypTestResult, PositionWrtCi, SampleMoments, bernoulli_psucc_ci,
-        bernoulli_test, sample_mean, sample_stdev, student_one_sample_ci, student_one_sample_t,
-        student_one_sample_test, welch_ci, welch_deg_freedom, welch_t, welch_test,
+        AltHyp, Ci, HypTestResult, PositionWrtCi, SampleMoments, sample_mean, sample_stdev,
+        student_one_sample_ci, student_one_sample_t, student_one_sample_test, welch_ci,
+        welch_deg_freedom, welch_t, welch_test,
     },
     summary_stats,
 };
@@ -16,6 +16,9 @@ use std::{
     io::{Write, stderr, stdout},
     time::{Duration, Instant},
 };
+
+#[cfg(feature = "dev_utils")]
+use crate::statistics::{self, bernoulli_psucc_ci, bernoulli_test};
 
 const WARMUP_MILLIS: u64 = 3_000;
 const WARMUP_INCREMENT_COUNT: usize = 20;
@@ -217,14 +220,14 @@ impl DiffOut {
         self.mean_diff_ln_f1_f2().exp()
     }
 
-    #[doc(hidden)]
+    #[cfg(feature = "dev_utils")]
     /// Estimator of mean of Bernoulli distribution.
     pub fn bernoulli_prob_f1_gt_f2(&self) -> f64 {
         (self.count_f1_gt_f2() as f64 + self.count_f1_eq_f2 as f64 / 2.0)
             / (self.count_f1_lt_f2() + self.count_f1_eq_f2 + self.count_f1_gt_f2()) as f64
     }
 
-    #[doc(hidden)]
+    #[cfg(feature = "dev_utils")]
     /// Confidence interval for Bernoulli distribution (Wilson score interval).
     pub fn bernoulli_ci(&self, alpha: f64) -> Ci {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
@@ -232,13 +235,13 @@ impl DiffOut {
         bernoulli_psucc_ci(n, p_hat, alpha)
     }
 
-    #[doc(hidden)]
+    #[cfg(feature = "dev_utils")]
     pub fn bernoulli_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.bernoulli_ci(alpha);
         ci.position_of(value)
     }
 
-    #[doc(hidden)]
+    #[cfg(feature = "dev_utils")]
     pub fn bernoulli_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
         bernoulli_test(self.n(), p_hat, 1.0 / 2.0, alt_hyp, alpha)
@@ -302,7 +305,7 @@ impl DiffOut {
         welch_test(&moments1, &moments2, alt_hyp, alpha)
     }
 
-    #[doc(hidden)]
+    #[cfg(feature = "dev_utils")]
     pub fn student_diff_t(&self) -> f64 {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -312,12 +315,12 @@ impl DiffOut {
         student_one_sample_t(&moments, 0.0)
     }
 
-    #[doc(hidden)]
+    #[cfg(feature = "dev_utils")]
     pub fn student_diff_deg_freedom(&self) -> f64 {
         self.n() - 1.0
     }
 
-    #[doc(hidden)]
+    #[cfg(feature = "dev_utils")]
     pub fn student_diff_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -327,13 +330,13 @@ impl DiffOut {
         student_one_sample_ci(&moments, alpha)
     }
 
-    #[doc(hidden)]
+    #[cfg(feature = "dev_utils")]
     pub fn student_value_position_wrt_diff_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.student_diff_ci(alpha);
         ci.position_of(value)
     }
 
-    #[doc(hidden)]
+    #[cfg(feature = "dev_utils")]
     pub fn student_diff_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -385,18 +388,22 @@ impl DiffOut {
         student_one_sample_test(&moments, 0.0, alt_hyp, alpha)
     }
 
+    #[cfg(feature = "dev_utils")]
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
         statistics::wilcoxon_rank_sum_z(&self.hist_f1, &self.hist_f2)
     }
 
+    #[cfg(feature = "dev_utils")]
     pub fn wilcoxon_rank_sum_z_no_ties_adjust(&self) -> f64 {
         statistics::wilcoxon_rank_sum_z_no_ties_adjust(&self.hist_f1, &self.hist_f2)
     }
 
+    #[cfg(feature = "dev_utils")]
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
         statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
     }
 
+    #[cfg(feature = "dev_utils")]
     pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         statistics::wilcoxon_rank_sum_test(&self.hist_f1, &self.hist_f2, alt_hyp, alpha)
     }

@@ -59,6 +59,7 @@ pub fn sample_stdev(n: f64, sum: f64, sum2: f64) -> f64 {
     sample_var(n, sum, sum2).sqrt()
 }
 
+#[cfg(feature = "dev_utils")]
 /// Estimator of mean of Bernoulli distribution.
 ///
 /// Arguments:
@@ -68,6 +69,7 @@ pub fn bernoulli_p_hat(n: f64, successes: f64) -> f64 {
     successes / n
 }
 
+#[cfg(feature = "dev_utils")]
 /// Confidence interval for the probability of success of a Bernoulli distribution computed from a
 /// sample of trials (Wilson score interval).
 ///
@@ -84,6 +86,7 @@ pub fn bernoulli_psucc_ci(n: f64, p_hat: f64, alpha: f64) -> Ci {
     Ci((mid - delta) / denom, (mid + delta) / denom)
 }
 
+#[cfg(feature = "dev_utils")]
 /// Normal approximation z-value for standardized sample mean of Bernoulli distribution under the hypothesis that
 /// the probability of success is `p0`.
 ///
@@ -94,6 +97,7 @@ pub fn bernoulli_normal_approx_z(n: f64, p_hat: f64, p0: f64) -> f64 {
     (p_hat - p0) / (p0 * (1.0 - p0) / n).sqrt()
 }
 
+#[cfg(feature = "dev_utils")]
 /// Normal approximation p-value for standardized sample mean of Bernoulli distribution under the hypothesis that
 /// the probability of success is `p0`.
 ///
@@ -107,6 +111,7 @@ pub fn bernoulli_normal_approx_p(n: f64, p_hat: f64, p0: f64, alt_hyp: AltHyp) -
     z_to_p(z, alt_hyp)
 }
 
+#[cfg(feature = "dev_utils")]
 pub fn bernoulli_test(n: f64, p_hat: f64, p0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
     let p = bernoulli_normal_approx_p(n, p_hat, p0, alt_hyp);
     HypTestResult::new(p, alpha, alt_hyp)

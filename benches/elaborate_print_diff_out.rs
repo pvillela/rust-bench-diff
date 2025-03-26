@@ -4,7 +4,7 @@ const ALPHA: f64 = 0.05;
 
 pub fn print_diff_out(out: &DiffOut) {
     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
-    let ratio_medians_f1_f2_from_lns = out.mean_diff_ln_f1_f2().exp();
+    let ratio_medians_f1_f2_from_lns = out.ratio_medians_f1_f2_from_lns();
 
     println!();
     println!("summary_f1={:?}", out.summary_f1());
@@ -62,18 +62,6 @@ pub fn print_diff_out(out: &DiffOut) {
         out.count_f1_lt_f2(),
         out.count_f1_eq_f2(),
         out.count_f1_gt_f2()
-    );
-    println!(
-        "wilcoxon_rank_sum_test_lt:{:?}",
-        out.wilcoxon_rank_sum_test(AltHyp::Lt, ALPHA)
-    );
-    println!(
-        "wilcoxon_rank_sum_test_eq:{:?}",
-        out.wilcoxon_rank_sum_test(AltHyp::Ne, ALPHA)
-    );
-    println!(
-        "wilcoxon_rank_sum_test_gt:{:?}",
-        out.wilcoxon_rank_sum_test(AltHyp::Gt, ALPHA)
     );
     println!();
 }

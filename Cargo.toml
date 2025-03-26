@@ -44,5 +44,13 @@ hypors = [
 ] # to enable Wilcoxon rank sum test functionality
 
 [[bench]]
-name = "bench_t"
+name = "main_bench"
+harness = false
+
+[[bench]]
+name = "doc_bench"
+harness = false
+
+[[bench]]
+name = "busy_bench"
 harness = false

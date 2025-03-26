@@ -217,12 +217,14 @@ impl DiffOut {
         self.mean_diff_ln_f1_f2().exp()
     }
 
+    #[doc(hidden)]
     /// Estimator of mean of Bernoulli distribution.
     pub fn bernoulli_prob_f1_gt_f2(&self) -> f64 {
         (self.count_f1_gt_f2() as f64 + self.count_f1_eq_f2 as f64 / 2.0)
             / (self.count_f1_lt_f2() + self.count_f1_eq_f2 + self.count_f1_gt_f2()) as f64
     }
 
+    #[doc(hidden)]
     /// Confidence interval for Bernoulli distribution (Wilson score interval).
     pub fn bernoulli_ci(&self, alpha: f64) -> (f64, f64) {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
@@ -230,11 +232,13 @@ impl DiffOut {
         bernoulli_psucc_ci(n, p_hat, alpha)
     }
 
+    #[doc(hidden)]
     pub fn bernoulli_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let (low, high) = self.bernoulli_ci(alpha);
         PositionWrtCi::position_of_value(value, low, high)
     }
 
+    #[doc(hidden)]
     pub fn bernoulli_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
         bernoulli_test(self.n(), p_hat, 1.0 / 2.0, alt_hyp, alpha)
@@ -298,6 +302,7 @@ impl DiffOut {
         welch_test(&moments1, &moments2, alt_hyp, alpha)
     }
 
+    #[doc(hidden)]
     pub fn student_diff_t(&self) -> f64 {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -307,10 +312,12 @@ impl DiffOut {
         student_one_sample_t(&moments, 0.0)
     }
 
+    #[doc(hidden)]
     pub fn student_diff_deg_freedom(&self) -> f64 {
         self.n() - 1.0
     }
 
+    #[doc(hidden)]
     pub fn student_diff_ci(&self, alpha: f64) -> (f64, f64) {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -320,11 +327,13 @@ impl DiffOut {
         student_one_sample_ci(&moments, alpha)
     }
 
+    #[doc(hidden)]
     pub fn student_value_position_wrt_diff_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let (low, high) = self.student_diff_ci(alpha);
         PositionWrtCi::position_of_value(value, low, high)
     }
 
+    #[doc(hidden)]
     pub fn student_diff_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -647,9 +656,13 @@ pub fn bench_diff_print(
 #[cfg(feature = "test_support")]
 mod test {
     use super::*;
-    use crate::test_support::{
-        ALPHA, BETA, ClaimResults, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams,
-        default_hi_stdev_log, default_lo_stdev_log, get_scale_params, get_scenario, nest_btree_map,
+    use crate::{
+        dev_utils::nest_btree_map,
+        test_support::{
+            ALPHA, BETA, Claim, ClaimResults, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR,
+            ScaleParams, default_hi_stdev_log, default_lo_stdev_log, get_scale_params,
+            get_scenario,
+        },
     };
     use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
     use rand_distr::LogNormal;
@@ -774,16 +787,6 @@ mod test {
         state
     }
 
-    const CRITICAL_CLAIM_NAMES: [&'static str; 5] = [
-        "welch_ratio_test",
-        // "student_diff_test",
-        "student_ratio_test",
-        "wilcoxon_rank_sum_test",
-        // "bernoulli_test",
-        "target_ratio_medians_f1_f2_in_welch_ratio_ci",
-        "target_ratio_medians_f1_f2_in_student_ratio_ci",
-    ];
-
     fn run_with_claims<T: Deref<Target = str> + Debug>(
         scale_params: &ScaleParams,
         name1: T,
@@ -853,7 +856,7 @@ mod test {
         }
 
         let type_i_and_ii_errors =
-            results.type_i_and_ii_errors(ALPHA, BETA, &CRITICAL_CLAIM_NAMES, nrepeats);
+            results.type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats);
         assert!(
             type_i_and_ii_errors.is_empty(),
             "\n*** type_i_and_ii_errors: {:?}\n",

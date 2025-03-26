@@ -52,7 +52,7 @@ impl SummaryStats {
     }
 }
 
-/// Computes a [`SummaryStats`] from a [`Timing`].
-pub fn summary_stats(hist: &Timing) -> SummaryStats {
+/// Computes a [`SummaryStats`] from a [`Histogram<u64>`].
+pub fn summary_stats(hist: &Histogram<u64>) -> SummaryStats {
     SummaryStats::new(hist)
 }

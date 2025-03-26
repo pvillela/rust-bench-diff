@@ -7,7 +7,6 @@ pub use bench_diff::*;
 mod summary_stats;
 pub use summary_stats::*;
 
-#[doc(hidden)]
 pub mod statistics;
 
 #[doc(hidden)]

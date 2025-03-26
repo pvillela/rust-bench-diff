@@ -3,8 +3,9 @@
 use super::params_args::{Args, calibrated_fn_params, get_args, get_fn};
 use crate::{
     DiffOut, bench_diff, bench_diff_print,
+    dev_utils::nest_btree_map,
     statistics::{AltHyp, SampleMoments, collect_moments},
-    test_support::{ALPHA, ClaimResults, ScaleParams, get_scale_params, get_scenario},
+    test_support::{ALPHA, BETA, Claim, ClaimResults, ScaleParams, get_scale_params, get_scenario},
 };
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
@@ -269,6 +270,14 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
                 println!("{name_pair:?} | {claim_name} ==> count={count}");
             }
         }
+
+        let type_i_and_ii_errors =
+            results.type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats);
+        assert!(
+            type_i_and_ii_errors.is_empty(),
+            "\n*** type_i_and_ii_errors: {:?}\n",
+            nest_btree_map(type_i_and_ii_errors)
+        );
 
         if noise_stats {
             println!();

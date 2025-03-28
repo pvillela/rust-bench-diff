@@ -58,3 +58,7 @@ harness = false
 [[bench]]
 name = "busy_bench"
 harness = false
+
+[[bench]]
+name = "naive_bench"
+harness = false

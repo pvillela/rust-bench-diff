@@ -101,7 +101,7 @@ pub struct DiffOut {
 }
 
 impl DiffOut {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let hist_f1 = new_timing(20 * 1000 * 1000, 5);
         let hist_f2 = Histogram::<u64>::new_from(&hist_f1);
         let hist_f1_lt_f2 = Histogram::<u64>::new_from(&hist_f1);
@@ -409,10 +409,10 @@ impl DiffOut {
     }
 }
 
-type DiffState = DiffOut;
+pub(crate) type DiffState = DiffOut;
 
 impl DiffState {
-    fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         self.hist_f1.reset();
         self.hist_f2.reset();
         self.hist_f1_lt_f2.reset();
@@ -429,7 +429,7 @@ impl DiffState {
     }
 
     #[inline(always)]
-    fn capture_data(&mut self, elapsed1: u64, elapsed2: u64) {
+    pub(crate) fn capture_data(&mut self, elapsed1: u64, elapsed2: u64) {
         self.hist_f1
             .record(elapsed1)
             .expect("can't happen: histogram is auto-resizable");

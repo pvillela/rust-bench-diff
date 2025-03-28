@@ -18,6 +18,8 @@ fn f2() {
 // the closest finer-grained latency unit.
 
 fn main() {
+    // Output values are in the selected latench unit, i.e., nanoseconds.
+
     println!("*** 1st benchmark ***");
     {
         let out: DiffOut = bench_diff_print(LatencyUnit::Nano, f1, f2, 1000, || {

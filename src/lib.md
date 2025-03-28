@@ -1,22 +1,47 @@
-This library supports the reliable comparison of the difference in latency between two functions/closures.
+This library supports **reliable latency comparison** between two functions/closures. This library provides commonly used latency metrics for target functions (mean, standard deviation, median, percentiles, min, max), but it differentiates itself by also providing support for the statistically rigorous comparison of latencies between two functions.
 
 One could simply run tools like [Criterion](https://crates.io/crates/criterion) or [Divan](https://crates.io/crates/divan) on each function and compare the results. However, a couple of challenges arise:
 
-- Order bias -- When running two benchmarks, one after the other, the first one may get an edge over the second one. This can be empirically observed. I speculate that this observation may be due to the following:
+- Ordering effect -- When running two benchmarks, one after the other, the first one may (and often does) get an edge over the second one, or vice-versa, due to changing machine conditions between the two runs.
+- Random noise -- which can confound results when the two functions have latencies that are close to each other.
 
-  - If the two benchmarks are run in the same process, the bias may be due to memory allocation order.
-  - Even if they are run in separate processes, the second one may run with a hotter CPU that may be throttled down by the hardware/OS to stay within allowable hardware thermal limits.
+These challenges can be addressed by running the individual benchmarks multiple times, interspersed with cooling-down and warm-up intervals, and using appropriate statistical methods to compare the two observed latency distributions. This is, however, time consuming and requires careful planning and analysis.
 
-- Random noise -- Random noise can confound results when the two functions have latencies that are close to each other.
+The present library provides a convenient, and statistically sound alternative to the above cumbersome methodology.
 
-These challenges can be addressed by running the individual benchmarks multiple times, interspersed with cooling-down intervals, and using appropriate statistical methods to compare the two observed latency distributions. This is, however, time consuming and requires careful planning and analysis.
+# Quick Start
 
-The present library provides a quick and convenient alternative to the above cumbersome methodology. It addresses order bias and random noise as follows:
+To run a benchmark with `bench_diff`, following these simple steps:
 
-- Let `f1` be the first target function and `f2` be the second one.
-- It contains an outer loop that executes benchmarks for both functions multiple times for statistical stability.
-- Each execution of the outer loop includes two inner loops -- one executes `f1` multiple times and the other executes `f2` the same number of times.
-- The overall comparison benchmark execution is preceded by a warm-up execution of one iteration of the outer loop, which is not tallied.
+1. Create a bench file -- see [Simple Bench Example](#simple-bench-example) for a representative example.
+
+1. Create in `Cargo.toml` a `bench` section corresponding to the bench file. For example, given a file `benches/my_bench.rs`, add the following to `Cargo.toml`:
+
+   ```toml
+   [[bench]]
+   name = "my_bench"
+   harness = false
+   ```
+
+1. Execute the benchmark the usual way:
+   
+   ```bash
+   cargo bench --bench my_bench
+   ```
+
+# Implementation Approach
+
+This library addresses the ordering effect and random noise challenges as follows. Given two functions `f1` and `f2`:
+
+- It repeatedly executes *quads* of pairs (`f1`, `f2`), (`f1`, `f2`), (`f2`, `f1`), (`f2`, `f1`). This ensures the following:
+  - Obviously, both functions are executed the same number of times.
+  - Each function is executed as many times preceded by itself as preceded by the other function. This removes the ordering effect for the functions.
+  - Each function pair is executed as many times preceded by itself as preceded by the other function pair. This removes the ordering effect for the pairs of functions.
+  - Latencies can be compared pairwise, as well as overall for both functions. This enables the analysis of data with statistical methods targeting either two independent samples or a single paired sample.
+- The number of function executions can be specified to mitigate random noise. More on this in the [Statistical Details](#statistical-details) section.
+- It warms-up by executing the above pattern for 3 seconds before it starts tallying the results. This is similar to the `Criterion` warm-up strategy.
+
+CONTINUE HERE
 - It maintains four histograms:
   - `hist_f1`: captures the mean latency of `f1` over each inner loop.
   - `hist_f2`: captures the mean latency of `f2` over each inner loop.
@@ -27,18 +52,16 @@ The present library provides a quick and convenient alternative to the above cum
 - A simple comparison of the number of observations in `hist_f1_ge_f2` and `hist_f1_lt_f2` yields a reliable indicator of which function is faster, provided that the number of outer and inner loop iterations are reasonably large. If the count in `hist_f1_lt_f2` is higher then `f1` is faster, and vice-versa.
 - The summary statistics for the four histograms are generated as well, but the key hypothesis testing purpose of this library is addressed by the above point.
 
+# Statistical Details
+
+ [MENTION LOGNORMAL ASSUMPTION, TESTS INDICATE X NUMBER OF EXECUTIONS OK FOR VALIDITY OF LOGNORMAL APPROXIMATION AND LOGNORMAL-BASED CONFIDENCE INTERVALS AND HYPOTHESIS TESTS AT MICROS SCALE, AS WELL AS TYPE II ERRORS WITH CERTAIN VARIANCE BOUNDS. SAMPLE SIZES (EXEC COUNTS) FOR A DESIRED TYPE II ERROR CAN BE FURTHER CALCULATED USING (PROVIDE REFERENCES).]
+
+# Testing
+
+This framework has been extensively tested:
+
+- Test of inferential statistics
+- Test benchmarks using both deterministic functions with known latency medians and non-deterministic functions with specified latency medians and variances.
+
 # Examples
 
-To run a benchmark with `bench_diff`, create in `Cargo.toml` a `bench` section corresponding to the bench file. For example, given a file `benches/simple_doc_bench.rs`, add the following to `Cargo.toml`:
-
-```toml
-[[bench]]
-name = "simple_doc_bench"
-harness = false
-```
-
-and execute the benchmark the usual way with:
-
-```bash
-cargo bench --bench simple_doc_bench
-```

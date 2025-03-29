@@ -69,8 +69,8 @@ fn duo_exec(mut f1: impl FnMut(), mut f2: impl FnMut()) -> [(Duration, Duration)
     let l01 = latency(&mut f1);
     let l02 = latency(&mut f2);
 
-    let l11 = latency(&mut f2);
-    let l12 = latency(&mut f1);
+    let l12 = latency(&mut f2);
+    let l11 = latency(&mut f1);
 
     [(l01, l02), (l11, l12)]
 }

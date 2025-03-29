@@ -37,9 +37,9 @@ fn main() {
     };
 
     match (median1, median2, mean1, mean2) {
-        _ if median1 < median2 && mean1 < mean2 => println!(") >>> INVERTED MEAN AND MEDIAN"),
-        _ if median1 < median2 => println!(") >>> INVERTED MEDIAN"),
-        _ if mean1 < mean2 => println!(") >>> INVERTED MEAN"),
+        _ if median1 < median2 && mean1 < mean2 => println!("### INVERTED MEAN AND MEDIAN"),
+        _ if median1 < median2 => println!("### INVERTED MEDIAN"),
+        _ if mean1 < mean2 => println!("### INVERTED MEAN"),
         _ => (),
     }
 }

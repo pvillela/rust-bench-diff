@@ -80,9 +80,9 @@ pub fn print_diff_out(out: &DiffOut) {
     let mean1 = out.mean_f1();
     let mean2 = out.mean_f2();
     match (median1, median2, mean1, mean2) {
-        _ if median1 < median2 && mean1 < mean2 => println!(">>> INVERTED MEAN AND MEDIAN"),
-        _ if median1 < median2 => println!(">>> INVERTED MEDIAN"),
-        _ if mean1 < mean2 => println!(">>> INVERTED MEAN"),
+        _ if median1 < median2 && mean1 < mean2 => println!("### INVERTED MEAN AND MEDIAN"),
+        _ if median1 < median2 => println!("### INVERTED MEDIAN"),
+        _ if mean1 < mean2 => println!("### INVERTED MEAN"),
         _ => (),
     }
 }

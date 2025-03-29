@@ -68,20 +68,14 @@ pub fn latency(mut f: impl FnMut()) -> Duration {
 }
 
 #[inline(always)]
-fn quad_exec(mut f1: impl FnMut(), mut f2: impl FnMut()) -> [(Duration, Duration); 4] {
+fn duo_exec(mut f1: impl FnMut(), mut f2: impl FnMut()) -> [(Duration, Duration); 2] {
     let l01 = latency(&mut f1);
     let l02 = latency(&mut f2);
 
-    let l11 = latency(&mut f1);
-    let l12 = latency(&mut f2);
+    let l11 = latency(&mut f2);
+    let l12 = latency(&mut f1);
 
-    let l22 = latency(&mut f2);
-    let l21 = latency(&mut f1);
-
-    let l32 = latency(&mut f2);
-    let l31 = latency(&mut f1);
-
-    [(l01, l02), (l11, l12), (l21, l22), (l31, l32)]
+    [(l01, l02), (l11, l12)]
 }
 
 pub struct DiffOut {
@@ -481,8 +475,8 @@ impl DiffState {
     ) {
         pre_exec();
 
-        for _ in 1..=exec_count / 4 {
-            let pairs = quad_exec(&mut f1, &mut f2);
+        for _ in 1..=exec_count / 2 {
+            let pairs = duo_exec(&mut f1, &mut f2);
 
             for (latency1, latency2) in pairs {
                 let elapsed1 = unit.latency_as_u64(latency1);
@@ -573,8 +567,6 @@ pub fn bench_diff_x(
     );
 
     let mut state_rev = DiffState::new();
-    // state_rev.warm_up(unit, &mut f2, &mut f1, &mut warm_up_status);
-    // state_rev.reset();
     state_rev.execute(unit, &mut f2, &mut f1, exec_count2, || (), &mut exec_status);
 
     state
@@ -617,7 +609,7 @@ pub fn bench_diff_print(
             if elapsed_millis.lt(&warm_up_millis) {
                 status_len = status.len();
             } else {
-                status_len = 0;
+                status_len = 0; // reset status in case of multiple warm-up phases
             };
             eprint!("{status}");
             stderr().flush().expect("unexpected I/O error");
@@ -634,7 +626,7 @@ pub fn bench_diff_print(
         let mut i = 0;
 
         move || {
-            i += 4;
+            i += 2; // account for duos
             eprint!("{}", "\u{8}".repeat(status_len));
             let status = format!("{i} of {exec_count}.");
             status_len = status.len();

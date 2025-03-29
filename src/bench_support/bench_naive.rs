@@ -72,7 +72,7 @@ pub fn bench_naive(unit: LatencyUnit, mut f: impl FnMut(), exec_count: usize) ->
         let mut i = 0;
 
         move || {
-            i += 4;
+            i += 1;
             eprint!("{}", "\u{8}".repeat(status_len));
             let status = format!("{i} of {exec_count}.");
             status_len = status.len();
@@ -85,7 +85,6 @@ pub fn bench_naive(unit: LatencyUnit, mut f: impl FnMut(), exec_count: usize) ->
     warm_up(&mut state, unit, &mut f, &mut warm_up_status);
     state.reset();
 
-    pre_exec();
     execute(&mut state, unit, &mut f, exec_count, pre_exec, exec_status);
     state
 }

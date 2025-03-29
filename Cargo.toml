@@ -48,11 +48,11 @@ name = "main_bench"
 harness = false
 
 [[bench]]
-name = "simple_doc_bench"
+name = "simple1_bench"
 harness = false
 
 [[bench]]
-name = "elaborate_doc_bench"
+name = "simple2_bench"
 harness = false
 
 [[bench]]
@@ -61,4 +61,8 @@ harness = false
 
 [[bench]]
 name = "naive_bench"
+harness = false
+
+[[bench]]
+name = "basic_bench"
 harness = false

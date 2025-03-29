@@ -5,7 +5,7 @@
 //! This example compares the latencies of functions `f1` and `f2` and prints basic summary statistics for each.
 //!
 //! ```rust
-#![doc = include_str!("../benches/simple_doc_bench.rs")]
+#![doc = include_str!("../benches/simple1_bench.rs")]
 //! ````
 //! ## A More Elaborate `print_diff_out` Function
 //!

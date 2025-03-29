@@ -1,17 +1,17 @@
-This library supports **reliable latency comparison** between two functions/closures. This library provides commonly used latency metrics for target functions (mean, standard deviation, median, percentiles, min, max), but it differentiates itself by also providing support for the statistically rigorous comparison of latencies between two functions.
+This library supports **reliable latency comparison** between two functions/closures. This library provides commonly used latency metrics for target functions (mean, standard deviation, median, percentiles, min, max), but it differentiates itself by providing support for the statistically rigorous comparison of latencies between two functions.
 
 One could simply run tools like [Criterion](https://crates.io/crates/criterion) or [Divan](https://crates.io/crates/divan) on each function and compare the results. However, a couple of challenges arise:
 
-- Ordering effect -- When running two benchmarks, one after the other, the first one may (and often does) get an edge over the second one, or vice-versa, due to changing machine conditions between the two runs.
-- Random noise -- which can confound results when the two functions have latencies that are close to each other.
+- ***Ordering effect*** -- When running two benchmarks, one after the other, the first one may (and often does) get an edge over the second one, or vice-versa, due to changing machine conditions between the two runs. This can significantly distort the comparison. In some cases, a function that is known by construction to be 5% faster than another function can show a mean latency and/or median latency that is higher than the corresponding metric for the slower function.
+- ***Time-dependent random noise*** -- Random noise can and often does change over time. This is a contributor to the *ordering effect*. Increasing the sample size (number of repetitions) can narrow the variance of a function's median or mean latency as measured at a point in time, but it is not effective by itself in mitigating the time-dependent variability.
 
-These challenges can be addressed by running the individual benchmarks multiple times, interspersed with cooling-down and warm-up intervals, and using appropriate statistical methods to compare the two observed latency distributions. This is, however, time consuming and requires careful planning and analysis.
+One could attempt to address these challenges by running the individual benchmarks, one after the other, repeating that multiple times, and using appropriate statistical methods to compare the two observed latency distributions. This is, however, quite time consuming and requires careful planning and analysis.
 
-The present library provides a convenient, and statistically sound alternative to the above cumbersome methodology.
+The present library provides a convenient, efficient, and statistically sound alternative to the above cumbersome methodology.
 
 # Quick Start
 
-To run a benchmark with `bench_diff`, following these simple steps:
+To run a benchmark with `bench_diff`, follow these simple steps:
 
 1. Create a bench file -- see [Simple Bench Example](#simple-bench-example) for a representative example.
 
@@ -33,12 +33,12 @@ To run a benchmark with `bench_diff`, following these simple steps:
 
 This library addresses the ordering effect and random noise challenges as follows. Given two functions `f1` and `f2`:
 
-- It repeatedly executes *quads* of pairs (`f1`, `f2`), (`f1`, `f2`), (`f2`, `f1`), (`f2`, `f1`). This ensures the following:
+- It repeatedly executes *duos* of pairs (`f1`, `f2`), (`f2`, `f1`). This ensures the following:
   - Obviously, both functions are executed the same number of times.
-  - Each function is executed as many times preceded by itself as preceded by the other function. This removes the ordering effect for the functions.
-  - Each function pair is executed as many times preceded by itself as preceded by the other function pair. This removes the ordering effect for the pairs of functions.
+  - Each function is executed as many times preceded by itself as preceded by the other function. This removes the ordering effect.
+  - Because the function excutions are paired, those executions are in close time proximity to each other, so the time-dependent variation is effectively neutralized in the comparison of latencies (even though it may persist in the latency distributions of the individual functions).
   - Latencies can be compared pairwise, as well as overall for both functions. This enables the analysis of data with statistical methods targeting either two independent samples or a single paired sample.
-- The number of function executions can be specified to mitigate random noise. More on this in the [Statistical Details](#statistical-details) section.
+- The number of function executions can be specified according to the desired levels of confidence and fine-grained discrimination. More on this in the [Statistical Details](#statistical-details) section.
 - It warms-up by executing the above pattern for 3 seconds before it starts tallying the results. This is similar to the `Criterion` warm-up strategy.
 
 CONTINUE HERE

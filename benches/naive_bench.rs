@@ -1,43 +1,32 @@
+use core::f64;
+
 use bench_diff::{
     LatencyUnit,
-    bench_support::{bench_naive::bench_naive, calibrated_fn_params, get_fn},
-    test_support::{ScaleParams, default_hi_stdev_log, default_lo_stdev_log},
+    bench_support::bench_naive::bench_naive,
+    dev_utils::{busy_work, calibrate_busy_work},
 };
 
 fn main() {
+    let unit = LatencyUnit::Nano;
     let base_median = 100_000.0;
-    let scale_params = ScaleParams {
-        name: "micros_scale".into(),
-        unit: LatencyUnit::Nano,
-        exec_count: 2_000,
-        base_median,
-        lo_stdev_log: default_lo_stdev_log(),
-        hi_stdev_log: default_hi_stdev_log(),
-    };
-
-    let calibrated_fn_params = calibrated_fn_params(&scale_params);
+    let base_effort = calibrate_busy_work(unit.latency_from_f64(base_median));
+    let exec_count = 2_000;
 
     {
-        let name = "hi_1pct_median_no_var";
-        let f = {
-            let mut my_fn = get_fn(name)(&calibrated_fn_params);
-            move || my_fn.invoke()
-        };
-
-        let out = bench_naive(LatencyUnit::Nano, f, scale_params.exec_count);
-        println!("\n{}: {:?}", name, out.summary_f1());
+        let name = "hi_5pct_median_no_var";
+        let effort = (base_effort as f64 * 1.05) as u32;
+        let f = || busy_work(effort);
+        let out = bench_naive(LatencyUnit::Nano, f, exec_count);
+        println!("\n{} summary: {:?}", name, out.summary_f1());
         println!();
     }
 
     {
         let name = "base_median_no_var";
-        let f = {
-            let mut my_fn = get_fn(name)(&calibrated_fn_params);
-            move || my_fn.invoke()
-        };
-
-        let out = bench_naive(LatencyUnit::Nano, f, scale_params.exec_count);
-        println!("\n{}: {:?}", name, out.summary_f1());
+        let effort = base_effort;
+        let f = || busy_work(effort);
+        let out = bench_naive(LatencyUnit::Nano, f, exec_count);
+        println!("\n{} summary: {:?}", name, out.summary_f1());
         println!();
     }
 }

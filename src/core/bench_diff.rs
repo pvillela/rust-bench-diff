@@ -5,10 +5,20 @@ use core::f64;
 use std::{
     error::Error,
     io::{Write, stderr, stdout},
+    sync::atomic::{AtomicU64, Ordering},
     time::{Duration, Instant},
 };
 
-const WARMUP_MILLIS: u64 = 3_000;
+static WARMUP_MILLIS: AtomicU64 = AtomicU64::new(3_000);
+
+fn get_warmup_millis() -> u64 {
+    WARMUP_MILLIS.load(Ordering::Relaxed)
+}
+
+pub fn set_wamup_millis(millis: u64) {
+    WARMUP_MILLIS.store(millis, Ordering::Relaxed);
+}
+
 const WARMUP_INCREMENT_COUNT: usize = 20;
 
 #[derive(Clone, Copy, Debug)]
@@ -158,12 +168,13 @@ impl DiffState {
         mut f2: impl FnMut(),
         mut warm_up_status: impl FnMut(usize, u64, u64),
     ) {
+        let warmup_millis = get_warmup_millis();
         let start = Instant::now();
         for i in 1.. {
             self.execute(unit, &mut f1, &mut f2, WARMUP_INCREMENT_COUNT, || {}, || {});
             let elapsed = Instant::now().duration_since(start);
-            warm_up_status(i, elapsed.as_millis() as u64, WARMUP_MILLIS);
-            if elapsed.ge(&Duration::from_millis(WARMUP_MILLIS)) {
+            warm_up_status(i, elapsed.as_millis() as u64, warmup_millis);
+            if elapsed.ge(&Duration::from_millis(warmup_millis)) {
                 break;
             }
         }

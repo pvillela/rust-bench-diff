@@ -74,4 +74,15 @@ pub fn print_diff_out(out: &DiffOut) {
         out.diff_medians_f1_f2() / (out.median_f1() + out.median_f2()) * 2.0
     );
     println!();
+
+    let median1 = out.median_f1();
+    let median2 = out.median_f2();
+    let mean1 = out.mean_f1();
+    let mean2 = out.mean_f2();
+    match (median1, median2, mean1, mean2) {
+        _ if median1 < median2 && mean1 < mean2 => println!(">>> INVERTED MEAN AND MEDIAN"),
+        _ if median1 < median2 => println!(">>> INVERTED MEDIAN"),
+        _ if mean1 < mean2 => println!(">>> INVERTED MEAN"),
+        _ => (),
+    }
 }

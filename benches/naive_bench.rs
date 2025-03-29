@@ -1,4 +1,4 @@
-use core::f64;
+//! Naive benchmrk example for comparison with `basic_bench`.
 
 use bench_diff::{
     LatencyUnit,

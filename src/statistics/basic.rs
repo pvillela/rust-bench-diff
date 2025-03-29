@@ -1,5 +1,4 @@
 use super::{AltHyp, Ci, HypTestResult};
-use core::f64;
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 
 /// Returns the p-value for a z-value from the standard normal.

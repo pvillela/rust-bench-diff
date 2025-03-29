@@ -7,7 +7,6 @@ use crate::{
     },
     summary_stats,
 };
-use core::f64;
 use hdrhistogram::Histogram;
 
 #[cfg(feature = "dev_utils")]

@@ -1,7 +1,6 @@
 //! Module to compare the difference in latency between two closures.
 
 use super::DiffOut;
-use core::f64;
 use std::{
     error::Error,
     io::{Write, stderr, stdout},

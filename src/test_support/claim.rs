@@ -1,3 +1,4 @@
+use super::{ALPHA, BETA};
 use crate::{
     DiffOut,
     dev_utils::ApproxEq,
@@ -301,17 +302,21 @@ impl ClaimResults {
             .collect()
     }
 
-    pub fn type_i_and_ii_errors(
+    pub fn excess_type_i_and_ii_errors(
         &self,
         alpha: f64,
         beta: f64,
         claim_names: &[&'static str],
         nrepeats: usize,
+        nsigmas: f64,
     ) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
-        const ALPHA_COUNT_ALLOWANCE: f64 = 0.30;
-        const BETA_COUNT_ALLOWANCE: f64 = 0.20;
-        let alpha_count = (nrepeats as f64 * alpha * (1.0 + ALPHA_COUNT_ALLOWANCE)).ceil() as u32;
-        let beta_count = (nrepeats as f64 * beta * (1.0 + BETA_COUNT_ALLOWANCE)).ceil() as u32;
+        // Normal approximations of binomial distribution
+        let alpha_binomial_stdev: f64 = (nrepeats as f64 * ALPHA * (1.0 - ALPHA)).sqrt(); // valid for ALPHA * nrepeats > 5
+        let beta_binomial_stdev: f64 = (nrepeats as f64 * BETA * (1.0 - BETA)).sqrt(); // valid for BETA * nrepeats > 5
+
+        let max_alpha_count =
+            (nrepeats as f64 * alpha + alpha_binomial_stdev * nsigmas).ceil() as u32;
+        let max_beta_count = (nrepeats as f64 * beta + beta_binomial_stdev * nsigmas).ceil() as u32;
 
         let predicate = |name1: &'static str,
                          name2: &'static str,
@@ -321,14 +326,14 @@ impl ClaimResults {
             match (name1, name2, claim_name, count) {
                 _ if name1[..5] == name2[..5]
                     && claim_names.contains(&claim_name)
-                    && count > alpha_count =>
+                    && count > max_alpha_count =>
                 {
                     true
                 }
 
                 _ if name1[..5] != name2[..5]
                     && claim_names.contains(&claim_name)
-                    && count > beta_count =>
+                    && count > max_beta_count =>
                 {
                     true
                 }

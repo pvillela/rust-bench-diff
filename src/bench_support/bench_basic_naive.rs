@@ -1,5 +1,6 @@
 use crate::{DiffOut, DiffState, LatencyUnit, latency};
 use std::{
+    env,
     io::{Write, stderr, stdout},
     time::{Duration, Instant},
 };
@@ -87,4 +88,54 @@ pub fn bench_naive(unit: LatencyUnit, mut f: impl FnMut(), exec_count: usize) ->
 
     execute(&mut state, unit, &mut f, exec_count, pre_exec, exec_status);
     state
+}
+
+fn relative_diff(x: f64, y: f64) -> f64 {
+    (x - y) / ((x + y) / 2.)
+}
+
+pub struct Args {
+    pub target_relative_diff_pct: u32,
+}
+
+pub fn get_args() -> Args {
+    let target_relative_diff_pct_str = env::var("TARGET_RELATIVE_DIFF_PCT").unwrap_or("5".into());
+    let target_relative_diff_pct =target_relative_diff_pct_str
+        .parse::<u32>()
+        .expect(&format!(
+            "TARGET_RELATIVE_DIFF_PCT, if provided, must be non-negative integer; was \"{target_relative_diff_pct_str}\""
+        ));
+
+    Args {
+        target_relative_diff_pct,
+    }
+}
+
+pub fn too_close(target_relative_diff_pct: u32) -> f64 {
+    (target_relative_diff_pct as f64 / 100.) / 2.
+}
+
+pub fn report_median_mean_anomalies(
+    median1: f64,
+    median2: f64,
+    mean1: f64,
+    mean2: f64,
+    too_close: f64,
+) {
+    match () {
+        _ if median1 < median2 && mean1 < mean2 => println!("### INVERTED MEAN AND MEDIAN"),
+        _ if median1 < median2 => println!("### INVERTED MEDIAN"),
+        _ if mean1 < mean2 => println!("### INVERTED MEAN"),
+        _ => (),
+    }
+
+    let fmedian1 = median1;
+    let fmedian2 = median2;
+    if relative_diff(fmedian1, fmedian2) <= too_close && relative_diff(mean1, mean2) <= too_close {
+        println!("=== TOO CLOSE: MEAN AND MEDIAN")
+    } else if relative_diff(fmedian1, fmedian2) <= too_close {
+        println!("=== TOO CLOSE: MEDIAN")
+    } else if relative_diff(mean1, mean2) <= too_close {
+        println!("=== TOO CLOSE: MEAN")
+    }
 }

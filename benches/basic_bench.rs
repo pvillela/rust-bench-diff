@@ -2,7 +2,7 @@
 
 use bench_diff::{DiffOut, statistics::AltHyp};
 use bench_diff::{
-    LatencyUnit, bench_diff_print,
+    bench_diff_print,
     bench_support::bench_basic_naive::{Args, get_args, report_median_mean_anomalies, too_close},
     dev_utils::{busy_work, calibrate_busy_work},
 };
@@ -10,12 +10,12 @@ use bench_diff::{
 fn main() {
     let Args {
         target_relative_diff_pct,
+        latency_unit,
+        base_median,
+        exec_count,
     } = get_args();
 
-    let unit = LatencyUnit::Nano;
-    let base_median = 100_000.;
-    let base_effort = calibrate_busy_work(unit.latency_from_f64(base_median));
-    let exec_count = 2_000;
+    let base_effort = calibrate_busy_work(latency_unit.latency_from_f64(base_median));
 
     let name1 = format!("hi_{}pct_median_no_var", target_relative_diff_pct);
     let name2 = "base_median_no_var";
@@ -30,7 +30,7 @@ fn main() {
         move || busy_work(effort)
     };
 
-    let out = bench_diff_print(unit, f1, f2, exec_count, || {
+    let out = bench_diff_print(latency_unit, f1, f2, exec_count, || {
         println!("\nbench_diff: f1={name1}, f2={name2}")
     });
 

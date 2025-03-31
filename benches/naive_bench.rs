@@ -11,12 +11,12 @@ use bench_diff::{
 fn main() {
     let Args {
         target_relative_diff_pct,
+        latency_unit,
+        base_median,
+        exec_count,
     } = get_args();
 
-    let unit = LatencyUnit::Nano;
-    let base_median = 100_000.;
-    let base_effort = calibrate_busy_work(unit.latency_from_f64(base_median));
-    let exec_count = 2_000;
+    let base_effort = calibrate_busy_work(latency_unit.latency_from_f64(base_median));
 
     let (median1, mean1) = {
         let name = format!("hi_{}pct_median_no_var", target_relative_diff_pct);

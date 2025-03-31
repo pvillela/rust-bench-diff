@@ -1,6 +1,6 @@
 use crate::{DiffOut, DiffState, LatencyUnit, latency};
 use std::{
-    env,
+    env::{self, VarError},
     io::{Write, stderr, stdout},
     time::{Duration, Instant},
 };
@@ -96,18 +96,53 @@ fn relative_diff(x: f64, y: f64) -> f64 {
 
 pub struct Args {
     pub target_relative_diff_pct: u32,
+    pub latency_unit: LatencyUnit,
+    pub base_median: f64,
+    pub exec_count: usize,
 }
 
 pub fn get_args() -> Args {
-    let target_relative_diff_pct_str = env::var("TARGET_RELATIVE_DIFF_PCT").unwrap_or("5".into());
+    fn with_default(res: Result<String, VarError>, deflt: &str) -> String {
+        match res {
+            Ok(s) if !s.is_empty() => s,
+            _ => deflt.into(),
+        }
+    }
+
+    let target_relative_diff_pct_str = with_default(env::var("TARGET_RELATIVE_DIFF_PCT"), "5");
     let target_relative_diff_pct =target_relative_diff_pct_str
         .parse::<u32>()
         .expect(&format!(
-            "TARGET_RELATIVE_DIFF_PCT, if provided, must be non-negative integer; was \"{target_relative_diff_pct_str}\""
+            "TARGET_RELATIVE_DIFF_PCT, if provided, must be a non-negative integer; was \"{target_relative_diff_pct_str}\""
         ));
+
+    let latency_unit_str = with_default(env::var("LATENCY_UNIT"), "nano");
+    let latency_unit = match latency_unit_str.to_lowercase() {
+        s @ _ if s == "nano" => LatencyUnit::Nano,
+        s @ _ if s == "micro" => LatencyUnit::Micro,
+        s @ _ if s == "milli" => LatencyUnit::Milli,
+        s @ _ => panic!("invalid LATENCY_UNIT environment variable value: {s}"),
+    };
+
+    let base_median_str = with_default(env::var("BASE_MEDIAN"), "100_000");
+    let base_median = base_median_str.parse::<f64>().expect(&format!(
+        "BASE_MEDIAN, if provided, must be a non-negative number; was \"{base_median_str}\""
+    ));
+    assert!(
+        base_median >= 0.,
+        "BASE_MEDIAN, if provided, must be a non-negative number; was \"{base_median_str}\""
+    );
+
+    let exec_count_str = with_default(env::var("EXEC_COUNT"), "2_000");
+    let exec_count = exec_count_str.parse::<usize>().expect(&format!(
+        "EXEC_COUNT, if provided, must be a non-negative integer; was \"{exec_count_str}\""
+    ));
 
     Args {
         target_relative_diff_pct,
+        latency_unit,
+        base_median,
+        exec_count,
     }
 }
 

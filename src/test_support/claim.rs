@@ -310,12 +310,13 @@ impl ClaimResults {
         nrepeats: usize,
         nsigmas: f64,
     ) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
-        // Normal approximations of binomial distribution
-        let alpha_binomial_stdev: f64 = (nrepeats as f64 * ALPHA * (1.0 - ALPHA)).sqrt(); // valid for ALPHA * nrepeats > 5
-        let beta_binomial_stdev: f64 = (nrepeats as f64 * BETA * (1.0 - BETA)).sqrt(); // valid for BETA * nrepeats > 5
+        let alpha_binomial_stdev: f64 = (nrepeats as f64 * ALPHA * (1.0 - ALPHA)).sqrt();
+        let beta_binomial_stdev: f64 = (nrepeats as f64 * BETA * (1.0 - BETA)).sqrt();
 
+        // Normal approximations of binomial distribution: valid for ALPHA * nrepeats > 5
         let max_alpha_count =
             (nrepeats as f64 * alpha + alpha_binomial_stdev * nsigmas).ceil() as u32;
+        // Normal approximations of binomial distribution: valid for BETA * nrepeats > 5
         let max_beta_count = (nrepeats as f64 * beta + beta_binomial_stdev * nsigmas).ceil() as u32;
 
         let predicate = |name1: &'static str,

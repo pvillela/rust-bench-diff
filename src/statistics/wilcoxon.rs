@@ -384,7 +384,7 @@ mod base_test {
     use hdrhistogram::Histogram;
 
     #[test]
-    fn test_p() {
+    fn test_w() {
         // Based on https://learning.oreilly.com/library/view/nonparametric-statistical-methods/9781118553299/9781118553299c04.xhtml#c04_level1_2
         // Nonparametric Statistical Methods, 3rd Edition, by Myles Hollander, Douglas A. Wolfe, Eric Chicken
         // Example 4.1.

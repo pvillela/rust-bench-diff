@@ -94,6 +94,7 @@ fn relative_diff(x: f64, y: f64) -> f64 {
     (x - y) / ((x + y) / 2.)
 }
 
+#[derive(Debug)]
 pub struct Args {
     pub target_relative_diff_pct: u32,
     pub latency_unit: LatencyUnit,
@@ -124,7 +125,7 @@ pub fn get_args() -> Args {
         s @ _ => panic!("invalid LATENCY_UNIT environment variable value: {s}"),
     };
 
-    let base_median_str = with_default(env::var("BASE_MEDIAN"), "100_000");
+    let base_median_str = with_default(env::var("BASE_MEDIAN"), "100000");
     let base_median = base_median_str.parse::<f64>().expect(&format!(
         "BASE_MEDIAN, if provided, must be a non-negative number; was \"{base_median_str}\""
     ));
@@ -133,7 +134,7 @@ pub fn get_args() -> Args {
         "BASE_MEDIAN, if provided, must be a non-negative number; was \"{base_median_str}\""
     );
 
-    let exec_count_str = with_default(env::var("EXEC_COUNT"), "2_000");
+    let exec_count_str = with_default(env::var("EXEC_COUNT"), "2000");
     let exec_count = exec_count_str.parse::<usize>().expect(&format!(
         "EXEC_COUNT, if provided, must be a non-negative integer; was \"{exec_count_str}\""
     ));

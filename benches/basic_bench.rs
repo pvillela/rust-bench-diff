@@ -8,12 +8,15 @@ use bench_diff::{
 };
 
 fn main() {
+    let args = get_args();
+    println!("args={args:?}");
+
     let Args {
         target_relative_diff_pct,
         latency_unit,
         base_median,
         exec_count,
-    } = get_args();
+    } = args;
 
     let base_effort = calibrate_busy_work(latency_unit.latency_from_f64(base_median));
 

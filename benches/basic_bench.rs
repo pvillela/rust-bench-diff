@@ -3,7 +3,9 @@
 use bench_diff::{DiffOut, statistics::AltHyp};
 use bench_diff::{
     bench_diff_print,
-    bench_support::bench_basic_naive::{Args, get_args, report_median_mean_anomalies, too_close},
+    bench_support::bench_basic_naive::{
+        Args, ANOMALY_TOLERANCE, get_args, report_median_mean_anomalies,
+    },
     dev_utils::{busy_work, calibrate_busy_work},
 };
 
@@ -49,7 +51,8 @@ fn main() {
         median2,
         mean1,
         mean2,
-        too_close(target_relative_diff_pct),
+        target_relative_diff_pct,
+        ANOMALY_TOLERANCE,
     );
 }
 

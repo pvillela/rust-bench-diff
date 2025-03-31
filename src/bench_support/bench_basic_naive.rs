@@ -147,8 +147,12 @@ pub fn get_args() -> Args {
     }
 }
 
-pub fn too_close(target_relative_diff_pct: u32) -> f64 {
-    (target_relative_diff_pct as f64 / 100.) / 2.
+fn too_deviant(v1: f64, v2: f64, target_relative_diff_pct: u32, tolerance: f64) -> bool {
+    let target_relative_diff = target_relative_diff_pct as f64 / 100.;
+    let low = target_relative_diff * (1. - tolerance);
+    let high = target_relative_diff * (1. + tolerance);
+    let rdiff = relative_diff(v1, v2);
+    rdiff <= low || rdiff >= high
 }
 
 pub fn report_median_mean_anomalies(
@@ -156,7 +160,8 @@ pub fn report_median_mean_anomalies(
     median2: f64,
     mean1: f64,
     mean2: f64,
-    too_close: f64,
+    target_relative_diff_pct: u32,
+    tolerance: f64,
 ) {
     match () {
         _ if median1 < median2 && mean1 < mean2 => println!("### INVERTED MEAN AND MEDIAN"),
@@ -165,13 +170,21 @@ pub fn report_median_mean_anomalies(
         _ => (),
     }
 
-    let fmedian1 = median1;
-    let fmedian2 = median2;
-    if relative_diff(fmedian1, fmedian2) <= too_close && relative_diff(mean1, mean2) <= too_close {
-        println!("=== TOO CLOSE: MEAN AND MEDIAN")
-    } else if relative_diff(fmedian1, fmedian2) <= too_close {
-        println!("=== TOO CLOSE: MEDIAN")
-    } else if relative_diff(mean1, mean2) <= too_close {
-        println!("=== TOO CLOSE: MEAN")
+    if too_deviant(median1, median2, target_relative_diff_pct, tolerance)
+        && too_deviant(mean1, mean2, target_relative_diff_pct, tolerance)
+    {
+        let rdiff_medians = relative_diff(median1, mean2);
+        let rdiff_means = relative_diff(mean1, mean2);
+        println!(
+            "=== TOO DEVIANT: MEAN AND MEDIAN (tolerance={tolerance}, rdiff_means={rdiff_means}, rdiff_medians={rdiff_medians})"
+        )
+    } else if too_deviant(median1, median2, target_relative_diff_pct, tolerance) {
+        let rdiff_medians = relative_diff(median1, mean2);
+        println!("=== TOO DEVIANT: MEDIAN (tolerance={tolerance}, rdiff_medians={rdiff_medians})")
+    } else if too_deviant(mean1, mean2, target_relative_diff_pct, tolerance) {
+        let rdiff_means = relative_diff(mean1, mean2);
+        println!("=== TOO DEVIANT: MEAN (tolerance={tolerance}, rdiff_means={rdiff_means})")
     }
 }
+
+pub const ANOMALY_TOLERANCE: f64 = 0.25;

@@ -3,7 +3,7 @@
 use bench_diff::{
     LatencyUnit,
     bench_support::bench_basic_naive::{
-        Args, bench_naive, get_args, report_median_mean_anomalies, too_close,
+        ANOMALY_TOLERANCE, Args, bench_naive, get_args, report_median_mean_anomalies,
     },
     dev_utils::{busy_work, calibrate_busy_work},
 };
@@ -50,6 +50,7 @@ fn main() {
         median2 as f64,
         mean1,
         mean2,
-        too_close(target_relative_diff_pct),
+        target_relative_diff_pct,
+        ANOMALY_TOLERANCE,
     );
 }

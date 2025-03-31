@@ -56,12 +56,12 @@ fn print_diff_out(out: &DiffOut) {
     println!("mean_diff_f1_f2={}", out.mean_diff_f1_f2());
     println!(
         "relative_mean_diff_f1_f2={}",
-        out.mean_diff_f1_f2() / (out.mean_f1() + out.mean_f2()) * 2.0
+        out.mean_diff_f1_f2() / (out.mean_f1() + out.mean_f2()) * 2.
     );
     println!("diff_medians_f1_f2={}", out.diff_medians_f1_f2());
     println!(
         "relative_diff_medians_f1_f2={}",
-        out.diff_medians_f1_f2() / (out.median_f1() + out.median_f2()) * 2.0
+        out.diff_medians_f1_f2() / (out.median_f1() + out.median_f2()) * 2.
     );
     println!(
         "student_diff_test_lt:{:?}",
@@ -273,7 +273,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
         }
 
         let type_i_and_ii_errors_1sigma =
-            results.excess_type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats, 1.0);
+            results.excess_type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats, 1.);
         if !type_i_and_ii_errors_1sigma.is_empty() {
             println!(
                 ">>> type_i_and_ii_errors_1sigma: {:?}",
@@ -282,7 +282,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
         }
 
         let type_i_and_ii_errors_2sigma =
-            results.excess_type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats, 2.0);
+            results.excess_type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats, 2.);
         if !type_i_and_ii_errors_2sigma.is_empty() {
             println!(
                 ">>> type_i_and_ii_errors_2sigma: {:?}",

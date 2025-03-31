@@ -151,7 +151,7 @@ impl DiffOut {
     #[cfg(feature = "dev_utils")]
     /// Estimator of mean of Bernoulli distribution.
     pub fn bernoulli_prob_f1_gt_f2(&self) -> f64 {
-        (self.count_f1_gt_f2() as f64 + self.count_f1_eq_f2 as f64 / 2.0)
+        (self.count_f1_gt_f2() as f64 + self.count_f1_eq_f2 as f64 / 2.)
             / (self.count_f1_lt_f2() + self.count_f1_eq_f2 + self.count_f1_gt_f2()) as f64
     }
 
@@ -172,7 +172,7 @@ impl DiffOut {
     #[cfg(feature = "dev_utils")]
     pub fn bernoulli_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
-        bernoulli_test(self.n(), p_hat, 1.0 / 2.0, alt_hyp, alpha)
+        bernoulli_test(self.n(), p_hat, 1. / 2., alt_hyp, alpha)
     }
 
     /// Welch's t statistic for
@@ -240,12 +240,12 @@ impl DiffOut {
             self.sum_diff_f1_f2,
             self.sum2_diff_f1_f2,
         );
-        student_one_sample_t(&moments, 0.0)
+        student_one_sample_t(&moments, 0.)
     }
 
     #[cfg(feature = "dev_utils")]
     pub fn student_diff_deg_freedom(&self) -> f64 {
-        self.n() - 1.0
+        self.n() - 1.
     }
 
     #[cfg(feature = "dev_utils")]
@@ -271,7 +271,7 @@ impl DiffOut {
             self.sum_diff_f1_f2,
             self.sum2_diff_f1_f2,
         );
-        student_one_sample_test(&moments, 0.0, alt_hyp, alpha)
+        student_one_sample_test(&moments, 0., alt_hyp, alpha)
     }
 
     pub fn student_diff_ln_t(&self) -> f64 {
@@ -280,11 +280,11 @@ impl DiffOut {
             self.sum_diff_ln_f1_f2,
             self.sum2_diff_ln_f1_f2,
         );
-        student_one_sample_t(&moments, 0.0)
+        student_one_sample_t(&moments, 0.)
     }
 
     pub fn student_diff_ln_deg_freedom(&self) -> f64 {
-        self.n() - 1.0
+        self.n() - 1.
     }
 
     pub fn student_diff_ln_ci(&self, alpha: f64) -> Ci {
@@ -313,7 +313,7 @@ impl DiffOut {
             self.sum_diff_ln_f1_f2,
             self.sum2_diff_ln_f1_f2,
         );
-        student_one_sample_test(&moments, 0.0, alt_hyp, alpha)
+        student_one_sample_test(&moments, 0., alt_hyp, alpha)
     }
 
     #[cfg(feature = "dev_utils")]

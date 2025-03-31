@@ -19,7 +19,7 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
         // Revised params.
         //
         {
-            let base_median = 400.0;
+            let base_median = 400.;
             ScaleParams {
                 name: "nanos_scale".into(),
                 unit: LatencyUnit::Nano,
@@ -30,7 +30,7 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
             }
         },
         {
-            let base_median = 100_000.0;
+            let base_median = 100_000.;
             ScaleParams {
                 name: "micros_scale".into(),
                 unit: LatencyUnit::Nano,
@@ -41,7 +41,7 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
             }
         },
         {
-            let base_median = 5_000.0;
+            let base_median = 5_000.;
             ScaleParams {
                 name: "millis_scale".into(),
                 unit: LatencyUnit::Micro,
@@ -55,7 +55,7 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
         // Original params.
         //
         {
-            let base_median = 400.0;
+            let base_median = 400.;
             ScaleParams {
                 name: "nanos_scale_original".into(),
                 unit: LatencyUnit::Nano,
@@ -66,7 +66,7 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
             }
         },
         {
-            let base_median = 100_000.0;
+            let base_median = 100_000.;
             ScaleParams {
                 name: "micros_scale_original".into(),
                 unit: LatencyUnit::Nano,
@@ -77,7 +77,7 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
             }
         },
         {
-            let base_median = 10_000.0;
+            let base_median = 10_000.;
             ScaleParams {
                 name: "millis_scale_original".into(),
                 unit: LatencyUnit::Micro,

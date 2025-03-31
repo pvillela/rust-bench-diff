@@ -310,8 +310,8 @@ impl ClaimResults {
         nrepeats: usize,
         nsigmas: f64,
     ) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
-        let alpha_binomial_stdev: f64 = (nrepeats as f64 * ALPHA * (1.0 - ALPHA)).sqrt();
-        let beta_binomial_stdev: f64 = (nrepeats as f64 * BETA * (1.0 - BETA)).sqrt();
+        let alpha_binomial_stdev: f64 = (nrepeats as f64 * ALPHA * (1. - ALPHA)).sqrt();
+        let beta_binomial_stdev: f64 = (nrepeats as f64 * BETA * (1. - BETA)).sqrt();
 
         // Normal approximations of binomial distribution: valid for ALPHA * nrepeats > 5
         let max_alpha_count =

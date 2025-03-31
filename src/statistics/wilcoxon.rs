@@ -29,7 +29,7 @@ fn wilcoxon_ranked_items_ties_sum_prod(
         ties_sum_prod: &mut u64,
     ) -> (RankedItem, f64) {
         let count = count_i + count_other;
-        let rank = prev_rank + (count as f64 + 1.0) / 2.0;
+        let rank = prev_rank + (count as f64 + 1.) / 2.;
         let item = RankedItem {
             #[cfg(test)]
             value,
@@ -49,7 +49,7 @@ fn wilcoxon_ranked_items_ties_sum_prod(
         let mut iter_a = hist_a.iter_recorded();
         let mut iter_b = hist_b.iter_recorded();
         let (mut item_a_opt, mut item_b_opt) = (iter_a.next(), iter_b.next());
-        let mut prev_rank = 0.0;
+        let mut prev_rank = 0.;
 
         loop {
             match (&mut item_a_opt, &mut item_b_opt) {
@@ -164,7 +164,7 @@ fn wilcoxon_rank_sum_ties_sum_prod(hist_a: &Histogram<u64>, hist_b: &Histogram<u
         ties_sum_prod: &mut u64,
     ) -> (f64, f64) {
         let count = count_i + count_other;
-        let rank = prev_rank + (count as f64 + 1.0) / 2.0;
+        let rank = prev_rank + (count as f64 + 1.) / 2.;
         let rank_sum = count_i as f64 * rank;
         let new_prev_rank = prev_rank + count as f64;
         *item_opt_i = iter_i.next();
@@ -175,12 +175,12 @@ fn wilcoxon_rank_sum_ties_sum_prod(hist_a: &Histogram<u64>, hist_b: &Histogram<u
     let mut ties_sum_prod = 0;
 
     let rank_sum_b: f64 = {
-        let mut rank_sum_a = 0.0;
-        let mut rank_sum_b = 0.0;
+        let mut rank_sum_a = 0.;
+        let mut rank_sum_b = 0.;
         let mut iter_a = hist_a.iter_recorded();
         let mut iter_b = hist_b.iter_recorded();
         let (mut item_a_opt, mut item_b_opt) = (iter_a.next(), iter_b.next());
-        let mut prev_rank = 0.0;
+        let mut prev_rank = 0.;
 
         loop {
             match (&mut item_a_opt, &mut item_b_opt) {
@@ -276,7 +276,7 @@ fn wilcoxon_rank_sum_ties_sum_prod(hist_a: &Histogram<u64>, hist_b: &Histogram<u
         {
             let n_a = hist_a.len() as f64;
             let n_b = hist_b.len() as f64;
-            let expected_rank_sum_a = (1.0 + n_a + n_b) * (n_a + n_b) / 2.0 - rank_sum_b;
+            let expected_rank_sum_a = (1. + n_a + n_b) * (n_a + n_b) / 2. - rank_sum_b;
             debug_assert_eq!(expected_rank_sum_a, rank_sum_a, "rank_sum_a check");
         }
 
@@ -291,7 +291,7 @@ fn wilcoxon_rank_sum_ties_sum_prod(hist_a: &Histogram<u64>, hist_b: &Histogram<u
 fn mann_whitney_u_b(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let (w, _) = wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b);
     let n_b = hist_b.len() as f64;
-    w - n_b * (n_b + 1.0) / 2.0
+    w - n_b * (n_b + 1.) / 2.
 }
 
 #[cfg(test)]
@@ -312,9 +312,9 @@ pub fn wilcoxon_rank_sum_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> 
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;
     let (w, ties_sum_prod) = wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b);
-    let e0_w = n_b * (n_a + n_b + 1.0) / 2.0;
-    let var0_w_base = n_a * n_b * (n_a + n_b + 1.0) / 12.0;
-    let var0_w_ties_adjust = n_a * n_b / (12.0 * (n_a + n_b) * (n_a + n_b - 1.0)) * ties_sum_prod;
+    let e0_w = n_b * (n_a + n_b + 1.) / 2.;
+    let var0_w_base = n_a * n_b * (n_a + n_b + 1.) / 12.;
+    let var0_w_ties_adjust = n_a * n_b / (12. * (n_a + n_b) * (n_a + n_b - 1.)) * ties_sum_prod;
     let var0_w = var0_w_base - var0_w_ties_adjust;
     let w_star = (w - e0_w) / var0_w.sqrt();
 
@@ -326,9 +326,9 @@ pub fn wilcoxon_rank_sum_z_no_ties_adjust(hist_a: &Histogram<u64>, hist_b: &Hist
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;
     let (w, _) = wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b);
-    let e0_w = n_b * (n_a + n_b + 1.0) / 2.0;
-    let var0_w_base = n_a * n_b * (n_a + n_b + 1.0) / 12.0;
-    let var0_w_ties_adjust = 0.0;
+    let e0_w = n_b * (n_a + n_b + 1.) / 2.;
+    let var0_w_base = n_a * n_b * (n_a + n_b + 1.) / 12.;
+    let var0_w_ties_adjust = 0.;
     let var0_w = var0_w_base - var0_w_ties_adjust;
     let w_star = (w - e0_w) / var0_w.sqrt();
 
@@ -394,11 +394,11 @@ mod base_test {
 
         let sample_a = sample_a0
             .into_iter()
-            .map(|x| (x * 100.0) as u64)
+            .map(|x| (x * 100.) as u64)
             .collect::<Vec<_>>();
         let sample_b = sample_b0
             .into_iter()
-            .map(|x| (x * 100.0) as u64)
+            .map(|x| (x * 100.) as u64)
             .collect::<Vec<_>>();
 
         let mut hist_a = Histogram::new_with_max(200, 3).unwrap();
@@ -412,7 +412,7 @@ mod base_test {
             hist_b.record(*v).unwrap();
         }
 
-        let expected_w = 30.0;
+        let expected_w = 30.;
         let (actual_w, _) = wilcoxon_rank_sum_ties_sum_prod(&hist_a, &hist_b);
         assert_eq!(expected_w, actual_w, "w comparison");
 
@@ -464,7 +464,7 @@ mod test_with_hypors {
 
         let n_a = sample_a.len() as f64;
         let n_b = sample_b.len() as f64;
-        let rank_sum_a = (1.0 + n_a + n_b) * (n_a + n_b) / 2.0 - rank_sum_b;
+        let rank_sum_a = (1. + n_a + n_b) * (n_a + n_b) / 2. - rank_sum_b;
         println!("rank_sum_a={rank_sum_a}");
 
         let wilcoxon_rank_sum_a_lt_b_p = wilcoxon_rank_sum_p(&mut hist_a, &mut hist_b, AltHyp::Lt);
@@ -554,11 +554,11 @@ mod test_with_hypors {
 
             let sample_a = sample_a0
                 .into_iter()
-                .map(|x| (x * 100.0) as u64)
+                .map(|x| (x * 100.) as u64)
                 .collect::<Vec<_>>();
             let sample_b = sample_b0
                 .into_iter()
-                .map(|x| (x * 100.0) as u64)
+                .map(|x| (x * 100.) as u64)
                 .collect::<Vec<_>>();
 
             process_samples(sample_a, sample_b, 200, 3);
@@ -585,7 +585,7 @@ mod test_with_hypors {
                 let mut combined = sample_a.iter().chain(sample_b.iter()).collect::<Vec<_>>();
                 combined.sort();
 
-                let exp_ranks_b = [1.0, 2.0, 5.0, 6.0, 7.0, 9.5, 11.0, 12.5, 15.5, 18.5];
+                let exp_ranks_b = [1., 2., 5., 6., 7., 9.5, 11., 12.5, 15.5, 18.5];
                 let exp_rank_sum_b = exp_ranks_b.iter().sum::<f64>();
 
                 println!("sorted_a={sorted_a:?}");

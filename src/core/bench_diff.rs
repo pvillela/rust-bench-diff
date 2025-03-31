@@ -84,14 +84,14 @@ impl DiffState {
         self.hist_f1_lt_f2.reset();
         self.count_f1_eq_f2 = 0;
         self.hist_f1_gt_f2.reset();
-        self.sum_ln_f1 = 0.0;
-        self.sum2_ln_f1 = 0.0;
-        self.sum_ln_f2 = 0.0;
-        self.sum2_ln_f2 = 0.0;
-        self.sum_diff_f1_f2 = 0.0;
-        self.sum2_diff_f1_f2 = 0.0;
-        self.sum_diff_ln_f1_f2 = 0.0;
-        self.sum2_diff_ln_f1_f2 = 0.0;
+        self.sum_ln_f1 = 0.;
+        self.sum2_ln_f1 = 0.;
+        self.sum_ln_f2 = 0.;
+        self.sum2_ln_f2 = 0.;
+        self.sum_diff_f1_f2 = 0.;
+        self.sum2_diff_f1_f2 = 0.;
+        self.sum_diff_ln_f1_f2 = 0.;
+        self.sum2_diff_ln_f1_f2 = 0.;
     }
 
     #[inline(always)]
@@ -527,7 +527,7 @@ mod test {
         }
 
         let type_i_and_ii_errors_2sigma =
-            results.excess_type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats, 2.0);
+            results.excess_type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats, 2.);
         assert!(
             type_i_and_ii_errors_2sigma.is_empty(),
             "\n*** type_i_and_ii_errors_2sigma: {:?}\n",

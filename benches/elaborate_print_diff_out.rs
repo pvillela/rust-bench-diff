@@ -49,12 +49,12 @@ pub fn print_diff_out(out: &DiffOut) {
     println!("mean_diff_f1_f2={}", out.mean_diff_f1_f2());
     println!(
         "relative_mean_diff_f1_f2={}",
-        out.mean_diff_f1_f2() / (out.mean_f1() + out.mean_f2()) * 2.0
+        out.mean_diff_f1_f2() / (out.mean_f1() + out.mean_f2()) * 2.
     );
     println!("diff_medians_f1_f2={}", out.diff_medians_f1_f2());
     println!(
         "relative_diff_medians_f1_f2={}",
-        out.diff_medians_f1_f2() / (out.median_f1() + out.median_f2()) * 2.0
+        out.diff_medians_f1_f2() / (out.median_f1() + out.median_f2()) * 2.
     );
     println!();
     println!(

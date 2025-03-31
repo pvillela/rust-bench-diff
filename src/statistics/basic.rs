@@ -9,19 +9,19 @@ pub fn z_to_p(z: f64, alt_hyp: AltHyp) -> f64 {
     match alt_hyp {
         AltHyp::Lt => normal.cdf(z),
         AltHyp::Gt => normal.cdf(-z),
-        AltHyp::Ne => normal.cdf(-z.abs()) * 2.0,
+        AltHyp::Ne => normal.cdf(-z.abs()) * 2.,
     }
 }
 
 /// Returns the p-value for a t-value from the Student distribution with location 0, scale 1, and `deg_freedom` degrees of freedom.
 /// `alt_hyp` is the alternative hypothesis. The null hypothesis is that the sample distribution's mean is 0.
 pub fn t_to_p(t: f64, deg_freedom: f64, alt_hyp: AltHyp) -> f64 {
-    let stud = StudentsT::new(0.0, 1.0, deg_freedom).expect("degrees of freedom must be > 0");
+    let stud = StudentsT::new(0., 1., deg_freedom).expect("degrees of freedom must be > 0");
 
     match alt_hyp {
         AltHyp::Lt => stud.cdf(t),
         AltHyp::Gt => stud.cdf(-t),
-        AltHyp::Ne => stud.cdf(-t.abs()) * 2.0,
+        AltHyp::Ne => stud.cdf(-t.abs()) * 2.,
     }
 }
 
@@ -34,7 +34,7 @@ pub fn z_alpha(alpha: f64) -> f64 {
 /// Returns the probability that the Student distribution with location 0, scale 1, and `deg_freedom` degrees of freedom
 /// produces a value greater than `alpha`.
 pub fn t_alpha(deg_freedom: f64, alpha: f64) -> f64 {
-    let stud = StudentsT::new(0.0, 1.0, deg_freedom).expect("degrees of freedom must be > 0");
+    let stud = StudentsT::new(0., 1., deg_freedom).expect("degrees of freedom must be > 0");
     stud.cdf(-alpha)
 }
 
@@ -50,7 +50,7 @@ pub fn sample_sum2_deviations(n: f64, sum: f64, sum2: f64) -> f64 {
 
 #[inline(always)]
 pub fn sample_var(n: f64, sum: f64, sum2: f64) -> f64 {
-    sample_sum2_deviations(n, sum, sum2) / (n - 1.0)
+    sample_sum2_deviations(n, sum, sum2) / (n - 1.)
 }
 
 #[inline(always)]
@@ -78,10 +78,10 @@ pub fn bernoulli_p_hat(n: f64, successes: f64) -> f64 {
 /// - `alpha`: confidence level.
 pub fn bernoulli_psucc_ci(n: f64, p_hat: f64, alpha: f64) -> Ci {
     let p = p_hat;
-    let z_alpha_2 = z_alpha(alpha / 2.0);
-    let mid = p + z_alpha_2.powi(2) / (2.0 * n);
-    let delta = z_alpha_2 * (p * (1.0 - p) / n + z_alpha_2.powi(2) / (4.0 * n.powi(2))).sqrt();
-    let denom = 1.0 + z_alpha_2.powi(2) / n;
+    let z_alpha_2 = z_alpha(alpha / 2.);
+    let mid = p + z_alpha_2.powi(2) / (2. * n);
+    let delta = z_alpha_2 * (p * (1. - p) / n + z_alpha_2.powi(2) / (4. * n.powi(2))).sqrt();
+    let denom = 1. + z_alpha_2.powi(2) / n;
     Ci((mid - delta) / denom, (mid + delta) / denom)
 }
 
@@ -93,7 +93,7 @@ pub fn bernoulli_psucc_ci(n: f64, p_hat: f64, alpha: f64) -> Ci {
 /// - `p_hat`: estimate of mean of the Bernoulli distribution. See [`bernoulli_p_hat`].
 /// - `p0`: probability of success under null hypothesis.
 pub fn bernoulli_normal_approx_z(n: f64, p_hat: f64, p0: f64) -> f64 {
-    (p_hat - p0) / (p0 * (1.0 - p0) / n).sqrt()
+    (p_hat - p0) / (p0 * (1. - p0) / n).sqrt()
 }
 
 #[cfg(feature = "dev_utils")]
@@ -188,8 +188,8 @@ impl Default for SampleMoments {
     fn default() -> Self {
         Self {
             count: 0,
-            sum: 0.0,
-            sum2: 0.0,
+            sum: 0.,
+            sum2: 0.,
             min: f64::NAN,
             max: f64::NAN,
         }
@@ -224,7 +224,7 @@ pub fn welch_deg_freedom(moments_a: &SampleMoments, moments_b: &SampleMoments) -
     let s2_mean_a = s2_a / n_a;
     let s2_mean_b = s2_b / n_b;
     let numerator = (s2_mean_a + s2_mean_b).powi(2);
-    let denominator = s2_mean_a.powi(2) / (n_a - 1.0) + s2_mean_b.powi(2) / (n_b - 1.0);
+    let denominator = s2_mean_a.powi(2) / (n_a - 1.) + s2_mean_b.powi(2) / (n_b - 1.);
     numerator / denominator
 }
 
@@ -244,8 +244,8 @@ pub fn welch_ci(moments_a: &SampleMoments, moments_b: &SampleMoments, alpha: f64
     let s2_mean_b = s2_b / n_b;
     let nu = welch_deg_freedom(moments_a, moments_b);
 
-    let stud = StudentsT::new(0.0, 1.0, nu).expect("Welch degrees of freedom must be > 0");
-    let t = -stud.inverse_cdf(alpha / 2.0);
+    let stud = StudentsT::new(0., 1., nu).expect("Welch degrees of freedom must be > 0");
+    let t = -stud.inverse_cdf(alpha / 2.);
 
     let mid = dx;
     let radius = (s2_mean_a + s2_mean_b).sqrt() * t;
@@ -271,7 +271,7 @@ pub fn student_one_sample_t(moments: &SampleMoments, mu0: f64) -> f64 {
 }
 
 pub fn student_one_sample_deg_freedom(moments: &SampleMoments) -> f64 {
-    moments.n() - 1.0
+    moments.n() - 1.
 }
 
 pub fn student_one_sample_p(moments: &SampleMoments, mu0: f64, alt_hyp: AltHyp) -> f64 {
@@ -282,9 +282,9 @@ pub fn student_one_sample_p(moments: &SampleMoments, mu0: f64, alt_hyp: AltHyp) 
 
 pub fn student_one_sample_ci(moments: &SampleMoments, alpha: f64) -> Ci {
     let nu = student_one_sample_deg_freedom(moments);
-    let stud = StudentsT::new(0.0, 1.0, nu)
+    let stud = StudentsT::new(0., 1., nu)
         .expect("can't happen: degrees of freedom is always >= 3 by construction");
-    let t = -stud.inverse_cdf(alpha / 2.0);
+    let t = -stud.inverse_cdf(alpha / 2.);
 
     let mid = moments.mean();
     let radius = (moments.stdev() / moments.n().sqrt()) * t;

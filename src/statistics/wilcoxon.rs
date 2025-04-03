@@ -426,18 +426,8 @@ mod base_test {
 #[cfg(test)]
 #[cfg(feature = "hypors")]
 mod test_with_hypors {
-    use crate::{
-        dev_utils::ApproxEq,
-        statistics::{
-            AltHyp,
-            wilcoxon::{
-                mann_whitney_u, mann_whitney_u_a, mann_whitney_u_b, wilcoxon_rank_sum_p,
-                wilcoxon_rank_sum_p_no_ties_adjust, wilcoxon_rank_sum_ties_sum_prod,
-            },
-        },
-    };
-
-    use super::wilcoxon_ranked_items_ties_sum_prod;
+    use super::*;
+    use crate::{dev_utils::ApproxEq, statistics::AltHyp};
     use hdrhistogram::Histogram;
     use hypors::{common::TailType, mann_whitney::u_test};
     use polars::prelude::*;

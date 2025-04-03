@@ -2,7 +2,7 @@ mod elaborate_print_diff_out;
 
 use bench_diff::{
     DiffOut, LatencyUnit, bench_diff_print,
-    dev_utils::{busy_work, calibrate_busy_work},
+    test_support::{busy_work, calibrate_busy_work},
 };
 use elaborate_print_diff_out::print_diff_out;
 use std::time::Duration;

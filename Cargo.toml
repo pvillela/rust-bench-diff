@@ -31,9 +31,9 @@ polars = { version = "0.43", optional = true }                        # required
 # All features below are for internal development use only
 [features]
 bench = ["test_support"] # intended only to be used by benches
-dev_utils = ["dep:sha2"] # utilities for creation of synthetic benchmarks
+dev_support = ["dep:sha2"] # utilities for creation of synthetic benchmarks
 test_support = [
-    "dev_utils",
+    "dev_support",
     "dep:rand",
     "dep:rand_distr",
 ] # intended only for tests and benches

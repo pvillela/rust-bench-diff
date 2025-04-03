@@ -9,7 +9,7 @@ use crate::{
 };
 use hdrhistogram::Histogram;
 
-#[cfg(feature = "dev_utils")]
+#[cfg(feature = "dev_support")]
 use crate::statistics::{self, bernoulli_psucc_ci, bernoulli_test};
 
 pub struct DiffOut {
@@ -148,14 +148,14 @@ impl DiffOut {
         self.mean_diff_ln_f1_f2().exp()
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     /// Estimator of mean of Bernoulli distribution.
     pub fn bernoulli_prob_f1_gt_f2(&self) -> f64 {
         (self.count_f1_gt_f2() as f64 + self.count_f1_eq_f2 as f64 / 2.)
             / (self.count_f1_lt_f2() + self.count_f1_eq_f2 + self.count_f1_gt_f2()) as f64
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     /// Confidence interval for Bernoulli distribution (Wilson score interval).
     pub fn bernoulli_ci(&self, alpha: f64) -> Ci {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
@@ -163,13 +163,13 @@ impl DiffOut {
         bernoulli_psucc_ci(n, p_hat, alpha)
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn bernoulli_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.bernoulli_ci(alpha);
         ci.position_of(value)
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn bernoulli_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
         bernoulli_test(self.n(), p_hat, 1. / 2., alt_hyp, alpha)
@@ -233,7 +233,7 @@ impl DiffOut {
         welch_test(&moments1, &moments2, alt_hyp, alpha)
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn student_diff_t(&self) -> f64 {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -243,12 +243,12 @@ impl DiffOut {
         student_one_sample_t(&moments, 0.)
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn student_diff_deg_freedom(&self) -> f64 {
         self.n() - 1.
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn student_diff_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -258,13 +258,13 @@ impl DiffOut {
         student_one_sample_ci(&moments, alpha)
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn student_value_position_wrt_diff_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.student_diff_ci(alpha);
         ci.position_of(value)
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn student_diff_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -316,22 +316,22 @@ impl DiffOut {
         student_one_sample_test(&moments, 0., alt_hyp, alpha)
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
         statistics::wilcoxon_rank_sum_z(&self.hist_f1, &self.hist_f2)
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn wilcoxon_rank_sum_z_no_ties_adjust(&self) -> f64 {
         statistics::wilcoxon_rank_sum_z_no_ties_adjust(&self.hist_f1, &self.hist_f2)
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
         statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
     }
 
-    #[cfg(feature = "dev_utils")]
+    #[cfg(feature = "dev_support")]
     pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         statistics::wilcoxon_rank_sum_test(&self.hist_f1, &self.hist_f2, alt_hyp, alpha)
     }

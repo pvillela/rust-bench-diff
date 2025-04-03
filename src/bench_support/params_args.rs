@@ -1,8 +1,8 @@
 //! Definition of target functions, test scenarios, and their parameterization.
 
-use crate::{
-    dev_utils::{busy_work, calibrate_busy_work},
-    test_support::{FN_NAME_PAIRS, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams},
+use crate::test_support::{
+    FN_NAME_PAIRS, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams, busy_work,
+    calibrate_busy_work,
 };
 use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
 use rand_distr::LogNormal;

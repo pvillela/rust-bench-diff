@@ -5,7 +5,7 @@ use bench_diff::{
     bench_support::bench_basic_naive::{
         ANOMALY_TOLERANCE, Args, bench_naive, get_args, report_median_mean_anomalies,
     },
-    dev_utils::{busy_work, calibrate_busy_work},
+    test_support::{busy_work, calibrate_busy_work},
 };
 
 fn main() {

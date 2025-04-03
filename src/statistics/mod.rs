@@ -3,11 +3,11 @@ mod basic;
 pub use basic::*;
 
 #[allow(unused)]
-#[cfg(feature = "dev_utils")]
+#[cfg(feature = "dev_support")]
 mod wilcoxon;
 
 #[doc(hidden)]
-#[cfg(feature = "dev_utils")]
+#[cfg(feature = "dev_support")]
 pub use wilcoxon::*;
 
 mod types;

@@ -4,7 +4,7 @@ use super::params_args::{Args, calibrated_fn_params, get_args, get_fn};
 use crate::{
     DiffOut, bench_diff, bench_diff_print,
     dev_utils::nest_btree_map,
-    statistics::{AltHyp, SampleMoments, collect_moments},
+    statistics::{AltHyp, SampleMoments},
     test_support::{
         ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, get_scale_params, get_scenario,
     },
@@ -227,23 +227,21 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
                 let ratio_medians_from_lns_noise = ratio_medians_from_lns_noises
                     .entry((name1, name2))
                     .or_insert_with(|| SampleMoments::default());
-                collect_moments(
-                    ratio_medians_from_lns_noise,
-                    diff_out.mean_diff_ln_f1_f2().exp(),
-                );
+
+                ratio_medians_from_lns_noise.collect_value(diff_out.mean_diff_ln_f1_f2().exp());
 
                 let diff_ratio_medians_noise = diff_ratio_medians_noises
                     .entry((name1, name2))
                     .or_insert_with(|| SampleMoments::default());
-                collect_moments(
-                    diff_ratio_medians_noise,
+
+                diff_ratio_medians_noise.collect_value(
                     diff_out.ratio_medians_f1_f2() - diff_out.ratio_medians_f1_f2_from_lns(),
                 );
 
                 let diff_ln_stdev_noise = diff_ln_stdev_noises
                     .entry((name1, name2))
                     .or_insert_with(|| SampleMoments::default());
-                collect_moments(diff_ln_stdev_noise, diff_out.stdev_diff_ln_f1_f2());
+                diff_ln_stdev_noise.collect_value(diff_out.stdev_diff_ln_f1_f2());
             }
         }
 

@@ -25,7 +25,6 @@ pub use core::*;
 pub mod statistics;
 
 #[doc(hidden)]
-#[cfg(feature = "dev_utils")]
 pub mod dev_utils;
 
 // intended only to be used by benches

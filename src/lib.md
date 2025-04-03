@@ -55,7 +55,7 @@ Much of the statistical inference supported by this library is based on the assu
 
 This framework has been extensively tested using both standard Rust tests and test benchmarks.
 
-**Tests of inferential statistics** -- The implementations of inferential statistics (hypothesis tests, confidence intervals, t values, p values, etc.) has been tested independently on their own, using Rust's standard testing approach. This included tests against known data and expected results, as well as comparison of results obtained with this library against the corresponding results obtained with the statistical hypothesis testing crate [hypors](https://docs.rs/hypors/latest/hypors/).
+**Tests of inferential statistics** -- The implementations of inferential statistics (hypothesis tests, confidence intervals, t values, p values, etc.) have been tested independently on their own, using Rust's standard testing approach. Sources for comparison included published data sets with their corresponding statistics, as well as calculations using R.
 
 **Test benchmarks** -- Specific benchmarking scenarios were defined to test the library on its own and in comparison with "*traditional*" benchmarking.
 
@@ -74,7 +74,7 @@ This framework has been extensively tested using both standard Rust tests and te
   - Three variance levels were used: 0 (deterministic functions), low (standard deviation of the log of the distribution = ln(1.2) / 2, which corresponds to a multiplicative effect of 1.095 at the 68th percentile for a lognormal distribution), and high (standard deviation of the log of the distribution = ln(2.4) / 2, which corresponds to a multiplicative effect of 1.55 at the 68th percentile for a lognormal distribution).
 
 
-**General observations** -- These are the general observations from the test benchmark results:
+**General observations** -- Following are general observations from the test benchmark results:
 
 - Comparative test benchmarks
 
@@ -116,13 +116,13 @@ This framework has been extensively tested using both standard Rust tests and te
     - Type I error frequency was in line (within 2 sigma) with a chosen alpha of 0.05 and and the corresponding binomial distribution (p=0.05, n=100).
     - Type II error frequency was in line (within 2 sigma) with a beta of 0.05 and the corresponding binomial distribution (p=0.05, n=100) for the sample sizes (`exec_count`) used, which were the same as those used in the comparative test benchmarks.
   - For comparisons where at least one of the functions was non-deterministic, with base median of 100 microseconds and sample size of 2,000:
-    - Type I error frequency was in line with a chosen alpha of 0.05 and and the corresponding binomial distribution (p=0.05, n=100).
-    - In all but one case, Type II error frequency was in line with a beta of 0.05 and the corresponding binomial distribution (p=0.05, n=100) for the sample size used. The only exception was a comparison involving a small relative latency difference (1%) and a high latency variance.
+    - Type I error frequency was in line (within 2 sigma) with a chosen alpha of 0.05 and and the corresponding binomial distribution (p=0.05, n=100).
+    - In all but one case, Type II error frequency was in line (within 2 sigma) with a beta of 0.05 and the corresponding binomial distribution (p=0.05, n=100) for the sample size used. The only exception was a comparison involving a small relative latency difference (1%) and a high latency variance.
 
   - For comparisons where at least one of the functions was non-deterministic, with base median of 20 milliseconds and sample size of 200:
-    - Type I error frequency was in line with a chosen alpha of 0.05 and and the corresponding binomial distribution (p=0.05, n=100).
-    - In most cases, Type II error frequency was in line with a beta of 0.05 and the corresponding binomial distribution (p=0.05, n=100) for the sample size used. The exceptions were the comparisons involving either a small relative latency difference (1%) together with low or high variance, or a moderate relative latency difference (10%) together with a high latency variance.
-  - Unsurprisingly, the observed Type II errors are higher when the difference in means/medians is smaller and/or the variance is higher. Of course, Type II errors can be reduced by increasing the sample size, which reduces beta.
+    - Type I error frequency was in line (within 2 sigma) with a chosen alpha of 0.05 and and the corresponding binomial distribution (p=0.05, n=100).
+    - In most cases, Type II error frequency was in line (within 2 sigma) with a beta of 0.05 and the corresponding binomial distribution (p=0.05, n=100) for the sample size used. The exceptions were the comparisons involving either a small relative latency difference (1%) together with low or high variance, or a moderate relative latency difference (10%) together with a high latency variance.
+  - Unsurprisingly, the observed Type II errors are higher when the difference in means/medians is smaller and/or the variance is higher. Of course, Type II errors can be reduced by increasing the sample size (and testing time), which reduces beta.
 
 # Examples
 

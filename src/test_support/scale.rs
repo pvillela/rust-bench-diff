@@ -41,7 +41,7 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
             }
         },
         {
-            let base_median = 5_000.;
+            let base_median = 20_000.;
             ScaleParams {
                 name: "millis_scale".into(),
                 unit: LatencyUnit::Micro,

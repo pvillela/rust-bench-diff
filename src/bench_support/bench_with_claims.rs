@@ -5,7 +5,9 @@ use crate::{
     DiffOut, bench_diff, bench_diff_print,
     dev_utils::nest_btree_map,
     statistics::{AltHyp, SampleMoments, collect_moments},
-    test_support::{ALPHA, BETA, Claim, ClaimResults, ScaleParams, get_scale_params, get_scenario},
+    test_support::{
+        ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, get_scale_params, get_scenario,
+    },
 };
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
@@ -287,6 +289,20 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             println!(
                 ">>> type_i_and_ii_errors_2sigma: {:?}",
                 nest_btree_map(type_i_and_ii_errors_2sigma)
+            );
+        }
+
+        let type_i_and_ii_errors_2sigma_beta_01 = results.excess_type_i_and_ii_errors(
+            ALPHA,
+            BETA_01,
+            &Claim::CRITICAL_NAMES,
+            nrepeats,
+            2.,
+        );
+        if !type_i_and_ii_errors_2sigma_beta_01.is_empty() {
+            println!(
+                ">>> type_i_and_ii_errors_2sigma_beta_01: {:?}",
+                nest_btree_map(type_i_and_ii_errors_2sigma_beta_01)
             );
         }
 

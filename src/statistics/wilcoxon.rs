@@ -377,6 +377,9 @@ pub fn wilcoxon_rank_sum_test_no_ties_adjust(
 
 #[cfg(test)]
 mod base_test {
+    //! Used R's wilcox.test function to generate expected results.
+    //! https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/wilcox.test
+
     use crate::statistics::{
         AltHyp,
         wilcoxon::{wilcoxon_rank_sum_p, wilcoxon_rank_sum_ties_sum_prod},

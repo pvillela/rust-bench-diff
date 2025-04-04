@@ -354,6 +354,7 @@ mod test {
     };
 
     const ALPHA: f64 = 0.05;
+    const EPSILON: f64 = 0.0005;
 
     fn check_welch(
         dataset_a: &[f64],
@@ -376,18 +377,17 @@ mod test {
         let ci = welch_alt_hyp_ci(&moments_a, &moments_b, alt_hyp, ALPHA);
         let res = welch_test(&moments_a, &moments_b, alt_hyp, ALPHA);
 
-        let epsilon = 0.001;
-        assert!(exp_t.approx_eq(t, epsilon), "exp_t={exp_t}, t={t}");
-        assert!(exp_df.approx_eq(df, epsilon), "exp_df={exp_df}, df={df}");
-        assert!(exp_p.approx_eq(p, epsilon), "exp_p={exp_p}, p={p}");
+        assert!(exp_t.approx_eq(t, EPSILON), "exp_t={exp_t}, t={t}");
+        assert!(exp_df.approx_eq(df, EPSILON), "exp_df={exp_df}, df={df}");
+        assert!(exp_p.approx_eq(p, EPSILON), "exp_p={exp_p}, p={p}");
         assert!(
-            exp_ci.0.approx_eq(ci.0, epsilon) || exp_ci.0.is_infinite() && ci.0.is_infinite(),
+            exp_ci.0.approx_eq(ci.0, EPSILON) || exp_ci.0.is_infinite() && ci.0.is_infinite(),
             "exp_ci.0={}, ci.0={}",
             exp_ci.0,
             ci.0
         );
         assert!(
-            exp_ci.1.approx_eq(ci.1, epsilon) || exp_ci.1.is_infinite() && ci.1.is_infinite(),
+            exp_ci.1.approx_eq(ci.1, EPSILON) || exp_ci.1.is_infinite() && ci.1.is_infinite(),
             "exp_ci.1={}, ci.1={}",
             exp_ci.1,
             ci.1
@@ -409,8 +409,6 @@ mod test {
         exp_ci: Ci,
         exp_accept_hyp: Hyp,
     ) {
-        println!("*** alternative hypothesis: {alt_hyp:?}");
-
         let moments = SampleMoments::from_slice(dataset);
 
         let t = student_one_sample_t(&moments, mu0);
@@ -419,27 +417,39 @@ mod test {
         let ci = student_one_sample_alt_hyp_ci(&moments, alt_hyp, ALPHA);
         let res = student_one_sample_test(&moments, mu0, alt_hyp, ALPHA);
 
-        let epsilon = 0.001;
-        assert!(exp_t.approx_eq(t, epsilon), "exp_t={exp_t}, t={t}");
-        assert!(exp_df.approx_eq(df, epsilon), "exp_df={exp_df}, df={df}");
-        assert!(exp_p.approx_eq(p, epsilon), "exp_p={exp_p}, p={p}");
         assert!(
-            exp_ci.0.approx_eq(ci.0, epsilon) || exp_ci.0.is_infinite() && ci.0.is_infinite(),
-            "exp_ci.0={}, ci.0={}",
+            exp_t.approx_eq(t, EPSILON),
+            "alt_hyp={alt_hyp:?} -- exp_t={exp_t}, t={t}"
+        );
+        assert!(
+            exp_df.approx_eq(df, EPSILON),
+            "alt_hyp={alt_hyp:?} -- exp_df={exp_df}, df={df}"
+        );
+        assert!(
+            exp_p.approx_eq(p, EPSILON),
+            "alt_hyp={alt_hyp:?} -- exp_p={exp_p}, p={p}"
+        );
+        assert!(
+            exp_ci.0.approx_eq(ci.0, EPSILON) || exp_ci.0.is_infinite() && ci.0.is_infinite(),
+            "alt_hyp={alt_hyp:?} -- exp_ci.0={}, ci.0={}",
             exp_ci.0,
             ci.0
         );
         assert!(
-            exp_ci.1.approx_eq(ci.1, epsilon) || exp_ci.1.is_infinite() && ci.1.is_infinite(),
-            "exp_ci.1={}, ci.1={}",
+            exp_ci.1.approx_eq(ci.1, EPSILON) || exp_ci.1.is_infinite() && ci.1.is_infinite(),
+            "alt_hyp={alt_hyp:?} -- exp_ci.1={}, ci.1={}",
             exp_ci.1,
             ci.1
         );
 
-        assert_eq!(p, res.p(), "res.p");
-        assert_eq!(ALPHA, res.alpha(), "res.alpha");
-        assert_eq!(alt_hyp, res.alt_hyp(), "res.alt_hyp");
-        assert_eq!(exp_accept_hyp, res.accepted(), "res.accepted");
+        assert_eq!(p, res.p(), "alt_hyp={alt_hyp:?} -- res.p");
+        assert_eq!(ALPHA, res.alpha(), "alt_hyp={alt_hyp:?} -- res.alpha");
+        assert_eq!(alt_hyp, res.alt_hyp(), "alt_hyp={alt_hyp:?} -- res.alt_hyp");
+        assert_eq!(
+            exp_accept_hyp,
+            res.accepted(),
+            "alt_hyp={alt_hyp:?} -- res.accepted"
+        );
     }
 
     #[test]
@@ -484,13 +494,24 @@ mod test {
 
         {
             let alt_hyp = AltHyp::Lt;
+            let exp_accept_hyp = Hyp::Null;
             let exp_p = 0.9989;
             let exp_ci = Ci(-f64::INFINITY, 21.00566);
-            check_welch(&a, &b, alt_hyp, exp_t, exp_df, exp_p, exp_ci, Hyp::Null);
+            check_welch(
+                &a,
+                &b,
+                alt_hyp,
+                exp_t,
+                exp_df,
+                exp_p,
+                exp_ci,
+                exp_accept_hyp,
+            );
         }
 
         {
             let alt_hyp = AltHyp::Ne;
+            let exp_accept_hyp = Hyp::Alt(AltHyp::Ne);
             let exp_p = 0.00213;
             let exp_ci = Ci(7.57018, 22.49649);
             check_welch(
@@ -501,12 +522,13 @@ mod test {
                 exp_df,
                 exp_p,
                 exp_ci,
-                Hyp::Alt(AltHyp::Ne),
+                exp_accept_hyp,
             );
         }
 
         {
             let alt_hyp = AltHyp::Gt;
+            let exp_accept_hyp = Hyp::Alt(AltHyp::Gt);
             let exp_p = 0.001065;
             let exp_ci = Ci(9.061005, f64::INFINITY);
             check_welch(
@@ -517,7 +539,7 @@ mod test {
                 exp_df,
                 exp_p,
                 exp_ci,
-                Hyp::Alt(AltHyp::Gt),
+                exp_accept_hyp,
             );
         }
     }
@@ -528,6 +550,124 @@ mod test {
             22.14, 19.56, 21.10, 18.04, 24.12, 19.95, 19.72, 18.28, 16.26, 17.46, 20.53, 22.12,
             25.06, 22.44, 19.08, 19.88, 21.39, 22.33, 25.79,
         ]
+    }
+    #[test]
+    fn test_student_lt() {
+        let data = student_data();
+
+        let mu0 = 23.;
+        let exp_t = -3.505;
+        let exp_df = 30.;
+
+        {
+            let alt_hyp = AltHyp::Lt;
+            let exp_accept_hyp = Hyp::Alt(AltHyp::Lt);
+            let exp_p = 0.0007288;
+            let exp_ci = Ci(-f64::INFINITY, 22.17479);
+            check_student(
+                &data,
+                mu0,
+                alt_hyp,
+                exp_t,
+                exp_df,
+                exp_p,
+                exp_ci,
+                exp_accept_hyp,
+            );
+        }
+
+        {
+            let alt_hyp = AltHyp::Ne;
+            let exp_accept_hyp = Hyp::Alt(AltHyp::Ne);
+            let exp_p = 0.001458;
+            let exp_ci = Ci(20.46771, 22.33229);
+            check_student(
+                &data,
+                mu0,
+                alt_hyp,
+                exp_t,
+                exp_df,
+                exp_p,
+                exp_ci,
+                exp_accept_hyp,
+            );
+        }
+
+        {
+            let alt_hyp = AltHyp::Gt;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.9993;
+            let exp_ci = Ci(20.62521, f64::INFINITY);
+            check_student(
+                &data,
+                mu0,
+                alt_hyp,
+                exp_t,
+                exp_df,
+                exp_p,
+                exp_ci,
+                exp_accept_hyp,
+            );
+        }
+    }
+    #[test]
+    fn test_student_eq() {
+        let data = student_data();
+
+        let mu0 = 21.;
+        let exp_t = 0.87624;
+        let exp_df = 30.;
+
+        {
+            let alt_hyp = AltHyp::Lt;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.8061;
+            let exp_ci = Ci(-f64::INFINITY, 22.17479);
+            check_student(
+                &data,
+                mu0,
+                alt_hyp,
+                exp_t,
+                exp_df,
+                exp_p,
+                exp_ci,
+                exp_accept_hyp,
+            );
+        }
+
+        {
+            let alt_hyp = AltHyp::Ne;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.3879;
+            let exp_ci = Ci(20.46771, 22.33229);
+            check_student(
+                &data,
+                mu0,
+                alt_hyp,
+                exp_t,
+                exp_df,
+                exp_p,
+                exp_ci,
+                exp_accept_hyp,
+            );
+        }
+
+        {
+            let alt_hyp = AltHyp::Gt;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.1939;
+            let exp_ci = Ci(20.62521, f64::INFINITY);
+            check_student(
+                &data,
+                mu0,
+                alt_hyp,
+                exp_t,
+                exp_df,
+                exp_p,
+                exp_ci,
+                exp_accept_hyp,
+            );
+        }
     }
 
     #[test]
@@ -540,13 +680,24 @@ mod test {
 
         {
             let alt_hyp = AltHyp::Lt;
+            let exp_accept_hyp = Hyp::Null;
             let exp_p = 0.9977;
             let exp_ci = Ci(-f64::INFINITY, 22.17479);
-            check_student(&data, mu0, alt_hyp, exp_t, exp_df, exp_p, exp_ci, Hyp::Null);
+            check_student(
+                &data,
+                mu0,
+                alt_hyp,
+                exp_t,
+                exp_df,
+                exp_p,
+                exp_ci,
+                exp_accept_hyp,
+            );
         }
 
         {
             let alt_hyp = AltHyp::Ne;
+            let exp_accept_hyp = Hyp::Alt(AltHyp::Ne);
             let exp_p = 0.004553;
             let exp_ci = Ci(20.46771, 22.33229);
             check_student(
@@ -557,12 +708,13 @@ mod test {
                 exp_df,
                 exp_p,
                 exp_ci,
-                Hyp::Alt(AltHyp::Ne),
+                exp_accept_hyp,
             );
         }
 
         {
             let alt_hyp = AltHyp::Gt;
+            let exp_accept_hyp = Hyp::Alt(AltHyp::Gt);
             let exp_p = 0.002276;
             let exp_ci = Ci(20.62521, f64::INFINITY);
             check_student(
@@ -573,86 +725,8 @@ mod test {
                 exp_df,
                 exp_p,
                 exp_ci,
-                Hyp::Alt(AltHyp::Gt),
+                exp_accept_hyp,
             );
-        }
-    }
-
-    #[test]
-    fn test_student_eq() {
-        let data = student_data();
-
-        let mu0 = 21.;
-        let exp_t = 0.87624;
-        let exp_df = 30.;
-
-        {
-            let alt_hyp = AltHyp::Lt;
-            let exp_p = 0.8061;
-            let exp_ci = Ci(-f64::INFINITY, 22.17479);
-            check_student(&data, mu0, alt_hyp, exp_t, exp_df, exp_p, exp_ci, Hyp::Null);
-        }
-
-        {
-            let alt_hyp = AltHyp::Ne;
-            let exp_p = 0.3879;
-            let exp_ci = Ci(20.46771, 22.33229);
-            check_student(&data, mu0, alt_hyp, exp_t, exp_df, exp_p, exp_ci, Hyp::Null);
-        }
-
-        {
-            let alt_hyp = AltHyp::Gt;
-            let exp_p = 0.1939;
-            let exp_ci = Ci(20.62521, f64::INFINITY);
-            check_student(&data, mu0, alt_hyp, exp_t, exp_df, exp_p, exp_ci, Hyp::Null);
-        }
-    }
-
-    #[test]
-    fn test_student_lt() {
-        let data = student_data();
-
-        let mu0 = 23.;
-        let exp_t = -3.505;
-        let exp_df = 30.;
-
-        {
-            let alt_hyp = AltHyp::Lt;
-            let exp_p = 0.0007288;
-            let exp_ci = Ci(-f64::INFINITY, 22.17479);
-            check_student(
-                &data,
-                mu0,
-                alt_hyp,
-                exp_t,
-                exp_df,
-                exp_p,
-                exp_ci,
-                Hyp::Alt(AltHyp::Lt),
-            );
-        }
-
-        {
-            let alt_hyp = AltHyp::Ne;
-            let exp_p = 0.001458;
-            let exp_ci = Ci(20.46771, 22.33229);
-            check_student(
-                &data,
-                mu0,
-                alt_hyp,
-                exp_t,
-                exp_df,
-                exp_p,
-                exp_ci,
-                Hyp::Alt(AltHyp::Ne),
-            );
-        }
-
-        {
-            let alt_hyp = AltHyp::Gt;
-            let exp_p = 0.9993;
-            let exp_ci = Ci(20.62521, f64::INFINITY);
-            check_student(&data, mu0, alt_hyp, exp_t, exp_df, exp_p, exp_ci, Hyp::Null);
         }
     }
 }

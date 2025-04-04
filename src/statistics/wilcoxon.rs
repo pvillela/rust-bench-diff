@@ -287,15 +287,28 @@ fn wilcoxon_rank_sum_ties_sum_prod(hist_a: &Histogram<u64>, hist_b: &Histogram<u
 }
 
 #[cfg(test)]
-#[cfg(feature = "hypors")]
+pub fn wilcoxon_w(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+    wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b).0
+}
+
+/// The `w` value computed by `R`'s `wilcox.test` function, which is the Mann-Whitney U for the
+/// first sample (`hist_a`).
+///
+/// See explanation in the book Nonparametric Statistical Methods, 3rd Edition,
+/// by Myles Hollander, Douglas A. Wolfe, Eric Chicken, Example 4.1.
+#[cfg(test)]
+pub fn wilcoxon_r_w(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+    mann_whitney_u_a(hist_a, hist_b)
+}
+
+#[cfg(test)]
 fn mann_whitney_u_b(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
-    let (w, _) = wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b);
+    let w = wilcoxon_w(hist_a, hist_b);
     let n_b = hist_b.len() as f64;
     w - n_b * (n_b + 1.) / 2.
 }
 
 #[cfg(test)]
-#[cfg(feature = "hypors")]
 fn mann_whitney_u_a(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;
@@ -303,7 +316,6 @@ fn mann_whitney_u_a(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
 }
 
 #[cfg(test)]
-#[cfg(feature = "hypors")]
 fn mann_whitney_u(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     mann_whitney_u_b(hist_a, hist_b).min(mann_whitney_u_a(hist_a, hist_b))
 }
@@ -321,11 +333,11 @@ pub fn wilcoxon_rank_sum_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> 
     -w_star
 }
 
-// #[cfg(test)]
-pub fn wilcoxon_rank_sum_z_no_ties_adjust(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+#[cfg(test)]
+fn wilcoxon_rank_sum_z_no_ties_adjust(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;
-    let (w, _) = wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b);
+    let w = wilcoxon_w(hist_a, hist_b);
     let e0_w = n_b * (n_a + n_b + 1.) / 2.;
     let var0_w_base = n_a * n_b * (n_a + n_b + 1.) / 12.;
     let var0_w_ties_adjust = 0.;
@@ -377,52 +389,216 @@ pub fn wilcoxon_rank_sum_test_no_ties_adjust(
 
 #[cfg(test)]
 mod base_test {
-    //! Used R's wilcox.test function to generate expected results.
+    //! Tests other than `test_w` used R's wilcox.test function to generate expected results.
     //! https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/wilcox.test
 
-    use crate::statistics::{
-        AltHyp,
-        wilcoxon::{wilcoxon_rank_sum_p, wilcoxon_rank_sum_ties_sum_prod},
+    use super::*;
+    use crate::{
+        dev_utils::ApproxEq,
+        statistics::{AltHyp, Hyp},
     };
     use hdrhistogram::Histogram;
 
+    const ALPHA: f64 = 0.05;
+    const EPSILON: f64 = 0.0005;
+
+    fn book_data() -> (Vec<f64>, Vec<f64>) {
+        let sample_a = vec![0.73, 0.80, 0.83, 1.04, 1.38, 1.45, 1.46, 1.64, 1.89, 1.91];
+        let sample_b = vec![0.74, 0.88, 0.90, 1.15, 1.21];
+        (sample_a, sample_b)
+    }
+
+    fn contrived_data() -> (Vec<f64>, Vec<f64>) {
+        let sample_a = vec![
+            85., 90., 78., 92., 88., 76., 95., 89., 91., 82., 115., 120., 108., 122., 118., 106.,
+            125., 119., 121., 112., 145., 150., 138., 152., 148., 136., 155., 149., 151., 142.,
+            175., 180., 168., 182., 178., 166., 185., 179., 181., 172., 205., 210., 198., 212.,
+            208., 196., 215., 209., 211., 202.,
+        ];
+        let sample_b = vec![
+            70., 85., 80., 90., 75., 88., 92., 79., 86., 81., 92., 100., 115., 110., 120., 105.,
+            118., 122., 109., 116., 111., 122., 130., 145., 140., 150., 135., 148., 152., 139.,
+            146., 141., 152., 160., 175., 170., 180., 165., 178., 182., 169., 176., 171., 182.,
+            190., 205., 200., 210., 195., 208., 212., 199., 206., 201., 212.,
+        ];
+        (sample_a, sample_b)
+    }
+
+    fn shifted_contrived_data() -> (Vec<f64>, Vec<f64>) {
+        let (sample_a, sample_b) = contrived_data();
+        let sample_b = sample_b.into_iter().map(|v| v + 35.).collect::<Vec<_>>();
+        (sample_a, sample_b)
+    }
+
+    fn data_hists(
+        (data_a, data_b): (Vec<f64>, Vec<f64>),
+        factor: u64,
+        hist_max: u64,
+        hist_sigfig: u8,
+    ) -> (Histogram<u64>, Histogram<u64>) {
+        let mut hist_a = Histogram::new_with_max(hist_max, hist_sigfig).unwrap();
+        let mut hist_b = Histogram::new_from(&hist_a);
+
+        for v in data_a {
+            hist_a.record((v * factor as f64) as u64).unwrap();
+        }
+
+        for v in data_b {
+            hist_b.record((v * factor as f64) as u64).unwrap();
+        }
+
+        (hist_a, hist_b)
+    }
+
     #[test]
+    /// Based on https://learning.oreilly.com/library/view/nonparametric-statistical-methods/9781118553299/9781118553299c04.xhtml#c04_level1_2
+    /// Nonparametric Statistical Methods, 3rd Edition, by Myles Hollander, Douglas A. Wolfe, Eric Chicken
+    /// Example 4.1.
     fn test_w() {
-        // Based on https://learning.oreilly.com/library/view/nonparametric-statistical-methods/9781118553299/9781118553299c04.xhtml#c04_level1_2
-        // Nonparametric Statistical Methods, 3rd Edition, by Myles Hollander, Douglas A. Wolfe, Eric Chicken
-        // Example 4.1.
-
-        let sample_a0 = vec![0.73, 0.80, 0.83, 1.04, 1.38, 1.45, 1.46, 1.64, 1.89, 1.91];
-        let sample_b0 = vec![0.74, 0.88, 0.90, 1.15, 1.21];
-
-        let sample_a = sample_a0
-            .into_iter()
-            .map(|x| (x * 100.) as u64)
-            .collect::<Vec<_>>();
-        let sample_b = sample_b0
-            .into_iter()
-            .map(|x| (x * 100.) as u64)
-            .collect::<Vec<_>>();
-
-        let mut hist_a = Histogram::new_with_max(200, 3).unwrap();
-        let mut hist_b = Histogram::new_with_max(200, 3).unwrap();
-
-        for v in &sample_a {
-            hist_a.record(*v).unwrap();
-        }
-
-        for v in &sample_b {
-            hist_b.record(*v).unwrap();
-        }
+        let (hist_a, hist_b) = data_hists(book_data(), 100, 200, 3);
 
         let expected_w = 30.;
-        let (actual_w, _) = wilcoxon_rank_sum_ties_sum_prod(&hist_a, &hist_b);
+        let actual_w = wilcoxon_w(&hist_a, &hist_b);
         assert_eq!(expected_w, actual_w, "w comparison");
 
-        let expected_p = 0.2544;
+        let expected_r_w = 35.;
+        let actual_r_w = wilcoxon_r_w(&hist_a, &hist_b);
+        assert_eq!(expected_r_w, actual_r_w, "R w comparison");
+
+        let expected_p_correct = 0.2544; // R: // R: wilcox.test(a, b)
+        let expected_p = 0.2207; // R: wilcox.test(a, b, exact=FALSE, correct=FALSE)
         let actual_p = wilcoxon_rank_sum_p(&hist_a, &hist_b, AltHyp::Ne);
-        // assert_eq!(expected_p, actual_p, "p comparison"); // this fails because I'm using normal approximation
-        println!("expected_p={expected_p}, actual_p={actual_p}");
+        println!(
+            "expected_p_correct={expected_p_correct}, expected_p={expected_p}, actual_p={actual_p}"
+        );
+        assert!(expected_p.approx_eq(actual_p, EPSILON), "p comparison");
+    }
+
+    fn check_wilcoxon(
+        hist_a: &Histogram<u64>,
+        hist_b: &Histogram<u64>,
+        alt_hyp: AltHyp,
+        exp_r_w: f64,
+        exp_p: f64,
+        exp_accept_hyp: Hyp,
+    ) {
+        let w = wilcoxon_w(hist_a, hist_b);
+        let r_w = wilcoxon_r_w(hist_a, hist_b);
+        let p = wilcoxon_rank_sum_p(hist_a, hist_b, alt_hyp);
+        let res = wilcoxon_rank_sum_test(hist_a, hist_b, alt_hyp, ALPHA);
+
+        println!("alt_hyp={alt_hyp:?} -- w={w}");
+        assert!(
+            exp_r_w.approx_eq(r_w, EPSILON),
+            "alt_hyp={alt_hyp:?} -- exp_r_w={exp_r_w}, r_w={r_w}"
+        );
+        assert!(
+            exp_p.approx_eq(p, EPSILON),
+            "alt_hyp={alt_hyp:?} -- exp_p={exp_p}, p={p}"
+        );
+
+        assert_eq!(p, res.p(), "alt_hyp={alt_hyp:?} -- res.p");
+        assert_eq!(ALPHA, res.alpha(), "alt_hyp={alt_hyp:?} -- res.alpha");
+        assert_eq!(alt_hyp, res.alt_hyp(), "alt_hyp={alt_hyp:?} -- res.alt_hyp");
+        assert_eq!(
+            exp_accept_hyp,
+            res.accepted(),
+            "alt_hyp={alt_hyp:?} -- res.accepted"
+        );
+
+        let mann_whitney_u_a = mann_whitney_u_a(hist_a, hist_b);
+        println!("alt_hyp={alt_hyp:?} -- mann_whitney_u_a={mann_whitney_u_a}");
+        let mann_whitney_u_b = mann_whitney_u_b(hist_a, hist_b);
+        println!("alt_hyp={alt_hyp:?} -- mann_whitney_u_b={mann_whitney_u_b}");
+        let mann_whitney_u = mann_whitney_u(hist_a, hist_b);
+        println!("alt_hyp={alt_hyp:?} -- mann_whitney_u={mann_whitney_u}");
+    }
+
+    #[test]
+    /// Based on https://learning.oreilly.com/library/view/nonparametric-statistical-methods/9781118553299/9781118553299c04.xhtml#c04_level1_2
+    /// Nonparametric Statistical Methods, 3rd Edition, by Myles Hollander, Douglas A. Wolfe, Eric Chicken
+    /// Example 4.1.
+    fn test_book_data() {
+        let (hist_a, hist_b) = data_hists(book_data(), 100, 200, 3);
+
+        let exp_r_w = 35.;
+
+        {
+            let alt_hyp = AltHyp::Lt;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.8897;
+            check_wilcoxon(&hist_a, &hist_b, alt_hyp, exp_r_w, exp_p, exp_accept_hyp);
+        }
+
+        {
+            let alt_hyp = AltHyp::Ne;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.2207;
+            check_wilcoxon(&hist_a, &hist_b, alt_hyp, exp_r_w, exp_p, exp_accept_hyp);
+        }
+
+        {
+            let alt_hyp = AltHyp::Gt;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.1103;
+            check_wilcoxon(&hist_a, &hist_b, alt_hyp, exp_r_w, exp_p, exp_accept_hyp);
+        }
+    }
+
+    #[test]
+    fn test_contrived_data() {
+        let (hist_a, hist_b) = data_hists(contrived_data(), 1, 300, 3);
+
+        let exp_r_w = 1442.5;
+
+        {
+            let alt_hyp = AltHyp::Lt;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.6675;
+            check_wilcoxon(&hist_a, &hist_b, alt_hyp, exp_r_w, exp_p, exp_accept_hyp);
+        }
+
+        {
+            let alt_hyp = AltHyp::Ne;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.6649;
+            check_wilcoxon(&hist_a, &hist_b, alt_hyp, exp_r_w, exp_p, exp_accept_hyp);
+        }
+
+        {
+            let alt_hyp = AltHyp::Gt;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.3325;
+            check_wilcoxon(&hist_a, &hist_b, alt_hyp, exp_r_w, exp_p, exp_accept_hyp);
+        }
+    }
+
+    #[test]
+    fn test_shifted_contrived_data() {
+        let (hist_a, hist_b) = data_hists(shifted_contrived_data(), 1, 300, 3);
+
+        let exp_r_w = 840.;
+
+        {
+            let alt_hyp = AltHyp::Lt;
+            let exp_accept_hyp = Hyp::Alt(AltHyp::Lt);
+            let exp_p = 0.0002987;
+            check_wilcoxon(&hist_a, &hist_b, alt_hyp, exp_r_w, exp_p, exp_accept_hyp);
+        }
+
+        {
+            let alt_hyp = AltHyp::Ne;
+            let exp_accept_hyp = Hyp::Alt(AltHyp::Ne);
+            let exp_p = 0.0005974;
+            check_wilcoxon(&hist_a, &hist_b, alt_hyp, exp_r_w, exp_p, exp_accept_hyp);
+        }
+
+        {
+            let alt_hyp = AltHyp::Gt;
+            let exp_accept_hyp = Hyp::Null;
+            let exp_p = 0.9997;
+            check_wilcoxon(&hist_a, &hist_b, alt_hyp, exp_r_w, exp_p, exp_accept_hyp);
+        }
     }
 }
 
@@ -452,7 +628,7 @@ mod test_with_hypors {
         let (ranked_items, _) = wilcoxon_ranked_items_ties_sum_prod(&mut hist_a, &mut hist_b);
         println!("{ranked_items:?}");
 
-        let (rank_sum_b, _) = wilcoxon_rank_sum_ties_sum_prod(&mut hist_a, &mut hist_b);
+        let rank_sum_b = wilcoxon_w(&mut hist_a, &mut hist_b);
         println!("rank_sum_b={rank_sum_b}");
 
         let n_a = sample_a.len() as f64;
@@ -561,7 +737,7 @@ mod test_with_hypors {
     #[test]
     fn test_contrived_data() {
         let sample_a0 = vec![85, 90, 78, 92, 88, 76, 95, 89, 91, 82];
-        let sample_b0 = vec![70, 85, 80, 90, 75, 88, 92, 79, 86, 81];
+        let sample_b0 = vec![70, 85, 80, 90, 75, 88, 92, 79, 86, 81, 92];
 
         println!("***** Original samples *****");
         {
@@ -578,7 +754,7 @@ mod test_with_hypors {
                 let mut combined = sample_a.iter().chain(sample_b.iter()).collect::<Vec<_>>();
                 combined.sort();
 
-                let exp_ranks_b = [1., 2., 5., 6., 7., 9.5, 11., 12.5, 15.5, 18.5];
+                let exp_ranks_b = [1., 2., 5., 6., 7., 9.5, 11., 12.5, 15.5, 19., 19.];
                 let exp_rank_sum_b = exp_ranks_b.iter().sum::<f64>();
 
                 println!("sorted_a={sorted_a:?}");
@@ -603,9 +779,14 @@ mod test_with_hypors {
         println!();
         println!("***** sample_a < sample_b *****");
         {
-            let sample_a = sample_a0.clone();
-            let delta = 2;
-            let sample_b = sample_a.iter().map(|x| x + delta).collect::<Vec<_>>();
+            let delta = 30;
+            let nrepeats = 5;
+            let sample_a = expand_sample(&sample_a0, delta, nrepeats);
+            let sample_b = expand_sample(&sample_b0, delta, nrepeats);
+
+            let shift = 35;
+            let sample_b = sample_b.iter().map(|x| x + shift).collect::<Vec<_>>();
+
             process_samples(sample_a, sample_b, 300, 3);
         }
     }

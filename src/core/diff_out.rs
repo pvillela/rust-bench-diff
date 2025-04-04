@@ -322,11 +322,6 @@ impl DiffOut {
     }
 
     #[cfg(feature = "dev_support")]
-    pub fn wilcoxon_rank_sum_z_no_ties_adjust(&self) -> f64 {
-        statistics::wilcoxon_rank_sum_z_no_ties_adjust(&self.hist_f1, &self.hist_f2)
-    }
-
-    #[cfg(feature = "dev_support")]
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
         statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
     }

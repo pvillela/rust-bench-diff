@@ -687,8 +687,8 @@ mod test_with_hypors {
                 );
 
                 assert_eq!(
-                    result.p_value.round_to_sig_decimals(5),
-                    wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust.round_to_sig_decimals(5),
+                    result.p_value.round_to(5),
+                    wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust.round_to(5),
                     "comparison of p values for non-equality (no ties adjustment)"
                 );
                 // Below fails because `hypors` does not compute ties adjustment.

@@ -366,8 +366,6 @@ mod test {
         exp_ci: Ci,
         exp_accept_hyp: Hyp,
     ) {
-        println!("*** alternative hypothesis: {alt_hyp:?}");
-
         let moments_a = SampleMoments::from_slice(dataset_a);
         let moments_b = SampleMoments::from_slice(dataset_b);
 
@@ -377,26 +375,39 @@ mod test {
         let ci = welch_alt_hyp_ci(&moments_a, &moments_b, alt_hyp, ALPHA);
         let res = welch_test(&moments_a, &moments_b, alt_hyp, ALPHA);
 
-        assert!(exp_t.approx_eq(t, EPSILON), "exp_t={exp_t}, t={t}");
-        assert!(exp_df.approx_eq(df, EPSILON), "exp_df={exp_df}, df={df}");
-        assert!(exp_p.approx_eq(p, EPSILON), "exp_p={exp_p}, p={p}");
+        assert!(
+            exp_t.approx_eq(t, EPSILON),
+            "alt_hyp={alt_hyp:?} -- exp_t={exp_t}, t={t}"
+        );
+        assert!(
+            exp_df.approx_eq(df, EPSILON),
+            "alt_hyp={alt_hyp:?} -- exp_df={exp_df}, df={df}"
+        );
+        assert!(
+            exp_p.approx_eq(p, EPSILON),
+            "alt_hyp={alt_hyp:?} -- exp_p={exp_p}, p={p}"
+        );
         assert!(
             exp_ci.0.approx_eq(ci.0, EPSILON) || exp_ci.0.is_infinite() && ci.0.is_infinite(),
-            "exp_ci.0={}, ci.0={}",
+            "alt_hyp={alt_hyp:?} -- exp_ci.0={}, ci.0={}",
             exp_ci.0,
             ci.0
         );
         assert!(
             exp_ci.1.approx_eq(ci.1, EPSILON) || exp_ci.1.is_infinite() && ci.1.is_infinite(),
-            "exp_ci.1={}, ci.1={}",
+            "alt_hyp={alt_hyp:?} -- exp_ci.1={}, ci.1={}",
             exp_ci.1,
             ci.1
         );
 
-        assert_eq!(p, res.p(), "res.p");
-        assert_eq!(ALPHA, res.alpha(), "res.alpha");
-        assert_eq!(alt_hyp, res.alt_hyp(), "res.alt_hyp");
-        assert_eq!(exp_accept_hyp, res.accepted(), "res.accepted");
+        assert_eq!(p, res.p(), "alt_hyp={alt_hyp:?} -- res.p");
+        assert_eq!(ALPHA, res.alpha(), "alt_hyp={alt_hyp:?} -- res.alpha");
+        assert_eq!(alt_hyp, res.alt_hyp(), "alt_hyp={alt_hyp:?} -- res.alt_hyp");
+        assert_eq!(
+            exp_accept_hyp,
+            res.accepted(),
+            "alt_hyp={alt_hyp:?} -- res.accepted"
+        );
     }
 
     fn check_student(

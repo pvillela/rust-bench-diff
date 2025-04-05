@@ -2,8 +2,8 @@ use crate::{
     SummaryStats, Timing, new_timing,
     statistics::{
         AltHyp, Ci, HypTestResult, PositionWrtCi, SampleMoments, sample_mean, sample_stdev,
-        student_one_sample_ci, student_one_sample_t, student_one_sample_test, welch_ci,
-        welch_deg_freedom, welch_t, welch_test,
+        student_one_sample_ci, student_one_sample_t, student_one_sample_test, welch_ci, welch_df,
+        welch_t, welch_test,
     },
     summary_stats,
 };
@@ -61,8 +61,15 @@ impl DiffOut {
         }
     }
 
+    /// Number of observations for each function as an integer.
     #[inline(always)]
-    pub fn n(&self) -> f64 {
+    pub fn n(&self) -> u64 {
+        self.hist_f1.len()
+    }
+
+    /// Number of observations for each function as a floating point (real or rational) number.
+    #[inline(always)]
+    pub fn nr(&self) -> f64 {
         self.hist_f1.len() as f64
     }
 
@@ -189,10 +196,10 @@ impl DiffOut {
     /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm),
     ///
     /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
-    pub fn welch_ln_deg_freedom(&self) -> f64 {
+    pub fn welch_ln_df(&self) -> f64 {
         let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
         let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
-        welch_deg_freedom(&moments1, &moments2)
+        welch_df(&moments1, &moments2)
     }
 
     /// Confidence interval for
@@ -244,8 +251,8 @@ impl DiffOut {
     }
 
     #[cfg(feature = "dev_support")]
-    pub fn student_diff_deg_freedom(&self) -> f64 {
-        self.n() - 1.
+    pub fn student_diff_df(&self) -> f64 {
+        self.nr() - 1.
     }
 
     #[cfg(feature = "dev_support")]
@@ -283,8 +290,8 @@ impl DiffOut {
         student_one_sample_t(&moments, 0.)
     }
 
-    pub fn student_diff_ln_deg_freedom(&self) -> f64 {
-        self.n() - 1.
+    pub fn student_diff_ln_df(&self) -> f64 {
+        self.nr() - 1.
     }
 
     pub fn student_diff_ln_ci(&self, alpha: f64) -> Ci {

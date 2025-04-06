@@ -1,3 +1,5 @@
+//! Module defining the key data structure produced by [`crate::bench_diff`].
+
 use crate::{
     SummaryStats, Timing, new_timing,
     statistics::{
@@ -10,8 +12,16 @@ use crate::{
 use hdrhistogram::Histogram;
 
 #[cfg(feature = "dev_support")]
-use crate::statistics::{self, bernoulli_psucc_ci, bernoulli_test};
+use crate::statistics::{self, bernoulli_psucc_ci};
 
+/// Contains the data resulting from a benchmark comparing functions `f1` and `f2`.
+///
+/// It is returned by the core benchmarking functions in this library.
+/// Its methods provide descriptive and inferential statistics about the latency samples of the two
+/// benchmarked functions, individually and in relation to each other.
+///
+/// *NOTE*: All statistics involving differences refer to a value for `f1` minus the corresponding
+/// value for `f2`.
 pub struct DiffOut {
     pub(super) hist_f1: Timing,
     pub(super) hist_f2: Timing,
@@ -29,6 +39,7 @@ pub struct DiffOut {
 }
 
 impl DiffOut {
+    /// Creates a new empty instance.
     pub(crate) fn new() -> Self {
         let hist_f1 = new_timing(20 * 1000 * 1000, 5);
         let hist_f2 = Histogram::<u64>::new_from(&hist_f1);
@@ -61,109 +72,146 @@ impl DiffOut {
         }
     }
 
-    /// Number of observations for each function as an integer.
+    /// Number of observations (sample size) for a function, as an integer.
+    ///
+    /// It is the same value for `f1` and `f2`.
     #[inline(always)]
     pub fn n(&self) -> u64 {
         self.hist_f1.len()
     }
 
-    /// Number of observations for each function as a floating point (real or rational) number.
+    /// Number of observations (sample size) for a function, as a floating point (*r*eal or *r*ational) number.
+    ///
+    /// It is the same value for `f1` and `f2`.
     #[inline(always)]
     pub fn nr(&self) -> f64 {
         self.hist_f1.len() as f64
     }
 
+    /// Summary descriptive statistics for `f1`.
+    ///
+    /// Includes sample size, mean, standard deviation, median, several percentiles, min, and max.
     pub fn summary_f1(&self) -> SummaryStats {
         summary_stats(&self.hist_f1)
     }
 
+    /// Summary descriptive statistics for `f2`.
+    ///
+    /// Includes sample size, mean, standard deviation, median, several percentiles, min, and max.
     pub fn summary_f2(&self) -> SummaryStats {
         summary_stats(&self.hist_f2)
     }
 
-    pub fn count_f1_lt_f2(&self) -> u64 {
-        self.hist_f1_lt_f2.len()
-    }
-
-    pub fn count_f1_eq_f2(&self) -> u64 {
-        self.count_f1_eq_f2
-    }
-
-    pub fn count_f1_gt_f2(&self) -> u64 {
-        self.hist_f1_gt_f2.len()
-    }
-
-    pub fn mean_ln_f1(&self) -> f64 {
-        sample_mean(self.n(), self.sum_ln_f1)
-    }
-
-    pub fn stdev_ln_f1(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_ln_f1, self.sum2_ln_f1)
-    }
-
-    pub fn mean_ln_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_ln_f2)
-    }
-
-    pub fn stdev_ln_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_ln_f2, self.sum2_ln_f2)
-    }
-
-    pub fn mean_diff_f1_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_diff_f1_f2)
-    }
-
-    pub fn stdev_diff_f1_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_diff_f1_f2, self.sum2_diff_f1_f2)
-    }
-
-    pub fn mean_diff_ln_f1_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_diff_ln_f1_f2)
-    }
-
-    pub fn stdev_diff_ln_f1_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_diff_ln_f1_f2, self.sum2_diff_ln_f1_f2)
-    }
-
+    /// Mean of `f1`'s latencies.
     pub fn mean_f1(&self) -> f64 {
         self.summary_f1().mean
     }
 
+    /// Mean of `f1`'s latencies.
     pub fn mean_f2(&self) -> f64 {
         self.summary_f2().mean
     }
 
+    /// Median of `f1`'s latencies.
     pub fn median_f1(&self) -> f64 {
         self.summary_f1().median as f64
     }
 
+    /// Median of `f2`'s latencies.
     pub fn median_f2(&self) -> f64 {
         self.summary_f2().median as f64
     }
 
+    /// Difference between the median of `f1`'s latencies and the median of `f2`'s latencies.
     pub fn diff_medians_f1_f2(&self) -> f64 {
         self.median_f1() - self.median_f2()
     }
 
-    // Ratio of medians computed from histograms.
+    /// Ratio of the median of `f1`'s latencies to the median of `f2`'s latencies.
     pub fn ratio_medians_f1_f2(&self) -> f64 {
         self.median_f1() / self.median_f2()
     }
 
-    // Alternative ratio of medians computed from the `exp` of the mean difference of `ln`s of latencies.
+    /// Count of paired observations where `f1`'s latency is less than `f2`'s.
+    pub fn count_f1_lt_f2(&self) -> u64 {
+        self.hist_f1_lt_f2.len()
+    }
+
+    /// Count of paired observations where `f1`'s latency is equal to `f2`'s.
+    pub fn count_f1_eq_f2(&self) -> u64 {
+        self.count_f1_eq_f2
+    }
+
+    /// Count of paired observations where `f1`'s latency is greater than `f2`'s.
+    pub fn count_f1_gt_f2(&self) -> u64 {
+        self.hist_f1_gt_f2.len()
+    }
+
+    /// Mean of the natural logarithms of `f1`'s latencies.
+    pub fn mean_ln_f1(&self) -> f64 {
+        sample_mean(self.n(), self.sum_ln_f1)
+    }
+
+    /// Standard deviation of the natural logarithms `f1`'s latecies.
+    pub fn stdev_ln_f1(&self) -> f64 {
+        sample_stdev(self.n(), self.sum_ln_f1, self.sum2_ln_f1)
+    }
+
+    /// Mean of the natural logarithms of `f1`'s latencies.
+    pub fn mean_ln_f2(&self) -> f64 {
+        sample_mean(self.n(), self.sum_ln_f2)
+    }
+
+    /// Standard deviation of the natural logarithms `f1`'s latecies.
+    pub fn stdev_ln_f2(&self) -> f64 {
+        sample_stdev(self.n(), self.sum_ln_f2, self.sum2_ln_f2)
+    }
+
+    /// Mean of the differences between paired latencies of `f1` and `f2`.
+    /// Equal to the difference between the mean of `f1`'s latencies and the mean of `f2`'s latencies.
+    pub fn mean_diff_f1_f2(&self) -> f64 {
+        sample_mean(self.n(), self.sum_diff_f1_f2)
+    }
+
+    /// Standard deviation of the differences between paired latencies of `f1` and `f2`.
+    /// (*Not* the difference between the standard deviation of `f1`'s latencies and
+    /// the standard deviation of`f2`'s latencies.)
+    pub fn stdev_diff_f1_f2(&self) -> f64 {
+        sample_stdev(self.n(), self.sum_diff_f1_f2, self.sum2_diff_f1_f2)
+    }
+
+    /// Mean of the differences between the natural logarithms of paired latencies of `f1` and `f2`.
+    /// (*Not* the difference between the mean of the natural logarithms of `f1`'s latencies and
+    /// the mean of the natural logarithms of`f2`'s latencies.)
+    pub fn mean_diff_ln_f1_f2(&self) -> f64 {
+        sample_mean(self.n(), self.sum_diff_ln_f1_f2)
+    }
+
+    /// Standard deviation of the differences between the natural logarithms of paired latencies of `f1` and `f2`.
+    /// (*Not* the difference between the standard deviation of the natural logarithms of `f1`'s latencies and
+    /// the standard deviation of the natural logarithms of`f2`'s latencies.)
+    pub fn stdev_diff_ln_f1_f2(&self) -> f64 {
+        sample_stdev(self.n(), self.sum_diff_ln_f1_f2, self.sum2_diff_ln_f1_f2)
+    }
+
+    /// Appproximation of the ratio of the median of `f1`'s latencies to the median of `f2`'s latencies,
+    /// computed as the `exp()` of [`Self::mean_diff_ln_f1_f2`].
     pub fn ratio_medians_f1_f2_from_lns(&self) -> f64 {
         self.mean_diff_ln_f1_f2().exp()
     }
 
     #[cfg(feature = "dev_support")]
-    /// Estimator of mean of Bernoulli distribution.
+    /// Estimate of the probability that `f1`s latency is greater than `f2`s in a paired observation
+    /// (Bernoulli distribution).
     pub fn bernoulli_prob_f1_gt_f2(&self) -> f64 {
         (self.count_f1_gt_f2() as f64 + self.count_f1_eq_f2 as f64 / 2.)
             / (self.count_f1_lt_f2() + self.count_f1_eq_f2 + self.count_f1_gt_f2()) as f64
     }
 
     #[cfg(feature = "dev_support")]
-    /// Confidence interval for Bernoulli distribution (Wilson score interval).
+    /// Confidence interval (Wilson score interval) for the mean of the Bernoulli distribution
+    /// whose parameter *p* is the probability probability that `f1`s latency is greater than `f2`s
+    /// (in a paired observation).
     pub fn bernoulli_ci(&self, alpha: f64) -> Ci {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
         let n = self.n();
@@ -171,21 +219,34 @@ impl DiffOut {
     }
 
     #[cfg(feature = "dev_support")]
+    /// Position of `value` with respect to the
+    /// confidence interval (Wilson score interval) for the mean of the Bernoulli distribution
+    /// whose parameter *p* is the probability probability that `f1`s latency is greater than `f2`s
+    /// (in a paired observation).
     pub fn bernoulli_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.bernoulli_ci(alpha);
         ci.position_of(value)
     }
 
     #[cfg(feature = "dev_support")]
-    pub fn bernoulli_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+    /// Statistical test of the hypothesis that
+    /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `p0`,
+    /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
+    pub fn bernoulli_test(&self, p0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
-        bernoulli_test(self.n(), p_hat, 1. / 2., alt_hyp, alpha)
+        statistics::bernoulli_test(self.n(), p_hat, p0, alt_hyp, alpha)
+    }
+
+    #[cfg(feature = "dev_support")]
+    /// Statistical test of the hypothesis that
+    /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `0.5`,
+    /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
+    pub fn bernoulli_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        self.bernoulli_test(1. / 2., alt_hyp, alpha)
     }
 
     /// Welch's t statistic for
-    /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm),
-    ///
-    /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
+    /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn welch_ln_t(&self) -> f64 {
         let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
         let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
@@ -193,18 +254,16 @@ impl DiffOut {
     }
 
     /// Degrees of freedom for Welch's t-test for
-    /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm),
-    ///
-    /// See [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test)
+    /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn welch_ln_df(&self) -> f64 {
         let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
         let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
         welch_df(&moments1, &moments2)
     }
 
-    /// Confidence interval for
+    /// Welch confidence interval for
     /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm),
-    /// with confidence level of `(1 - alpha)`.
+    /// with confidence level `(1 - alpha)`.
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
     /// performance analysis theory and empirical data.
@@ -216,9 +275,9 @@ impl DiffOut {
         welch_ci(&moments1, &moments2, alpha)
     }
 
-    /// Confidence interval for
+    /// Welch confidence interval for
     /// `median(latency(f1)) / median(latency(f2))`,
-    /// with confidence level of `(1 - alpha)`.
+    /// with confidence level `(1 - alpha)`.
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
     /// performance analysis theory and empirical data.
@@ -229,11 +288,24 @@ impl DiffOut {
         Ci(low, high)
     }
 
+    /// Position of `value` with respect to the
+    /// Welch confidence interval for
+    /// `median(latency(f1)) / median(latency(f2))`,
+    /// with confidence level `(1 - alpha)`.
+    ///
+    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
+    /// performance analysis theory and empirical data.
     pub fn welch_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.welch_ratio_ci(alpha);
         ci.position_of(value)
     }
 
+    /// Welch's test of the hypothesis that
+    /// `median(latency(f1)) == median(latency(f2))`,
+    /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
+    ///
+    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
+    /// performance analysis theory and empirical data.
     pub fn welch_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
         let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
@@ -241,6 +313,8 @@ impl DiffOut {
     }
 
     #[cfg(feature = "dev_support")]
+    /// Student's one-sample t statistic for
+    /// `mean(latency(f1) - latency(f2))`.
     pub fn student_diff_t(&self) -> f64 {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -251,11 +325,19 @@ impl DiffOut {
     }
 
     #[cfg(feature = "dev_support")]
+    /// Degrees of freedom for Student's one-sample t-test for
+    /// `mean(latency(f1) - latency(f2))`.
     pub fn student_diff_df(&self) -> f64 {
         self.nr() - 1.
     }
 
     #[cfg(feature = "dev_support")]
+    /// Student's confidence interval for
+    /// `mean(latency(f1) - latency(f2))`,
+    /// with confidence level `(1 - alpha)`.
+    ///
+    /// Assumes that `latency(f1) - latency(f2)` is normally distributed. This assumption is *not* supported by
+    /// performance analysis theory or empirical data.
     pub fn student_diff_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -266,12 +348,25 @@ impl DiffOut {
     }
 
     #[cfg(feature = "dev_support")]
+    /// Position of `value` with respect to
+    /// Student's confidence interval for
+    /// `mean(latency(f1) - latency(f2))`,
+    /// with confidence level `(1 - alpha)`.
+    ///
+    /// Assumes that `latency(f1) - latency(f2)` is normally distributed. This assumption is *not* supported by
+    /// performance analysis theory or empirical data.
     pub fn student_value_position_wrt_diff_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.student_diff_ci(alpha);
         ci.position_of(value)
     }
 
     #[cfg(feature = "dev_support")]
+    /// Student's one-sample test of the hypothesis that
+    /// `mean(latency(f1) - latency(f2)) == 0`,
+    /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
+    ///
+    /// Assumes that `latency(f1) - latency(f2)` is normally distributed. This assumption is *not* supported by
+    /// performance analysis theory or empirical data.
     pub fn student_diff_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -281,6 +376,8 @@ impl DiffOut {
         student_one_sample_test(&moments, 0., alt_hyp, alpha)
     }
 
+    /// Student's one-sample t statistic for
+    /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_t(&self) -> f64 {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -290,10 +387,18 @@ impl DiffOut {
         student_one_sample_t(&moments, 0.)
     }
 
+    /// Degrees of freedom for Student's one-sample t-test for
+    /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_df(&self) -> f64 {
         self.nr() - 1.
     }
 
+    /// Student's one-sample confidence interval for
+    /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
+    /// with confidence level `(1 - alpha)`.
+    ///
+    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
+    /// performance analysis theory and empirical data.
     pub fn student_diff_ln_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -302,6 +407,13 @@ impl DiffOut {
         );
         student_one_sample_ci(&moments, alpha)
     }
+
+    /// Student's one-sample confidence interval for
+    /// `median(latency(f1)) / median(latency(f2))`,
+    /// with confidence level `(1 - alpha)`.
+    ///
+    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
+    /// performance analysis theory and empirical data.
     pub fn student_ratio_ci(&self, alpha: f64) -> Ci {
         let Ci(log_low, log_high) = self.student_diff_ln_ci(alpha);
         let low = log_low.exp();
@@ -309,11 +421,24 @@ impl DiffOut {
         Ci(low, high)
     }
 
+    /// Position of `value` with respect to
+    /// Student's one-sample confidence interval for
+    /// `median(latency(f1)) / median(latency(f2))`,
+    /// with confidence level `(1 - alpha)`.
+    ///
+    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
+    /// performance analysis theory and empirical data.
     pub fn student_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.student_ratio_ci(alpha);
         ci.position_of(value)
     }
 
+    /// Student's one-sample test of the hypothesis that
+    /// `median(latency(f1)) == median(latency(f2))`,
+    /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
+    ///
+    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
+    /// performance analysis theory and empirical data.
     pub fn student_diff_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -324,16 +449,26 @@ impl DiffOut {
     }
 
     #[cfg(feature = "dev_support")]
+    /// Wilcoxon rank sum *W* statistic for `latency(f1)` and `latency(f2)`.
+    pub fn wilcoxon_rank_sum_w(&self) -> f64 {
+        statistics::wilcoxon_rank_sum_w(&self.hist_f1, &self.hist_f2)
+    }
+
+    #[cfg(feature = "dev_support")]
+    /// Wilcoxon rank sum normal approximation *z* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
         statistics::wilcoxon_rank_sum_z(&self.hist_f1, &self.hist_f2)
     }
 
     #[cfg(feature = "dev_support")]
+    /// Wilcoxon rank sum normal approximation *p* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
         statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
     }
 
     #[cfg(feature = "dev_support")]
+    /// Wilcoxon rank sum test for for `latency(f1)` and `latency(f2)`,
+    /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
     pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         statistics::wilcoxon_rank_sum_test(&self.hist_f1, &self.hist_f2, alt_hyp, alpha)
     }

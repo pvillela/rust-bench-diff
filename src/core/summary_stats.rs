@@ -12,6 +12,8 @@ pub(crate) fn new_timing(hist_high: u64, hist_sigfig: u8) -> Timing {
 }
 
 /// Common summary statistics useful in latency testing/benchmarking.
+///
+/// Includes sample size, mean, standard deviation, median, several percentiles, min, and max.
 #[derive(Debug, Clone)]
 pub struct SummaryStats {
     pub count: u64,
@@ -53,6 +55,6 @@ impl SummaryStats {
 }
 
 /// Computes a [`SummaryStats`] from a [`Histogram<u64>`].
-pub fn summary_stats(hist: &Histogram<u64>) -> SummaryStats {
+pub(crate) fn summary_stats(hist: &Histogram<u64>) -> SummaryStats {
     SummaryStats::new(hist)
 }

@@ -286,8 +286,7 @@ fn wilcoxon_rank_sum_ties_sum_prod(hist_a: &Histogram<u64>, hist_b: &Histogram<u
     (rank_sum_b, ties_sum_prod as f64)
 }
 
-#[cfg(test)]
-pub fn wilcoxon_w(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+pub fn wilcoxon_rank_sum_w(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     wilcoxon_rank_sum_ties_sum_prod(hist_a, hist_b).0
 }
 
@@ -297,13 +296,13 @@ pub fn wilcoxon_w(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
 /// See explanation in the book Nonparametric Statistical Methods, 3rd Edition,
 /// by Myles Hollander, Douglas A. Wolfe, Eric Chicken, Example 4.1.
 #[cfg(test)]
-pub fn wilcoxon_r_w(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
+pub fn wilcoxon_rank_sum_r_w(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     mann_whitney_u_a(hist_a, hist_b)
 }
 
 #[cfg(test)]
 fn mann_whitney_u_b(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
-    let w = wilcoxon_w(hist_a, hist_b);
+    let w = wilcoxon_rank_sum_w(hist_a, hist_b);
     let n_b = hist_b.len() as f64;
     w - n_b * (n_b + 1.) / 2.
 }
@@ -337,7 +336,7 @@ pub fn wilcoxon_rank_sum_z(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> 
 fn wilcoxon_rank_sum_z_no_ties_adjust(hist_a: &Histogram<u64>, hist_b: &Histogram<u64>) -> f64 {
     let n_a = hist_a.len() as f64;
     let n_b = hist_b.len() as f64;
-    let w = wilcoxon_w(hist_a, hist_b);
+    let w = wilcoxon_rank_sum_w(hist_a, hist_b);
     let e0_w = n_b * (n_a + n_b + 1.) / 2.;
     let var0_w_base = n_a * n_b * (n_a + n_b + 1.) / 12.;
     let var0_w_ties_adjust = 0.;
@@ -458,11 +457,11 @@ mod base_test {
         let (hist_a, hist_b) = data_hists(book_data(), 100, 200, 3);
 
         let expected_w = 30.;
-        let actual_w = wilcoxon_w(&hist_a, &hist_b);
+        let actual_w = wilcoxon_rank_sum_w(&hist_a, &hist_b);
         assert_eq!(expected_w, actual_w, "w comparison");
 
         let expected_r_w = 35.;
-        let actual_r_w = wilcoxon_r_w(&hist_a, &hist_b);
+        let actual_r_w = wilcoxon_rank_sum_r_w(&hist_a, &hist_b);
         assert_eq!(expected_r_w, actual_r_w, "R w comparison");
 
         let expected_p_correct = 0.2544; // R: // R: wilcox.test(a, b)
@@ -482,8 +481,8 @@ mod base_test {
         exp_p: f64,
         exp_accept_hyp: Hyp,
     ) {
-        let w = wilcoxon_w(hist_a, hist_b);
-        let r_w = wilcoxon_r_w(hist_a, hist_b);
+        let w = wilcoxon_rank_sum_w(hist_a, hist_b);
+        let r_w = wilcoxon_rank_sum_r_w(hist_a, hist_b);
         let p = wilcoxon_rank_sum_p(hist_a, hist_b, alt_hyp);
         let res = wilcoxon_rank_sum_test(hist_a, hist_b, alt_hyp, ALPHA);
 
@@ -628,7 +627,7 @@ mod test_with_hypors {
         let (ranked_items, _) = wilcoxon_ranked_items_ties_sum_prod(&mut hist_a, &mut hist_b);
         println!("{ranked_items:?}");
 
-        let rank_sum_b = wilcoxon_w(&mut hist_a, &mut hist_b);
+        let rank_sum_b = wilcoxon_rank_sum_w(&mut hist_a, &mut hist_b);
         println!("rank_sum_b={rank_sum_b}");
 
         let n_a = sample_a.len() as f64;

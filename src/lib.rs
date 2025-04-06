@@ -1,4 +1,4 @@
-#![doc = include_str!("lib.md")]
+#![doc = include_str!("lib1.md")]
 //!
 //! ## Simple Bench Example
 //!
@@ -16,6 +16,9 @@
 //! ```rust
 #![doc = include_str!("../benches/elaborate_print_diff_out.rs")]
 //! ````
+//!
+#![doc = include_str!("lib2.md")]
+//!
 
 #![deny(clippy::unwrap_used)]
 

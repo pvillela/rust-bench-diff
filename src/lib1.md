@@ -124,9 +124,5 @@ This framework has been extensively tested using both standard Rust tests and te
     - In most cases, Type II error frequency was in line (within 2 sigma) with a beta of 0.05 and the corresponding binomial distribution (p=0.05, n=100) for the sample size used. The exceptions were the comparisons involving either a small relative latency difference (1%) together with low or high variance, or a moderate relative latency difference (10%) together with a high latency variance.
   - Unsurprisingly, the observed Type II errors are higher when the difference in means/medians is smaller and/or the variance is higher. Of course, Type II errors can be reduced by increasing the sample size (and testing time), which reduces beta.
 
-# Limitations
-
-This library works well for latencies at the microseconds or millisecons order of magnitude, but not for latencies at the nanoseconds order of magnitude.
-
 # Examples
 

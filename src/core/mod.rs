@@ -1,3 +1,5 @@
+//! Core [`bench_diff`] functioality.
+
 mod diff_out;
 pub use diff_out::*;
 

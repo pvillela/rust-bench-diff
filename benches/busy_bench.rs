@@ -1,7 +1,14 @@
+//! Simple benchmark example using [`bench_diff`] and functions defined with [`busy_work`].
+//!
+//! To run the bench:
+//! ```
+//! cargo bench --bench busy_bench --features test_support
+//! ```
+
 mod elaborate_print_diff_out;
 
 use bench_diff::{
-    DiffOut, LatencyUnit, bench_diff_print,
+    DiffOut, LatencyUnit, bench_diff_with_status,
     test_support::{busy_work, calibrate_busy_work},
 };
 use elaborate_print_diff_out::print_diff_out;
@@ -21,24 +28,30 @@ fn main() {
 
     println!("*** 1st benchmark ***");
     {
-        let out: DiffOut = bench_diff_print(
+        let out: DiffOut = bench_diff_with_status(
             LatencyUnit::Nano,
             || f1(effort),
             || f2(effort),
             1000,
-            || println!("Comparing latency of f1 vs. f2."),
+            |_, _| {
+                println!("Comparing latency of f1 vs. f2.");
+                println!();
+            },
         );
         print_diff_out(&out);
     }
 
     println!("*** 2nd benchmark ***");
     {
-        let out: DiffOut = bench_diff_print(
+        let out: DiffOut = bench_diff_with_status(
             LatencyUnit::Nano,
             || f1(effort),
             || f1(effort),
             1000,
-            || println!("Comparing latency of f1 vs. f1."),
+            |_, _| {
+                println!("Comparing latency of f1 vs. f1.");
+                println!();
+            },
         );
         print_diff_out(&out);
     }

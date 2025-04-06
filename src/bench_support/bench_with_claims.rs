@@ -1,8 +1,8 @@
-//! Implementaton of main benchmarking logic to verify [`bench_diff`].
+//! Implementaton of main logic used by benchmark tests to verify [`bench_diff`].
 
 use super::params_args::{Args, calibrated_fn_params, get_args, get_fn};
 use crate::{
-    DiffOut, bench_diff, bench_diff_print,
+    DiffOut, bench_diff, bench_diff_with_status,
     dev_utils::nest_btree_map,
     statistics::{AltHyp, SampleMoments},
     test_support::{
@@ -208,12 +208,16 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             );
 
             let diff_out = if verbose {
-                let out = bench_diff_print(
+                let out = bench_diff_with_status(
                     scale_params.unit,
                     &mut f1,
                     &mut f2,
                     scale_params.exec_count,
-                    || println!("{scenario_name}"),
+                    |unit, exec_count| {
+                        println!("\n>>> bench_diff: unit={unit:?}, exec_count={exec_count}");
+                        println!("{scenario_name}");
+                        println!();
+                    },
                 );
                 print_diff_out(&out);
                 out

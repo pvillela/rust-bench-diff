@@ -17,18 +17,18 @@ To run a benchmark with `bench_diff`, follow these simple steps:
 
 1. Create a bench file -- see [Simple Bench Example](#simple-bench-example) for a representative example.
 
-1. Create in `Cargo.toml` a `bench` section corresponding to the bench file. For example, given a file `benches/my_bench.rs`, add the following to `Cargo.toml`:
+1. Create in `Cargo.toml` a `bench` section corresponding to the bench file. For example, given a file `benches/simple_bench.rs`, add the following to `Cargo.toml`:
 
    ```toml
    [[bench]]
-   name = "my_bench"
+   name = "simple_bench"
    harness = false
    ```
 
 1. Execute the benchmark the usual way:
    
    ```bash
-   cargo bench --bench my_bench
+   cargo bench --bench simple_bench
    ```
 
 # Implementation Approach

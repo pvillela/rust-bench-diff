@@ -1,8 +1,13 @@
-//! Basic `bench_diff`` benchmrk example for comparison with `naive_bench`.
+//! Basic example benchmark using [`bench_diff`], for comparison with `naive_bench`.
+//!
+//! To run the bench:
+//! ```
+//! cargo bench --bench basic_bench --features bench
+//! ```
 
 use bench_diff::{DiffOut, statistics::AltHyp};
 use bench_diff::{
-    bench_diff_print,
+    bench_diff_with_status,
     bench_support::bench_basic_naive::{
         ANOMALY_TOLERANCE, Args, get_args, report_median_mean_anomalies,
     },
@@ -35,8 +40,9 @@ fn main() {
         move || busy_work(effort)
     };
 
-    let out = bench_diff_print(latency_unit, f1, f2, exec_count, || {
-        println!("\nbench_diff: f1={name1}, f2={name2}")
+    let out = bench_diff_with_status(latency_unit, f1, f2, exec_count, |_, _| {
+        println!("\nbench_diff: f1={name1}, f2={name2}");
+        println!();
     });
 
     print_diff_out(&out);

@@ -1,3 +1,5 @@
+//! Function that prints a variety of statistics from [`DiffOut`]. Used in some of the example benchmarks.
+
 use bench_diff::{DiffOut, statistics::AltHyp};
 
 const ALPHA: f64 = 0.05;

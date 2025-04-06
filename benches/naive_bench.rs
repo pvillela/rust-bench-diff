@@ -1,4 +1,9 @@
-//! Naive benchmrk example for comparison with `basic_bench`.
+//! Naive benchmrk example where each function is benchmarked separately. For comparison with `basic_bench`.
+//!
+//! To run the bench:
+//! ```
+//! cargo bench --bench naive_bench --features bench
+//! ```
 
 use bench_diff::{
     LatencyUnit,

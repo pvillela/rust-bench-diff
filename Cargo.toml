@@ -28,12 +28,13 @@ rand_distr = { version = "0.5", optional = true }
 hypors = { version = "0.2", optional = true }
 polars = { version = "0.43", optional = true }                        # required by hypors
 
-# All features below are for internal development use only
 [features]
+# All features below are for internal development use only
 bench = ["test_support"] # intended only to be used by benches
-dev_support = ["dep:sha2"] # utilities for creation of synthetic benchmarks
+dev_support = []
 test_support = [
     "dev_support",
+    "dep:sha2",
     "dep:rand",
     "dep:rand_distr",
 ] # intended only for tests and benches
@@ -48,11 +49,11 @@ name = "main_bench"
 harness = false
 
 [[bench]]
-name = "simple1_bench"
+name = "simple_bench"
 harness = false
 
 [[bench]]
-name = "simple2_bench"
+name = "simple_x_bench"
 harness = false
 
 [[bench]]

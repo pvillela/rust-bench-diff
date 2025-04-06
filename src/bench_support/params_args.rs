@@ -1,4 +1,5 @@
-//! Definition of target functions, test scenarios, and their parameterization.
+//! Module that supports test benchmarks, with the definition of target functions, test scenarios,
+//! their parameterization, and passing of arguments from environment variables and the command line.
 
 use crate::test_support::{
     FN_NAME_PAIRS, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams, busy_work,

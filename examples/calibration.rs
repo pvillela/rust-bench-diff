@@ -1,9 +1,9 @@
-//! Example demonstrating `busy_work` and `calibrate_busy_work`.
-//! This example requires the undocumented feature "dev_utils".
+//! Example demonstrating [`busy_work`] and [`calibrate_busy_work`].
+//! This example requires the undocumented feature "test_support".
 //!
 //! To run the example:
 //! ```
-//! cargo run -r --example calibration --features dev_utils
+//! cargo run -r --example calibration --features test_support
 //! ```
 
 use bench_diff::latency;

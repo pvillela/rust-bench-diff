@@ -9,48 +9,86 @@ Following is a simple model of time-dependent random noise. While this model can
 3. Let **λ1** be the baseline (ideal) latency of function **f1** in the absence of noise; respectively, **λ2** for **f2**.
 4. Given a random variable **χ**, let **E(χ)** and **Stdev(χ)** be the expected value and standard deviation of **χ**, respectively.
 5. Assume time-dependent noise is **ν(t) = α(t) * β(t)**, where:
-   - **α(t)** is a smooth deterministic function of **t** such that, **λ1 * α'(t) * exp(1/2 * σ^2)** and **λ2 * α'(t) * exp(1/2 * σ^2)** are both very small. In practice, an upper bound of 0.01 or 0.02 would be acceptable. As will be seen later, these values impact the accuracy of our estimate of **λ1 / λ2**. Essentially, we are assuming that **α(t)**'s fluctuations stay within certain bounds.
+   - **α(t)** is a smooth deterministic function of **t**.
    - **β(t)** is a random variable dependent on **t**, with a log-normal distribution, such that **E(ln(β(t))) = 0** and **Stdev(ln(β(t))) = σ**, where **σ** is a constant that does not depend on **t**.
 6. Assume **L(f1, t) = λ1 * ν(t)** and **L(f2, t) = λ2 * ν(t)** for all **t**.
 
 **Implications:**
 
-1. Substituting *assumption 5* into *assumption 6* for **f1** at time **t** and **f2** at time **t + Δt**, we get:
-   - **L(f1, t) = λ1 * α(t) * β(t)**
-   - **L(f2, t + Δt) = λ2 * α(t + Δt) * β(t + Δt)**
+1. When we measure **f1**'s latency at a time **t<sub>1</sub>**, getting **L(f1, t<sub>1</sub>)**, and right after we measure **f2**'s latency, the measurement for **f2** occurs at a time **t<sub>2</sub> = t<sub>1</sub> + Δt<sub>1</sub>**, where **Δt<sub>1</sub>** is <u>very close</u> to **L(f1, t<sub>1</sub>)**.
 
-2. Applying natural logarithms on *implication 1*:
-   - **ln(L(f1, t)) = ln(λ1) + ln(α(t)) + ln(β(t))**
-   - **ln(L(f2, t + Δt)) = ln(λ2) + ln(α(t + Δt)) + ln(β(t + Δt))** 
+2. Substituting *assumption 5* into *assumption 6* for **f1** at time **t<sub>1</sub>** and **f2** at time **t<sub>2</sub> = t<sub>1</sub> + Δt<sub>1</sub>**:
 
-3. When we measure **f1**'s latency at time **t**, getting **L(f1, t)**, and right after we measure **f2**'s latency, the measurement for **f2** occurs at a time **t + Δt**, where **Δt ≈ L(f1, t)**.
+   - **L(f1, t<sub>1</sub>) = λ1 * α(t<sub>1</sub>) * β(t<sub>1</sub>)**
+   - **L(f2, t<sub>2</sub>) = λ2 * α(t<sub>1</sub> + Δt<sub>1</sub>) * β(t<sub>2</sub>)**
 
-4. Applying a linear approximation with the derivative of **α** (**α'**) and then using *implication 3*:
+3. Applying natural logarithms on *implication 2*:
 
-   - **ln(α(t + Δt)) ≈ ln(α(t)) + Δt * α'(t) / α(t) ≈ ln(α(t)) + L(f1, t) * α'(t) / α(t))**
+   - **ln(L(f1, t<sub>1</sub>)) = ln(λ1) + ln(α(t<sub>1</sub>)) + ln(β(t<sub>1</sub>))**
+   - **ln(L(f2, t<sub>2</sub>)) = ln(λ2) + ln(α(t<sub>1</sub> + Δt<sub>1</sub>)) + ln(β(t<sub>2</sub>))** 
 
-5. Using *implication 2* and substituting *implication 4* into the second equation of *implication 2*, we get:
-   - **ln(L(f1, t)) = ln(λ1) + ln(α(t)) + ln(β(t))**
+4. Applying a linear approximation with the derivative of **α** (**α'**) to *implication 3*:
 
-   - **ln(L(f2, t + Δt)) ≈ ln(λ2) + ln(α(t)) + L(f1, t) * α'(t) / α(t) + ln(β(t + Δt)) =**  [by the first equation in *implication 1*]
+   - **ln(L(f1, t<sub>1</sub>)) = ln(λ1) + ln(α(t<sub>1</sub>)) + ln(β(t<sub>1</sub>))**
+   - **ln(L(f2, t<sub>2</sub>)) = ln(λ2) + ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * α'(t<sub>1</sub>)/α(t<sub>1</sub>) + ln(β(t<sub>2</sub>)) + ε<sub>1</sub>(t<sub>1</sub>)**, where **ε<sub>1</sub>(t<sub>1</sub>)** is close to zero
 
-     ​    **ln(λ2) + ln(α(t)) + λ1 * α(t) * β(t) * α'(t) / α(t) + ln(β(t + Δt)) =**  [simplifying]
+5. Using *implication 1* to replace the **Δ** value in the linear approximation term in the second equation of *implication 4*:
 
-     ​    **ln(λ2) + ln(α(t)) + λ1 * α'(t) * β(t) + ln(β(t + Δt))**   
+   - **ln(L(f1, t<sub>1</sub>)) = ln(λ1) + ln(α(t<sub>1</sub>)) + ln(β(t<sub>1</sub>))**
+   - **ln(L(f2, t<sub>2</sub>)) = ln(λ2) + ln(α(t<sub>1</sub>)) + L(f1, t<sub>1</sub>) * α'(t<sub>1</sub>)/α(t<sub>1</sub>) + ln(β(t<sub>2</sub>)) + ε<sub>1</sub>(t<sub>1</sub>)**, where **ε<sub>1</sub>(t<sub>1</sub>)** is close to zero
 
-6. Subtracting the second equation from the first equation in *implication 5*, we get:
-   - **ln(L(f1, t)) - ln(L(f2, t + Δt)) ≈ ln(λ1) - ln(λ2) - λ1 * α'(t) * β(t) + ln(β(t)) - ln(β(t + Δt))**
+6. Using the first equation in *implication 2* and the formula for the expected value of a log-normal distribution:
 
-7. Taking the expected values of both sides of *implication 6* and using the second item in *assumption 5*, we get:
-   - **E(ln(L(f1, t)) - ln(L(f2, t + Δt))) ≈ ln(λ1) - ln(λ2) - λ1 * α'(t) * E(β(t)) =**  [using the formula for the expected value of a log-normal random variable]
+   - **E(L(f1, t<sub>1</sub>)) = λ1 * α(t<sub>1</sub>) * E(β(t<sub>1</sub>)) = λ1 * α(t<sub>1</sub>) * exp(1/2 * σ^2)**
 
-     ​    **ln(λ1) - ln(λ2) - λ1 * α'(t) * exp(1/2 * σ^2) ≈ **  [using the first item of *assumption 5* to drop the last term]
+7. Taking expected values in *implication 5*:
 
-     ​    **ln(λ1) - ln(λ2)**
+   - **E(ln(L(f1, t<sub>1</sub>))) = ln(λ1) + ln(α(t<sub>1</sub>)) + E(ln(β(t<sub>1</sub>)))**
+   - **E(ln(L(f2, t<sub>2</sub>))) = ln(λ2) + ln(α(t<sub>1</sub>)) + α'(t<sub>1</sub>)/α(t<sub>1</sub>) * E(L(f1, t<sub>1</sub>)) + E(ln(β(t<sub>2</sub>))) + E(ε<sub>1</sub>(t<sub>1</sub>))**
 
-8. Thus, for an execution of `bench_diff` with **f1** and **f2**, the difference between the sample means of the natural logarithms of the observed latencies is an approximately unbiased estimator of **ln(λ1 / λ2)**. The bias is approximately **λ1 * α'(t) * exp(1/2 * σ^2)**.
+8. Using the second item in *assumption 5*, *implication 7* simplifies to:
+
+   - **E(ln(L(f1, t<sub>1</sub>))) = ln(λ1) + ln(α(t<sub>1</sub>))**
+   - **E(ln(L(f2, t<sub>2</sub>))) = ln(λ2) + ln(α(t<sub>1</sub>)) + α'(t<sub>1</sub>)/α(t<sub>1</sub>) * E(L(f1, t<sub>1</sub>)) + E(ε<sub>1</sub>(t<sub>1</sub>))**
+
+9. Using *implication 8* and substituting *implication 6* into the second equation:
+
+   - **E(ln(L(f1, t<sub>1</sub>))) = ln(λ1) + ln(α(t<sub>1</sub>))**
+   - **E(ln(L(f2, t<sub>2</sub>)))**  
+     **= ln(λ2) + ln(α(t<sub>1</sub>)) + α'(t<sub>1</sub>)/α(t<sub>1</sub>) * λ1 * α(t<sub>1</sub>) * exp(1/2 * σ^2) + E(ε<sub>1</sub>(t<sub>1</sub>))**  
+     **= ln(λ2) + ln(α(t<sub>1</sub>)) + α'(t<sub>1</sub>) * λ1 * exp(1/2 * σ^2) + E(ε<sub>1</sub>(t<sub>1</sub>))**
+
+10. Subtracting the second equation from the first in *implication 9* and using the linearity of **E()**:
+
+    - **E(ln(L(f1, t<sub>1</sub>) - ln(L(f2, t<sub>2</sub>))))**  
+      **= ln(λ1) - ln(λ2) - α'(t<sub>1</sub>) * λ1 * exp(1/2 * σ^2) - E(ε<sub>1</sub>(t<sub>1</sub>)) =**  
+      **= ln(λ1 / λ2) - α'(t<sub>1</sub>) * λ1 * exp(1/2 * σ^2) - E(ε<sub>1</sub>(t<sub>1</sub>))**
+
+11. When we measure **f1**'s latency with `bench_diff` at time **t<sub>1'</sub>**, getting **L(f1, t<sub>1'</sub>)**, it happens right after we measure **f2**'s latency at a time **t<sub>2'</sub>**, so **t<sub>1'</sub> = t<sub>2'</sub> + Δt<sub>2'</sub>**, where **Δt<sub>2'</sub>** is <u>very close</u> to **L(f2, t<sub>2'</sub>)**.
+
+12. Based on *implication 11*, an equation analogous to that of *implication 10* can be derived:
+
+    - **E(ln(L(f2, t<sub>2'</sub>) - ln(L(f1, t<sub>1'</sub>)))) = ln(λ2 / λ1) - α'(t<sub>2'</sub>) * λ2 * exp(1/2 * σ^2) - E(ε<sub>2</sub>(t<sub>2'</sub>))**  
+      or, equivalently: 
+    - **E(ln(L(f1, t<sub>1'</sub>)) - ln(L(f2, t<sub>2'</sub>))) = ln(λ1 / λ2) + α'(t<sub>2'</sub>) * λ2 * exp(1/2 * σ^2) + E(ε<sub>2</sub>(t<sub>2'</sub>))**
+
+13. Using the linearity of **E()** and the definition of the sample mean **M(i, x<sub>i</sub>)** for a sample **x** with observations **x<sub>1</sub>, ..., x<sub>i</sub>, ..., x<sub>n</sub>**:
+
+    - **E(M(i, ln(L(f1, t<sub>1<sub>i</sub></sub>) - ln(L(f2, t<sub>2<sub>i</sub></sub>))))) = M(i, E(ln(L(f1, t<sub>1<sub>i</sub></sub>) - ln(L(f2, t<sub>2<sub>i</sub></sub>)))))**
+
+14. Using *implication 13* and taking the sample mean **M()** of each side in *implication 10* and *implication 12* over all measured latencies, we get:
+
+    - **E(M(i, ln(L(f1, t<sub>1<sub>i</sub></sub>) - ln(L(f2, t<sub>2<sub>i</sub></sub>)))) = ln(λ1 / λ2) - M(i, α'(t<sub>1<sub>i</sub></sub>)) * λ1 * exp(1/2 * σ^2) - M(i, E(ε<sub>1</sub>(t<sub>1<sub>i</sub></sub>))))**
+    - **E(M(i, ln(L(f1, t<sub>1'<sub>i</sub></sub>) - ln(L(f2, t<sub>2'<sub>i</sub></sub>)))) = ln(λ1 / λ2) + M(i, α'(t<sub>2'<sub>i</sub></sub>)) * λ2 * exp(1/2 * σ^2) + M(i, E(ε<sub>2</sub>(t<sub>2'<sub>i</sub></sub>))))**
+
+15. Both equations in *implication 14* show that the difference between the sample means of the natural logarithms of the observed latencies is an approximately unbiased estimator of **ln(λ1 / λ2)**. The bias is equal to the following equivalent values:
+
+    - **- M(i, α'(t<sub>1<sub>i</sub></sub>)) * λ1 * exp(1/2 * σ^2) - M(i, E(ε<sub>1</sub>(t<sub>1<sub>i</sub></sub>)))**
+    - **M(i, α'(t<sub>2'<sub>i</sub></sub>)) * λ2 * exp(1/2 * σ^2) + M(i, E(ε<sub>2</sub>(t<sub>2'<sub>i</sub></sub>)))**
+
+16. Thus, assuming the rate of change of **α(t)** is sufficiently small for all **t** during the measurement process, the estimates of the ratio of latency medians produced by `bench_diff` should be sufficiently accurate.
+
 
 # Limitations
 
 This library works well for latencies at the microseconds or millisecodns order of magnitude, but not for latencies at the nanoseconds order of magnitude.
-

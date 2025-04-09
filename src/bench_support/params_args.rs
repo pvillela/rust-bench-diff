@@ -13,15 +13,15 @@ pub fn calibrated_fn_params(s: &ScaleParams) -> CalibratedFnParams {
     let effort = calibrate_busy_work(s.unit.latency_from_f64(s.base_median));
     CalibratedFnParams {
         effort,
-        lo_stdev_log: s.lo_stdev_log,
-        hi_stdev_log: s.hi_stdev_log,
+        lo_stdev_ln: s.lo_stdev_ln,
+        hi_stdev_ln: s.hi_stdev_ln,
     }
 }
 
 pub struct CalibratedFnParams {
     pub effort: u32,
-    pub lo_stdev_log: f64,
-    pub hi_stdev_log: f64,
+    pub lo_stdev_ln: f64,
+    pub hi_stdev_ln: f64,
 }
 
 pub enum MyFnMut {
@@ -41,12 +41,12 @@ impl MyFnMut {
         Self::Det { median_effort }
     }
 
-    fn new_non_deterministic(median_effort: u32, stdev_log: f64) -> Self {
+    fn new_non_deterministic(median_effort: u32, stdev_ln: f64) -> Self {
         let mu = 0.0_f64;
-        let sigma = stdev_log;
+        let sigma = stdev_ln;
         Self::NonDet {
             median_effort,
-            lognormal: LogNormal::new(mu, sigma).expect("stdev_log must be > 0"),
+            lognormal: LogNormal::new(mu, sigma).expect("stdev_ln must be > 0"),
             rng: StdRng::from_rng(&mut rand::rng()),
         }
     }
@@ -97,28 +97,28 @@ const NAMED_FNS: [(&str, fn(&CalibratedFnParams) -> MyFnMut); 12] = {
             MyFnMut::new_deterministic(hi_25pct_effort(c))
         }),
         ("base_median_lo_var", |c| {
-            MyFnMut::new_non_deterministic(c.effort, c.lo_stdev_log)
+            MyFnMut::new_non_deterministic(c.effort, c.lo_stdev_ln)
         }),
         ("hi_1pct_median_lo_var", |c| {
-            MyFnMut::new_non_deterministic(hi_1pct_effort(c), c.lo_stdev_log)
+            MyFnMut::new_non_deterministic(hi_1pct_effort(c), c.lo_stdev_ln)
         }),
         ("hi_10pct_median_lo_var", |c| {
-            MyFnMut::new_non_deterministic(hi_10pct_effort(c), c.lo_stdev_log)
+            MyFnMut::new_non_deterministic(hi_10pct_effort(c), c.lo_stdev_ln)
         }),
         ("hi_25pct_median_lo_var", |c| {
-            MyFnMut::new_non_deterministic(hi_25pct_effort(c), c.lo_stdev_log)
+            MyFnMut::new_non_deterministic(hi_25pct_effort(c), c.lo_stdev_ln)
         }),
         ("base_median_hi_var", |c| {
-            MyFnMut::new_non_deterministic(c.effort, c.hi_stdev_log)
+            MyFnMut::new_non_deterministic(c.effort, c.hi_stdev_ln)
         }),
         ("hi_1pct_median_hi_var", |c| {
-            MyFnMut::new_non_deterministic(hi_1pct_effort(c), c.hi_stdev_log)
+            MyFnMut::new_non_deterministic(hi_1pct_effort(c), c.hi_stdev_ln)
         }),
         ("hi_10pct_median_hi_var", |c| {
-            MyFnMut::new_non_deterministic(hi_10pct_effort(c), c.hi_stdev_log)
+            MyFnMut::new_non_deterministic(hi_10pct_effort(c), c.hi_stdev_ln)
         }),
         ("hi_25pct_median_hi_var", |c| {
-            MyFnMut::new_non_deterministic(hi_25pct_effort(c), c.hi_stdev_log)
+            MyFnMut::new_non_deterministic(hi_25pct_effort(c), c.hi_stdev_ln)
         }),
     ]
 };

@@ -9,7 +9,9 @@ Following is a simple model of time-dependent random noise. While this model can
 3. Let **λ1** be the baseline (ideal) latency of function **f1** in the absence of noise; respectively, **λ2** for **f2**.
 4. Given a random variable **χ**, let **E(χ)** and **Stdev(χ)** be the expected value and standard deviation of **χ**, respectively.
 5. Assume time-dependent noise is **ν(t) = α(t) * β(t)**, where:
-   - **α(t)** > 0 is a smooth deterministic function of **t**, such that there are constants **A<sub>L</sub>**, **A<sub>U</sub>**, and **A<sub>D</sub>** for which **A<sub>L</sub> <= α(t) <= A<sub>U</sub>** and **|α'(t)| <= A<sub>D</sub>**, for all **t**.
+   - **α(t)** > 0 is a smooth deterministic function of **t**, such that:
+     - There are constants **A<sub>L</sub>**, **A<sub>U</sub>** such that **A<sub>L</sub> ≤ α(t) ≤ A<sub>U</sub>** for all **t**.
+     - There is a constant **A<sub>D</sub>** such that the absolute value of the derivative **d<sub>/dt</sub>ln(α(t))** is bounded by **A<sub>D</sub>**. By the chain rule, **|α'(t)/α(t)| ≤ A<sub>D</sub>**, for all **t**.
    - **β(t)** is a random variable dependent on **t**, with a log-normal distribution, such that **E(ln(β(t))) = 0** and **Stdev(ln(β(t))) = σ**, where **σ** is a constant that does not depend on **t**.
 6. Assume **L(f1, t) = λ1 * ν(t)** and **L(f2, t) = λ2 * ν(t)** for all **t**.
 
@@ -19,92 +21,131 @@ Following is a simple model of time-dependent random noise. While this model can
 
 2. Substituting *assumption 5* into *assumption 6* for **f1** at time **t<sub>1</sub>** and **f2** at time **t<sub>2</sub> = t<sub>1</sub> + Δt<sub>1</sub>**:
 
-   - **L(f1, t<sub>1</sub>) = λ1 * α(t<sub>1</sub>) * β(t<sub>1</sub>)**
-   - **L(f2, t<sub>2</sub>) = λ2 * α(t<sub>1</sub> + Δt<sub>1</sub>) * β(t<sub>2</sub>)**
-   
+   - L(f1, t<sub>1</sub>) = λ1 * α(t<sub>1</sub>) * β(t<sub>1</sub>)
+   - L(f2, t<sub>2</sub>) = λ2 * α(t<sub>1</sub> + Δt<sub>1</sub>) * β(t<sub>2</sub>)
+
 3. Applying natural logarithms on *implication 2*:
 
-   - **ln(L(f1, t<sub>1</sub>)) = ln(λ1) + ln(α(t<sub>1</sub>)) + ln(β(t<sub>1</sub>))**
-   - **ln(L(f2, t<sub>2</sub>)) = ln(λ2) + ln(α(t<sub>1</sub> + Δt<sub>1</sub>)) + ln(β(t<sub>2</sub>))** 
-   
-4. Based on the bound on **α'(t)** from *assumption 5*:
+   - ln(L(f1, t<sub>1</sub>)) = ln(λ1) + ln(α(t<sub>1</sub>)) + ln(β(t<sub>1</sub>))
+   - ln(L(f2, t<sub>2</sub>)) = ln(λ2) + ln(α(t<sub>1</sub> + Δt<sub>1</sub>)) + ln(β(t<sub>2</sub>))
+
+4. Based on *assumption 5*'s smoothness of **α(t)** and bounds on **d<sub>/dt</sub>ln(α(t))**:
 
    - ln(α(t<sub>1</sub> + Δt<sub>1</sub>))  
 
      = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * α'(t<sub>p</sub>)/α(t<sub>p</sub>)  **[**_for some t<sub>p</sub> between t<sub>1</sub> and Δt<sub>1</sub>_**]**  
 
-     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * γ(t<sub>1</sub>)/α(t<sub>p</sub>)  **[**_where |γ(t<sub>1</sub>)| <= A<sub>D</sub>_**]**
-
-   Based on the bounds for **α(t)** from *assumption 5*:
-   - α(t<sub>p</sub>) = α(t<sub>1</sub>) * δ(t<sub>1</sub>)  **[**_for some δ(t<sub>1</sub>) between A<sub>L</sub> / A<sub>U</sub> and A<sub>U</sub> / A<sub>L</sub>_**]**  
-
-   Therefore, from the first equation in this implication group and the above equation:
-
-   - ln(α(t<sub>1</sub> + Δt<sub>1</sub>))  
-
-     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * γ(t<sub>1</sub>) / (α(t<sub>1</sub>) * δ(t<sub>1</sub>))  
-
-     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * ε<sub>1</sub>(t<sub>1</sub>) / α(t<sub>1</sub>)  **[**_where ε<sub>1</sub>(t<sub>1</sub>) = γ(t<sub>1</sub>) / δ(t<sub>1</sub>)  and |ε<sub>1</sub>(t<sub>1</sub>)| <= A<sub>D</sub> * A<sub>U</sub> / A<sub>L</sub>_**]**
+     Using the definition ε<sub>1</sub>(t<sub>1</sub>) =<sub>def</sub> α'(t<sub>p</sub>)/α(t<sub>p</sub>):
+     
+     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * ε<sub>1</sub>(t<sub>1</sub>)  **[**_where |ε<sub>1</sub>(t<sub>1</sub>)| ≤ A<sub>D</sub>_**]**
 
 5. Applying *implication 4* to *implication 3*:
 
    - ln(L(f1, t<sub>1</sub>)) = ln(λ1) + ln(α(t<sub>1</sub>)) + ln(β(t<sub>1</sub>))
-   - ln(L(f2, t<sub>2</sub>)) = ln(λ2) + ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * ε<sub>1</sub>(t<sub>1</sub>)/α(t<sub>1</sub>) + ln(β(t<sub>2</sub>))   **[**_where where |ε<sub>1</sub>(t<sub>1</sub>)| <= A<sub>D</sub> * A<sub>U</sub> / A<sub>L</sub>_**]**
-   
-6. Using *implication 1* to replace the **Δ** value in the linear approximation term in the second equation of *implication 4*:
 
-   - **ln(L(f1, t<sub>1</sub>)) = ln(λ1) + ln(α(t<sub>1</sub>)) + ln(β(t<sub>1</sub>))**
-   - **ln(L(f2, t<sub>2</sub>)) = ln(λ2) + ln(α(t<sub>1</sub>)) + L(f1, t<sub>1</sub>) * α'(t<sub>1</sub>)/α(t<sub>1</sub>) + ln(β(t<sub>2</sub>)) + ε<sub>1</sub>(t<sub>1</sub>)**, where **ε<sub>1</sub>(t<sub>1</sub>)** is close to zero
-   
-7. Using the first equation in *implication 2* and the formula for the expected value of a log-normal distribution:
+   - ln(L(f2, t<sub>2</sub>))  
 
-   - **E(L(f1, t<sub>1</sub>)) = λ1 * α(t<sub>1</sub>) * E(β(t<sub>1</sub>)) = λ1 * α(t<sub>1</sub>) * exp(1/2 * σ^2)**
-   
-8. Taking expected values in *implication 5*:
+     = ln(λ2) + ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * ε<sub>1</sub>(t<sub>1</sub>) + ln(β(t<sub>2</sub>))   **[**_where |ε<sub>1</sub>(t<sub>1</sub>)| <= A<sub>D</sub>_**]**  
 
-   - **E(ln(L(f1, t<sub>1</sub>))) = ln(λ1) + ln(α(t<sub>1</sub>)) + E(ln(β(t<sub>1</sub>)))**
-   - **E(ln(L(f2, t<sub>2</sub>))) = ln(λ2) + ln(α(t<sub>1</sub>)) + α'(t<sub>1</sub>)/α(t<sub>1</sub>) * E(L(f1, t<sub>1</sub>)) + E(ln(β(t<sub>2</sub>))) + E(ε<sub>1</sub>(t<sub>1</sub>))**
-   
-9. Using the second item in *assumption 5*, *implication 7* simplifies to:
+     Using *implication 1* to replace the Δt<sub>1</sub> value above:  
 
-   - **E(ln(L(f1, t<sub>1</sub>))) = ln(λ1) + ln(α(t<sub>1</sub>))**
-   - **E(ln(L(f2, t<sub>2</sub>))) = ln(λ2) + ln(α(t<sub>1</sub>)) + α'(t<sub>1</sub>)/α(t<sub>1</sub>) * E(L(f1, t<sub>1</sub>)) + E(ε<sub>1</sub>(t<sub>1</sub>))**
-   
-10. Using *implication 8* and substituting *implication 6* into the second equation:
+     = lln(λ2) + ln(α(t<sub>1</sub>)) + L(f1, t<sub>1</sub>) * ε<sub>1</sub>(t<sub>1</sub>) + ln(β(t<sub>2</sub>))
 
-   - **E(ln(L(f1, t<sub>1</sub>))) = ln(λ1) + ln(α(t<sub>1</sub>))**
-   - **E(ln(L(f2, t<sub>2</sub>)))**  
-     **= ln(λ2) + ln(α(t<sub>1</sub>)) + α'(t<sub>1</sub>)/α(t<sub>1</sub>) * λ1 * α(t<sub>1</sub>) * exp(1/2 * σ^2) + E(ε<sub>1</sub>(t<sub>1</sub>))**  
-     **= ln(λ2) + ln(α(t<sub>1</sub>)) + α'(t<sub>1</sub>) * λ1 * exp(1/2 * σ^2) + E(ε<sub>1</sub>(t<sub>1</sub>))**
-11. Subtracting the second equation from the first in *implication 9* and using the linearity of **E()**:
+6. Using the first equation in *implication 2* and the formula for the expected value of a log-normal distribution:
 
-    - **E(ln(L(f1, t<sub>1</sub>) - ln(L(f2, t<sub>2</sub>))))**  
-      **= ln(λ1) - ln(λ2) - α'(t<sub>1</sub>) * λ1 * exp(1/2 * σ^2) - E(ε<sub>1</sub>(t<sub>1</sub>)) **  
-      **= ln(λ1 / λ2) - α'(t<sub>1</sub>) * λ1 * exp(1/2 * σ^2) - E(ε<sub>1</sub>(t<sub>1</sub>))**
-12. With `bench_diff`, measurements are done pairs, with one half of the pairs having **f1** followed by **f2** and the other half having **f2** followed by **f1**. The equation in *implication 10* above pertains to the first case. The analogous equation for the second case is:
-    - **E(ln(L(f2, t<sub>2'</sub>) - ln(L(f1, t<sub>1'</sub>)))) = ln(λ2 / λ1) - α'(t<sub>2'</sub>) * λ2 * exp(1/2 * σ^2) - E(ε<sub>2</sub>(t<sub>2'</sub>))**
-      or, equivalently: 
-    - **E(ln(L(f1, t<sub>1'</sub>)) - ln(L(f2, t<sub>2'</sub>))) = ln(λ1 / λ2) + α'(t<sub>2'</sub>) * λ2 * exp(1/2 * σ^2) + E(ε<sub>2</sub>(t<sub>2'</sub>))**
-13. Assuming the number of latency observations for each function is **n** and considering the two cases as described in *implication 11*, we can calculate the sample mean difference between the natural logarithms of the observed latencies:
-    - **mean_diff_ln =**  
-      **1/n * ∑<sub>i=1..n</sub> (ln(L(f1, t<sub>1<sub>i</sub></sub>) - ln(L(f2, t<sub>2<sub>i</sub></sub>)) **
-      **= 1/n * (∑<sub>i:odd</sub> (ln(L(f1, t<sub>1<sub>i</sub></sub>) - ln(L(f2, t<sub>2<sub>i</sub></sub>)) + ∑<sub>i:even</sub> (ln(L(f1, t<sub>1<sub>i</sub></sub>) - ln(L(f2, t<sub>2<sub>i</sub></sub>)))**
+   - E(L(f1, t<sub>1</sub>))  
 
-14. Using the linearity of **E()** and calculating the definition of the sample mean **M(i, x<sub>i</sub>)** for a sample **x** with observations **x<sub>1</sub>, ..., x<sub>i</sub>, ..., x<sub>n</sub>**:
-    - **∑<sub>i:odd</sub> x<sub>i</sub>**
-    - **E(M(i, ln(L(f1, t<sub>1<sub>i</sub></sub>) - ln(L(f2, t<sub>2<sub>i</sub></sub>))))) = M(i, E(ln(L(f1, t<sub>1<sub>i</sub></sub>) - ln(L(f2, t<sub>2<sub>i</sub></sub>)))))**
+     = λ1 * α(t<sub>1</sub>) * E(β(t<sub>1</sub>))  
 
-15. Using *implication 13* and taking the sample mean **M()** of each side in *implication 10* and *implication 12* over all measured latencies, we get:
+     = λ1 * α(t<sub>1</sub>) * exp(σ<sup>2</sup>/2)
 
-    - **E(M(i, ln(L(f1, t<sub>1<sub>i</sub></sub>) - ln(L(f2, t<sub>2<sub>i</sub></sub>)))) = ln(λ1 / λ2) - M(i, α'(t<sub>1<sub>i</sub></sub>)) * λ1 * exp(1/2 * σ^2) - M(i, E(ε<sub>1</sub>(t<sub>1<sub>i</sub></sub>))))**
-    - **E(M(i, ln(L(f1, t<sub>1'<sub>i</sub></sub>) - ln(L(f2, t<sub>2'<sub>i</sub></sub>)))) = ln(λ1 / λ2) + M(i, α'(t<sub>2'<sub>i</sub></sub>)) * λ2 * exp(1/2 * σ^2) + M(i, E(ε<sub>2</sub>(t<sub>2'<sub>i</sub></sub>))))**
-16. Both equations in *implication 14* show that the difference between the sample means of the natural logarithms of the observed latencies is an approximately unbiased estimator of **ln(λ1 / λ2)**. The bias is equal to the following equivalent values:
+7. Taking expected values in *implication 5*:
 
-    - **- M(i, α'(t<sub>1<sub>i</sub></sub>)) * λ1 * exp(1/2 * σ^2) - M(i, E(ε<sub>1</sub>(t<sub>1<sub>i</sub></sub>)))**
-    - **M(i, α'(t<sub>2'<sub>i</sub></sub>)) * λ2 * exp(1/2 * σ^2) + M(i, E(ε<sub>2</sub>(t<sub>2'<sub>i</sub></sub>)))**
-17. Thus, assuming the rate of change of **α(t)** is sufficiently small for all **t** during the measurement process, the estimates of the ratio of latency medians produced by `bench_diff` should be sufficiently accurate.
+   - E(ln(L(f1, t<sub>1</sub>))) = ln(λ1) + ln(α(t<sub>1</sub>)) + E(ln(β(t<sub>1</sub>)))
+   - E(ln(L(f2, t<sub>2</sub>))) = ln(λ2) + ln(α(t<sub>1</sub>)) + E(ε<sub>1</sub>(t<sub>1</sub>) * L(f1, t<sub>1</sub>)) + E(ln(β(t<sub>2</sub>)))
+
+8. Using the second item in *assumption 5*, *implication 7* simplifies to:
+
+   - E(ln(L(f1, t<sub>1</sub>))) = ln(λ1) + ln(α(t<sub>1</sub>))
+   - E(ln(L(f2, t<sub>2</sub>))) = ln(λ2) + ln(α(t<sub>1</sub>)) + E(ε<sub>1</sub>(t<sub>1</sub>) * L(f1, t<sub>1</sub>))
+
+9. Defining **δ<sub>1</sub>(t<sub>1</sub>) =<sub>def</sub> E(ε<sub>1</sub>(t<sub>1</sub>) * L(f1, t<sub>1</sub>))** and by standard expected value inequalities:
+
+   - |δ<sub>1</sub>(t<sub>1</sub>)|  
+
+     = |E(ε<sub>1</sub>(t<sub>1</sub>) * L(f1, t<sub>1</sub>))|  
+
+     ≤ E(|ε<sub>1</sub>(t<sub>1</sub>)| * |L(f1, t<sub>1</sub>)|)  
+
+     ≤ E(|ε<sub>1</sub>(t<sub>1</sub>)|) * E(|L(f1, t<sub>1</sub>)|)  
+
+     = E(|ε<sub>1</sub>(t<sub>1</sub>)|) * E(L(f1, t<sub>1</sub>))  
+
+     Using the  bound|ε<sub>1</sub>(t<sub>1</sub>)| <= A<sub>D</sub> from *implication 4*:
+
+     ≤ A<sub>D</sub> * E(L(f1, t<sub>1</sub>))  
+
+     By *implication 6*:
+     
+     = A<sub>D</sub> * λ1 * α(t<sub>1</sub>) * exp(σ<sup>2</sup>/2)
+
+10. Using *implication 8* and substituting *implication 9* into the second equation:
+
+       - E(ln(L(f1, t<sub>1</sub>))) = ln(λ1) + ln(α(t<sub>1</sub>))
+       - E(ln(L(f2, t<sub>2</sub>))) = ln(λ2) + ln(α(t<sub>1</sub>)) + δ<sub>1</sub>(t<sub>1</sub>)  **[**_where |δ<sub>1</sub>(t<sub>1</sub>)| ≤ A<sub>D</sub> * λ1 * α(t<sub>1</sub>) * exp(σ<sup>2</sup>/2)_**]**  
+
+11. Subtracting the second equation from the first in *implication 10* and using the linearity of **E()**:
+
+    - E(ln(L(f1, t<sub>1</sub>) - ln(L(f2, t<sub>2</sub>))))  
+
+      = ln(λ1) - ln(λ2) - δ<sub>1</sub>(t<sub>1</sub>)  
+
+      = ln(λ1 / λ2) - δ<sub>1</sub>(t<sub>1</sub>)  **[**_where |δ<sub>1</sub>(t<sub>1</sub>)| ≤ A<sub>D</sub> * λ1 * α(t<sub>1</sub>) * exp(σ<sup>2</sup>/2)_**]**
+
+12. With `bench_diff`, measurements are done pairs, with one half of the pairs having **f1** followed by **f2** and the other half having **f2** followed by **f1**. The equation in *implication 11* above pertains to the first case. The analogous equation for the second case is:  
+
+    - E(ln(L(f2, t<sub>2'</sub>) - ln(L(f1, t<sub>1'</sub>)))) = ln(λ2 / λ1) - δ<sub>2</sub>(t<sub>2'</sub>)  
+
+    Or, equivalently:
+
+    - E(ln(L(f1, t<sub>1'</sub>)) - ln(L(f2, t<sub>2'</sub>))) = ln(λ1 / λ2) + δ<sub>2</sub>(t<sub>2'</sub>)  **[**_where |δ<sub>2</sub>(t<sub>2'</sub>)| ≤ A<sub>D</sub> * λ2 * α(t<sub>2'</sub>) * exp(σ<sup>2</sup>/2)_**]**
+
+13. Assuming the number of latency observations for each function is **n** and considering the two cases as described in *implication 12*, we can calculate the sample mean difference between the natural logarithms of the observed latencies:
+    - mean_diff_ln  
+      
+      =<sub>def</sub> (1/n) * ∑<sub>i=1..n</sub> (ln(L(f1, t<sub>1,i</sub>) - ln(L(f2, t<sub>2,i</sub>))  
+      
+      = (1/n) * (∑<sub>i:odd</sub> (ln(L(f1, t<sub>1,i</sub>) - ln(L(f2, t<sub>2,i</sub>)) + ∑<sub>i:even</sub> (ln(L(f1, t<sub>1,i</sub>) - ln(L(f2, t<sub>2,i</sub>)))
+
+14. Taking expected values in *implication 13* and using the linearity of **E()**:
+
+    - E(mean_diff_ln)  
+
+      = (1/n) * (∑<sub>i:odd</sub> E(ln(L(f1, t<sub>1,i</sub>) - ln(L(f2, t<sub>2,i</sub>)) + ∑<sub>i:even</sub> E(ln(L(f1, t<sub>1,i</sub>) - ln(L(f2, t<sub>2,i</sub>)))  
+
+      By *implication 11* and *implication 12*:
+
+      = (1/n) * (∑<sub>i:odd</sub> (ln(λ1 / λ2) - δ<sub>1</sub>(t<sub>1,i</sub>)) + ∑<sub>i:even</sub> (ln(λ1 / λ2) + δ<sub>2</sub>(t<sub>2,i</sub>)))  
+
+      = ln(λ1 / λ2) + (1/n) * ∑<sub>i:odd</sub> (δ<sub>2</sub>(t<sub>2,i+1</sub>) - δ<sub>1</sub>(t<sub>1,i</sub>))  
+
+      **[**_where where |δ<sub>1</sub>(t<sub>1,i</sub>)| ≤ A<sub>D</sub> * λ1 * α(t<sub>1,i</sub>) * exp(σ<sup>2</sup>/2) and|δ<sub>2</sub>(t<sub>2,i</sub>)| ≤ A<sub>D</sub> * λ2 * α(t<sub>2,i</sub>) * exp(σ<sup>2</sup>/2)_**]**
+
+15. The equation in *implication 14* shows that, with `bench_diff`, the difference between the sample means of the natural logarithms of the observed latencies is biased estimator of **ln(λ1 / λ2)**, with a bias of:
+
+    - (1/n) * ∑<sub>i:odd</sub> (δ<sub>2</sub>(t<sub>2,i+1</sub>) - δ<sub>1</sub>(t<sub>1,i</sub>))  
+
+      ≤ (1/n) * ∑<sub>i:odd</sub> (|δ<sub>2</sub>(t<sub>2,i+1</sub>)| + |δ<sub>1</sub>(t<sub>1,i</sub>)|)  
+
+      ≤ (1/n) * ∑<sub>i:odd</sub> ((A<sub>D</sub> * λ2 * α(t<sub>2,i</sub>) * exp(σ<sup>2</sup>/2)) + (A<sub>D</sub> * λ1 * α(t<sub>1,i</sub>) * exp(σ<sup>2</sup>/2))  
+
+      = A<sub>D</sub> * (λ1 + λ2)/2 * exp(σ<sup>2</sup>/2) * (1/n) * ∑<sub>i:odd</sub> (α(t<sub>2,i</sub>) + α(t<sub>1,i</sub>))  
+
+      ≤ A<sub>D</sub> * (λ1 + λ2)/2 * exp(σ<sup>2</sup>/2) * A<sub>U</sub>
+
+16. Thus, assuming the above product is sufficiently small, the estimates of the ratio of latency medians produced by `bench_diff` should be sufficiently accurate.
 
 
 # Limitations
 
-This library works well for latencies at the microseconds or millisecodns order of magnitude, but not for latencies at the nanoseconds order of magnitude.
+This library works well for latencies at the microseconds or milliseconds order of magnitude, but not for latencies at the nanoseconds order of magnitude.

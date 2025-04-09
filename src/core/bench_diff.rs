@@ -381,8 +381,7 @@ mod test {
         dev_utils::nest_btree_map,
         test_support::{
             ALPHA, BETA, Claim, ClaimResults, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR,
-            ScaleParams, default_hi_stdev_log, default_lo_stdev_log, get_scale_params,
-            get_scenario,
+            ScaleParams, default_hi_stdev_ln, default_lo_stdev_ln, get_scale_params, get_scenario,
         },
     };
     use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
@@ -406,12 +405,12 @@ mod test {
             Self::Det { median }
         }
 
-        fn new_non_deterministic(median: f64, stdev_log: f64) -> Self {
+        fn new_non_deterministic(median: f64, stdev_ln: f64) -> Self {
             let mu = 0.0_f64;
-            let sigma = stdev_log;
+            let sigma = stdev_ln;
             Self::NonDet {
                 median,
-                lognormal: LogNormal::new(mu, sigma).expect("stdev_log must be > 0"),
+                lognormal: LogNormal::new(mu, sigma).expect("stdev_ln must be > 0"),
                 rng: StdRng::from_rng(&mut rand::rng()),
             }
         }
@@ -447,40 +446,28 @@ mod test {
                 MyFnMut::new_deterministic(base_median * HI_25PCT_FACTOR)
             }),
             ("base_median_lo_var", |base_median| {
-                MyFnMut::new_non_deterministic(base_median, default_lo_stdev_log())
+                MyFnMut::new_non_deterministic(base_median, default_lo_stdev_ln())
             }),
             ("hi_1pct_median_lo_var", |base_median| {
-                MyFnMut::new_non_deterministic(base_median * HI_1PCT_FACTOR, default_lo_stdev_log())
+                MyFnMut::new_non_deterministic(base_median * HI_1PCT_FACTOR, default_lo_stdev_ln())
             }),
             ("hi_10pct_median_lo_var", |base_median| {
-                MyFnMut::new_non_deterministic(
-                    base_median * HI_10PCT_FACTOR,
-                    default_lo_stdev_log(),
-                )
+                MyFnMut::new_non_deterministic(base_median * HI_10PCT_FACTOR, default_lo_stdev_ln())
             }),
             ("hi_25pct_median_lo_var", |base_median| {
-                MyFnMut::new_non_deterministic(
-                    base_median * HI_25PCT_FACTOR,
-                    default_lo_stdev_log(),
-                )
+                MyFnMut::new_non_deterministic(base_median * HI_25PCT_FACTOR, default_lo_stdev_ln())
             }),
             ("base_median_hi_var", |base_median| {
-                MyFnMut::new_non_deterministic(base_median, default_hi_stdev_log())
+                MyFnMut::new_non_deterministic(base_median, default_hi_stdev_ln())
             }),
             ("hi_1pct_median_hi_var", |base_median| {
-                MyFnMut::new_non_deterministic(base_median * HI_1PCT_FACTOR, default_hi_stdev_log())
+                MyFnMut::new_non_deterministic(base_median * HI_1PCT_FACTOR, default_hi_stdev_ln())
             }),
             ("hi_10pct_median_hi_var", |base_median| {
-                MyFnMut::new_non_deterministic(
-                    base_median * HI_10PCT_FACTOR,
-                    default_hi_stdev_log(),
-                )
+                MyFnMut::new_non_deterministic(base_median * HI_10PCT_FACTOR, default_hi_stdev_ln())
             }),
             ("hi_25pct_median_hi_var", |base_median| {
-                MyFnMut::new_non_deterministic(
-                    base_median * HI_25PCT_FACTOR,
-                    default_hi_stdev_log(),
-                )
+                MyFnMut::new_non_deterministic(base_median * HI_25PCT_FACTOR, default_hi_stdev_ln())
             }),
         ]
     };

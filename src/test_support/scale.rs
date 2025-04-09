@@ -1,6 +1,6 @@
 use crate::{
     LatencyUnit,
-    test_support::{default_hi_stdev_log, default_lo_stdev_log},
+    test_support::{default_hi_stdev_ln, default_lo_stdev_ln},
 };
 use std::sync::LazyLock;
 
@@ -9,8 +9,8 @@ pub struct ScaleParams {
     pub unit: LatencyUnit,
     pub exec_count: usize,
     pub base_median: f64,
-    pub lo_stdev_log: f64,
-    pub hi_stdev_log: f64,
+    pub lo_stdev_ln: f64,
+    pub hi_stdev_ln: f64,
 }
 
 pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
@@ -25,8 +25,8 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
                 unit: LatencyUnit::Nano,
                 exec_count: 10_000,
                 base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
+                lo_stdev_ln: default_lo_stdev_ln(),
+                hi_stdev_ln: default_hi_stdev_ln(),
             }
         },
         {
@@ -36,8 +36,8 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
                 unit: LatencyUnit::Nano,
                 exec_count: 2_000,
                 base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
+                lo_stdev_ln: default_lo_stdev_ln(),
+                hi_stdev_ln: default_hi_stdev_ln(),
             }
         },
         {
@@ -47,8 +47,8 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
                 unit: LatencyUnit::Micro,
                 exec_count: 200,
                 base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
+                lo_stdev_ln: default_lo_stdev_ln(),
+                hi_stdev_ln: default_hi_stdev_ln(),
             }
         },
         //
@@ -61,8 +61,8 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
                 unit: LatencyUnit::Nano,
                 exec_count: 100_000,
                 base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
+                lo_stdev_ln: default_lo_stdev_ln(),
+                hi_stdev_ln: default_hi_stdev_ln(),
             }
         },
         {
@@ -72,8 +72,8 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
                 unit: LatencyUnit::Nano,
                 exec_count: 10_000,
                 base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
+                lo_stdev_ln: default_lo_stdev_ln(),
+                hi_stdev_ln: default_hi_stdev_ln(),
             }
         },
         {
@@ -83,8 +83,8 @@ pub static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
                 unit: LatencyUnit::Micro,
                 exec_count: 600,
                 base_median,
-                lo_stdev_log: default_lo_stdev_log(),
-                hi_stdev_log: default_hi_stdev_log(),
+                lo_stdev_ln: default_lo_stdev_ln(),
+                hi_stdev_ln: default_hi_stdev_ln(),
             }
         },
     ]

@@ -2,7 +2,9 @@
 
 Following is a simple model of time-dependent random noise. While this model can be useful as a motivation for the `bench_diff` approach, the test benchmarks discussed previously provide independent validation of the benchmarking approach used in this library.
 
-**Definitions and assumptions:**
+## The Model
+
+**Definitions and assumptions**
 
 1. Let **ln(x)** be the natural logarithm of **x**.
 2. Let **L(f, t)** be the latency of function **f** at time **t**.
@@ -14,7 +16,7 @@ Following is a simple model of time-dependent random noise. While this model can
 
 6. Assume **L(f1, t) = λ1 * ν(t)** and **L(f2, t) = λ2 * ν(t)** for all **t**.
 
-**Implications:**
+**Implications**
 
 1. When we measure **f1**'s latency at a time **t<sub>1</sub>**, getting **L(f1, t<sub>1</sub>)**, and right after we measure **f2**'s latency, the measurement for **f2** occurs at a time **t<sub>2</sub> = t<sub>1</sub> + Δt<sub>1</sub>**, where **Δt<sub>1</sub>** is <u>very close</u> to **L(f1, t<sub>1</sub>)**.
 
@@ -170,8 +172,102 @@ Following is a simple model of time-dependent random noise. While this model can
       
       = A<sub>D</sub> * (1 +  A<sub>D</sub>/A<sub>L</sub>) * (λ1+λ2)/2 * exp(σ<sup>2</sup>/2)
     
-16. Thus, assuming the above product is sufficiently small, the estimates of the ratio of latency medians produced by `bench_diff` should be sufficiently accurate.
+16. Thus, assuming the above product is sufficiently small, the estimates of the ratio of latency medians produced by `bench_diff` should be sufficiently accurate. Notice that while the variability of the statistic mean_diff_ln varies with the sample size (exec_count), the bias estimate does not change.
 
+## Comparative Example
+
+We will define an example of the above model and compare how `bench_diff` and the *traditional* benchmarking method fare with respect to the model. The example is admittedly contrived in order to facilitate approximate calculations and also to highlight the potential disparity of results between the two benchmarking methods.
+
+**Model parameters**
+
+- The two functions, **f1** and **f2** are identical, with **λ1 = λ2 = 12 ms**.
+
+- The number of executions of each function is **exec_count = 2500**. So, the total execution time, ignoring warm-up, is 1 minute.
+
+- **α(t) = 1 + 1/2 * sin(t * 2*π / 60000)**, where **t** is the number of milliseconds elapsed since the start of the benchmark.  
+
+  -  α'(t)  
+
+    = 1/2 * 2\*π / 60000 * cos(t * 2\*π / 60000)  
+
+    = π / 60000 * cos(t * 2\*π / 60000)
+
+  Therefore:
+
+  - |α'(t)| ≤ π / 60000.
+
+  And we have the following bounds for α(t):
+
+  - A<sub>L</sub> = 1/2
+  - A<sub>D</sub> = π / 60000
+
+- **β(t)** has **σ = 0.28**.
+
+  - Therefore, E(β(t)) = exp(σ<sup>2</sup>/2) ≈ 1.04.
+
+**`bench_diff` calculations**
+
+1. Given exec_count = 2500, the noise contributed by β(t) is effectively eliminated.
+
+2. From the model (*implication*), the bias of E(mean_diff_ln) is:
+
+   - A<sub>D</sub> * (1 +  A<sub>D</sub>/A<sub>L</sub>) * (λ1+λ2)/2 * exp(σ<sup>2</sup>/2)  
+
+     ≈ π / 60000 * (1 + π / 60000 / (1/2)) * (12 + 12)/2 * 1.04  
+
+     = π / 60000 * (1 + π / 30000) * 12 * 1.04  
+
+     ≈ 0.0006535
+
+3. So, the multiplicative bias on the estimate of λ1/λ2 (which is 1 in our example) is:
+
+   - exp(0.0006535) = 1.0006537, i.e., less than 1/10 of 1%.
+
+4. Recall that bias does not depend on the number of executions, so it is the same with only half the number of executions. Also, given the high exec_count assumed, the `bench_diff` results during the first half should be very close to those obtained during the second half.
+
+***Traditional* method calculations**
+
+1. With the traditional method, we benchmark f1 with exec_count = 2500 and then benchmark f2 (which is the same as f1 in our example) with exec_count = 2500.
+
+2. Given exec_count = 2500, the noise contributed by β(t) is effectively eliminated.
+
+3. The first benchmark of f1 takes place during the first 30 seconds. The calculated mean latency is approximately:
+
+   - λ1 / 30000 * **∫**<sub>0</sub><sup>30000</sup> α(t) dt  
+
+     = 12 / 30000 * (30000 + 1/2 * (-cos(30000 * 2\*π / 60000) + cos(0)) / (2\*π / 60000))  
+
+     = 12 + 12/30000 * 1/2 * (-cos(π) + cos(0)) / (2\*π / 60000)  
+
+     = 12 + 12 * (-cos(π) + cos(0)) / (2\*π)  
+
+     = 12 + 12 * (1 + 1) / (2\*π)  
+
+     = 12 * (1 + 1/π)  
+
+     ≈ 12 * 1.3183
+
+   - This is an upward error of more than 30%.
+
+4. The second benchmark of f1 takes place during the second 30 seconds. The calculated mean latency is approximately:
+
+   - λ1 / 30000 * **∫**<sub>30000</sub><sup>60000</sup> α(t) dt  
+
+     = 12 / 30000 * (30000 + 1/2 * (-cos(60000 * 2\*π / 60000) + cos(30000 * 2\*π / 60000)) / (2\*π / 60000))  
+
+     = 12 + 12/30000 * 1/2 * (-cos(2\*π) + cos(π)) / (2\*π / 60000)  
+
+     = 12 + 12 * (-cos(2\*π) + cos(π)) / (2\*π)  
+
+     = 12 + 12 * (-1 + -1) / (2\*π)  
+
+     = 12 * (1 - 1/π)  
+
+     ≈ 12 * 0.6817
+
+   - This is an downward error of more than 30%.
+
+5. The estimated ratio λ1 / λ1 is approximately 1.3183 / 0.6817 ≈ 1.9338, an estimating error of close to !00%.
 
 # Limitations
 

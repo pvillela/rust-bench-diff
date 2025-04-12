@@ -1,6 +1,6 @@
 # A Model of Time-Dependent Random Noise
 
-Following is a simple model of time-dependent random noise. While this model can be useful as a motivation for the `bench_diff` approach, the test benchmarks discussed previously provide independent validation of the benchmarking approach used in this library.
+Following is a simple mathematical model of time-dependent random noise. This model provides additional corroboration for the `bench_diff` approach. Nonetheless, the model's fit with reality is not necessary to validate `bench_diff` as the test benchmarks discussed previously provide independent validation of the library.
 
 ## The Model
 
@@ -10,8 +10,8 @@ Following is a simple model of time-dependent random noise. While this model can
 2. Let **L(f, t)** be the latency of function **f** at time **t**.
 3. Let **λ1** be the baseline (ideal) latency of function **f1** in the absence of noise; respectively, **λ2** for **f2**.
 4. Given a random variable **χ**, let **E(χ)** and **Stdev(χ)** be the expected value and standard deviation of **χ**, respectively.
-5. Assume time-dependent noise is **ν(t) = α(t) * β(t)**, where:
-   - **α(t)** is a smooth deterministic function of **t**, such that there are positive constants **A<sub>L</sub>** and **A<sub>D</sub>** for which **A<sub>L</sub> ≤ α(t)** and **|α'(t)| ≤ A<sub>D</sub>**, for all **t**.
+5. Assume time-dependent noise is **ν(t) =<sub>def</sub> α(t) * β(t)**, where:
+   - **α(t)** is a differentiable deterministic function of **t**, such that there are positive constants **A<sub>L</sub>**, **A<sub>U</sub>**, and **A<sub>D</sub>** for which **A<sub>L</sub> ≤ α(t) ≤ A<sub>U</sub>** and **|α'(t)| ≤ A<sub>D</sub>**, for all **t**.
    - **β(t)** is a family of mutually independent log-normal random variables indexed by **t**, such that  **E(ln(β(t))) = 0** and **Stdev(ln(β(t))) = σ**, where **σ** is a constant that does not depend on **t**.
 
 6. Assume **L(f1, t) = λ1 * ν(t)** and **L(f2, t) = λ2 * ν(t)** for all **t**.
@@ -34,35 +34,13 @@ Following is a simple model of time-dependent random noise. While this model can
 
    - ln(α(t<sub>1</sub> + Δt<sub>1</sub>))  
 
+     By Lagrange's mean value theorem:
+
      = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * α'(t<sub>p</sub>)/α(t<sub>p</sub>)  **[** _for some t<sub>p</sub> between t<sub>1</sub> and Δt<sub>1</sub>_ **]**  
 
-     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * γ(t<sub>1</sub>)/α(t<sub>p</sub>)  **[** _where γ(t<sub>1</sub>) =<sub>def</sub> α'(t<sub>p</sub>), and thus |γ(t<sub>1</sub>)| ≤ A<sub>D</sub>_ **]**
+     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * α'(t<sub>p</sub>)/α(t<sub>1</sub>) * α(t<sub>1</sub>)/α(t<sub>p</sub>)
 
-   Based on the bounds for **α(t)** from *assumption 5*:
-
-   - 1 / α(t<sub>p</sub>) - 1 / α(t<sub>1</sub>)  
-
-     = -α'(t<sub>q</sub>) / α(t<sub>1</sub>)^2  **[** _for some t<sub>q</sub> between t<sub>1</sub> and t<sub>p</sub>_ **]**  
-
-     = δ<sub>0</sub>(t<sub>1</sub>) / α(t<sub>1</sub>)  **[** _where δ<sub>0</sub>(t<sub>1</sub>) =<sub>def</sub>  -α'(t<sub>q</sub>)/α(t<sub>1</sub>); thus |δ<sub>0</sub>(t<sub>1</sub>)| ≤ A<sub>D</sub>/A<sub>L</sub>_ **]**  
-
-     Thus:  
-
-     1 / α(t<sub>p</sub>)  
-
-     = 1 / α(t<sub>1</sub>) + δ<sub>0</sub>(t<sub>1</sub>) / α(t<sub>1</sub>)  
-
-     = (1 + δ<sub>0</sub>(t<sub>1</sub>)) / α(t<sub>1</sub>)  
-
-     = δ(t<sub>1</sub>) / α(t<sub>1</sub>)  **[** _where δ(t<sub>1</sub>) =<sub>def</sub> (1 + δ<sub>0</sub>(t<sub>1</sub>)); thus 1 - A<sub>D</sub>/A<sub>L</sub> ≤ δ(t<sub>1</sub>) ≤ 1 + A<sub>D</sub>/A<sub>L</sub> ⇒ |δ(t<sub>1</sub>)| ≤ 1 + A<sub>D</sub>/A<sub>L</sub>_ **]**
-
-   Therefore, from the first equation in this implication group and the above equation:
-
-   - ln(α(t<sub>1</sub> + Δt<sub>1</sub>))  
-
-     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * γ(t<sub>1</sub>) * δ(t<sub>1</sub>) / α(t<sub>1</sub>)  
-
-     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * ε<sub>1</sub>(t<sub>1</sub>) / α(t<sub>1</sub>)  **[** _where ε<sub>1</sub>(t<sub>1</sub>) =<sub>def</sub> γ(t<sub>1</sub>)\*δ(t<sub>1</sub>), ε<sub>1</sub><sup>U</sup> =<sub>def</sub> A<sub>D</sub>\*(1+A<sub>D</sub>/A<sub>L</sub>); thus |ε<sub>1</sub>(t<sub>1</sub>)| ≤  ε<sub>1</sub><sup>U</sup>_ **]**
+     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * ε<sub>1</sub>(t<sub>1</sub>)/α(t<sub>1</sub>)  **[** _where ε<sub>1</sub>(t<sub>1</sub>) =<sub>def</sub> α'(t<sub>p</sub>)\*α(t<sub>1</sub>)/α(t<sub>p</sub>), and thus |ε<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>U</sub> =<sub>def</sub> A<sub>D</sub>\*A<sub>U</sub>/A<sub>L</sub>_ **]**
 
 5. Applying *implication 4* to *implication 3*:
 
@@ -70,7 +48,7 @@ Following is a simple model of time-dependent random noise. While this model can
 
    - ln(L(f2, t<sub>2</sub>))  
 
-     = ln(λ2) + ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * ε<sub>1</sub>(t<sub>1</sub>)/α(t<sub>1</sub>) + ln(β(t<sub>2</sub>))   **[** _where |ε<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>1</sub><sup>U</sup>_ **]**  
+     = ln(λ2) + ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * ε<sub>1</sub>(t<sub>1</sub>)/α(t<sub>1</sub>) + ln(β(t<sub>2</sub>))   **[** _where |ε<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>U</sub>_ **]**  
 
      Using *implication 1* to replace the Δt<sub>1</sub> value above:  
 
@@ -106,20 +84,20 @@ Following is a simple model of time-dependent random noise. While this model can
 
      = E(|ε<sub>1</sub>(t<sub>1</sub>)|) * E(L(f1, t<sub>1</sub>)) / α(t<sub>1</sub>)  
 
-     Using the  bound|ε<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>1</sub><sup>U</sup> from *implication 4*:  
+     Using the  bound|ε<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>U</sub> from *implication 4*:  
 
-     ≤ ε<sub>1</sub><sup>U</sup> * E(L(f1, t<sub>1</sub>)) / α(t<sub>1</sub>)  
+     ≤ ε<sub>U</sub> * E(L(f1, t<sub>1</sub>)) / α(t<sub>1</sub>)  
 
      By *implication 6*:
-     
-     = ε<sub>1</sub><sup>U</sup> * λ1 * α(t<sub>1</sub>) * exp(σ<sup>2</sup>/2) / α(t<sub>1</sub>)  
-     
-     = ε<sub>1</sub><sup>U</sup> * λ1 * exp(σ<sup>2</sup>/2)
+
+     = ε<sub>U</sub> * λ1 * α(t<sub>1</sub>) * exp(σ<sup>2</sup>/2) / α(t<sub>1</sub>)  
+
+     = ε<sub>U</sub> * λ1 * exp(σ<sup>2</sup>/2)
 
 10. Using *implication 8* and substituting *implication 9* into the second equation:
 
        - E(ln(L(f1, t<sub>1</sub>))) = ln(λ1) + ln(α(t<sub>1</sub>))
-       - E(ln(L(f2, t<sub>2</sub>))) = ln(λ2) + ln(α(t<sub>1</sub>)) + ξ<sub>1</sub>(t<sub>1</sub>)  **[** _where |ξ<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>1</sub><sup>U</sup> * λ1 * exp(σ<sup>2</sup>/2)_ **]**
+       - E(ln(L(f2, t<sub>2</sub>))) = ln(λ2) + ln(α(t<sub>1</sub>)) + ξ<sub>1</sub>(t<sub>1</sub>)  **[** _where |ξ<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>U</sub> * λ1 * exp(σ<sup>2</sup>/2)_ **]**
 
 11. Subtracting the second equation from the first in *implication 10* and using the linearity of **E()**:
 
@@ -127,7 +105,7 @@ Following is a simple model of time-dependent random noise. While this model can
 
       = ln(λ1) - ln(λ2) - ξ<sub>1</sub>(t<sub>1</sub>)  
 
-      = ln(λ1 / λ2) - ξ<sub>1</sub>(t<sub>1</sub>)  **[** _where |ξ<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>1</sub><sup>U</sup> * λ1 * exp(σ<sup>2</sup>/2)_ **]**
+      = ln(λ1 / λ2) - ξ<sub>1</sub>(t<sub>1</sub>)  **[** _where |ξ<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>U</sub> * λ1 * exp(σ<sup>2</sup>/2)_ **]**
 
 12. With `bench_diff`, measurements are done pairs, with one half of the pairs having **f1** followed by **f2** and the other half having **f2** followed by **f1**. The equation in *implication 11* above pertains to the first case. The analogous equation for the second case is:  
 
@@ -135,13 +113,14 @@ Following is a simple model of time-dependent random noise. While this model can
 
     Or, equivalently:
 
-    - E(ln(L(f1, t<sub>1'</sub>)) - ln(L(f2, t<sub>2'</sub>))) = ln(λ1 / λ2) + ξ<sub>2</sub>(t<sub>2'</sub>)  **[** _where |ξ<sub>2</sub>(t<sub>2'</sub>)| ≤ ε<sub>2</sub><sup>U</sup> * λ2 * exp(σ<sup>2</sup>/2)_ **]**
+    - E(ln(L(f1, t<sub>1'</sub>)) - ln(L(f2, t<sub>2'</sub>))) = ln(λ1 / λ2) + ξ<sub>2</sub>(t<sub>2'</sub>)  **[** _where |ξ<sub>2</sub>(t<sub>2'</sub>)| ≤ ε<sub>U</sub> * λ2 * exp(σ<sup>2</sup>/2)_ **]**
 
 13. Assuming the number of latency observations for each function is **n** and considering the two cases as described in *implication 12*, we can calculate the sample mean difference between the natural logarithms of the observed latencies:
-    - mean_diff_ln  
-      
+
+    - **mean_diff_ln**  
+
       =<sub>def</sub> (1/n) * ∑<sub>i=1..n</sub> (ln(L(f1, t<sub>1,i</sub>) - ln(L(f2, t<sub>2,i</sub>))))  
-      
+
       = (1/n) * (∑<sub>i:odd</sub> (ln(L(f1, t<sub>1,i</sub>) - ln(L(f2, t<sub>2,i</sub>)))) + ∑<sub>i:even</sub> (ln(L(f1, t<sub>1,i</sub>) - ln(L(f2, t<sub>2,i</sub>)))))
 
 14. Taking expected values in *implication 13* and using the linearity of **E()**:
@@ -156,23 +135,35 @@ Following is a simple model of time-dependent random noise. While this model can
 
       = ln(λ1 / λ2) + (1/n) * ∑<sub>i:odd</sub> (ξ<sub>2</sub>(t<sub>2,i+1</sub>) - ξ<sub>1</sub>(t<sub>1,i</sub>))  
 
-      **[** _where |ξ<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>1</sub><sup>U</sup> * λ1 * exp(σ<sup>2</sup>/2) and |ξ<sub>2</sub>(t<sub>2'</sub>)| ≤ ε<sub>2</sub><sup>U</sup> * λ2 * exp(σ<sup>2</sup>/2)_ **]**
+      **[** _where |ξ<sub>1</sub>(t<sub>1</sub>)| ≤ ε<sub>U</sub> * λ1 * exp(σ<sup>2</sup>/2) and |ξ<sub>2</sub>(t<sub>2'</sub>)| ≤ ε<sub>U</sub> * λ2 * exp(σ<sup>2</sup>/2)_ **]**
 
-15. The equation in *implication 14* shows that, with `bench_diff`, the difference between the sample means of the natural logarithms of the observed latencies is a biased estimator of **ln(λ1 / λ2)**, with a bias of:
+15. The equation in *implication 14* shows that, with `bench_diff`, the difference between the sample means of the natural logarithms of the observed latencies is a biased estimator of **ln(λ1 / λ2)**. An upper bound for the absolute value of the bias is developed below:
 
-    - (1/n) * ∑<sub>i:odd</sub> (ξ<sub>2</sub>(t<sub>2,i+1</sub>) - ξ<sub>1</sub>(t<sub>1,i</sub>))  
+    - **bias(mean_diff_ln)**  
+
+      =<sub>def</sub> E(mean_diff_ln) - ln(λ1 / λ2)  
+
+      = (1/n) * ∑<sub>i:odd</sub> (ξ<sub>2</sub>(t<sub>2,i+1</sub>) - ξ<sub>1</sub>(t<sub>1,i</sub>))
+
+    - |bias(mean_diff_ln)|  
+
+      = (1/n) * |∑<sub>i:odd</sub> (ξ<sub>2</sub>(t<sub>2,i+1</sub>) - ξ<sub>1</sub>(t<sub>1,i</sub>))|  
 
       ≤ (1/n) * ∑<sub>i:odd</sub> (|ξ<sub>2</sub>(t<sub>2,i+1</sub>)| + |ξ<sub>1</sub>(t<sub>1,i</sub>)|)  
 
-      ≤ (1/n) * ∑<sub>i:odd</sub> ((ε<sub>2</sub><sup>U</sup> * λ2 * exp(σ<sup>2</sup>/2)) + (ε<sub>1</sub><sup>U</sup> * λ1 * exp(σ<sup>2</sup>/2)))  
+      ≤ (1/n) * ∑<sub>i:odd</sub> ((ε<sub>U</sub> * λ2 * exp(σ<sup>2</sup>/2)) + (ε<sub>U</sub> * λ1 * exp(σ<sup>2</sup>/2)))  
 
-      = (1/2) * (ε<sub>2</sub><sup>U</sup> * λ2 + ε<sub>1</sub><sup>U</sup> * λ1) * exp(σ<sup>2</sup>/2)  
+      = (1/2) * (ε<sub>U</sub> * λ2 + ε<sub>U</sub> * λ1) * exp(σ<sup>2</sup>/2)  
 
-      = (1/2) * (A<sub>D</sub>\*(1 + A<sub>D</sub>/A<sub>L</sub>)\*λ2 + A<sub>D</sub>\*(1 + A<sub>D</sub>/A<sub>L</sub>)\*λ1) * exp(σ<sup>2</sup>/2)
-      
-      = A<sub>D</sub> * (1 +  A<sub>D</sub>/A<sub>L</sub>) * (λ1+λ2)/2 * exp(σ<sup>2</sup>/2)
-    
-16. Thus, assuming the above product is sufficiently small, the estimates of the ratio of latency medians produced by `bench_diff` should be sufficiently accurate. Notice that while the variability of the statistic mean_diff_ln varies with the sample size (exec_count), the bias estimate does not change.
+      = (1/2) * (A<sub>D</sub>\*A<sub>U</sub>/A<sub>L</sub>\*λ2 + A<sub>D</sub>\*A<sub>U</sub>/A<sub>L</sub>\*λ1) * exp(σ<sup>2</sup>/2)
+
+      = A<sub>D</sub>\*A<sub>U</sub>/A<sub>L</sub> * (λ1+λ2)/2 * exp(σ<sup>2</sup>/2)
+
+16. Thus, assuming the above product is sufficiently small, the estimates of the ratio of latency medians produced by `bench_diff` should be sufficiently accurate.  
+
+    In practice, A<sub>U</sub>/A<sub>L</sub> < 2 and σ < 0.3, so the product A<sub>U</sub>/A<sub>L</sub> * exp(σ<sup>2</sup>/2) < 2.1.
+
+    Notice that while the variability of the statistic mean_diff_ln varies with the sample size (exec_count), this bias upper bound does not change.
 
 ## Comparative Example
 
@@ -180,13 +171,13 @@ We will define an example of the above model and compare how `bench_diff` and th
 
 **Model parameters**
 
-- The two functions, **f1** and **f2** are identical, with **λ1 = λ2 = 12 ms**.
+- The two functions, **f1** and **f2** are identical (call it **f**), with **λ1 = λ2 = λ = 12 ms**.
 
 - The number of executions of each function is **exec_count = 2500**. So, the total execution time, ignoring warm-up, is 1 minute.
 
 - **α(t) = 1 + 1/2 * sin(t * 2*π / 60000)**, where **t** is the number of milliseconds elapsed since the start of the benchmark.  
 
-  -  α'(t)  
+  - α'(t)  
 
     = 1/2 * 2\*π / 60000 * cos(t * 2\*π / 60000)  
 
@@ -199,75 +190,94 @@ We will define an example of the above model and compare how `bench_diff` and th
   And we have the following bounds for α(t):
 
   - A<sub>L</sub> = 1/2
+  - A<sub>U</sub> = 3/2
   - A<sub>D</sub> = π / 60000
 
 - **β(t)** has **σ = 0.28**.
 
-  - Therefore, E(β(t)) = exp(σ<sup>2</sup>/2) ≈ 1.04.
+  - Therefore, E(β(t)) = exp(σ<sup>2</sup>/2) ≈ 1.0400.
+
+- The **baseline median latency** of f is the median latency when α(t) = 1. Its value is **λ = λ1 = λ2** = 12 ms.
+
+- The **baseline mean latency** of f is the mean latency when α(t) = 1. Its value  **μ = μ1 = μ2** = λ * exp(σ<sup>2</sup>/2) ≈ 12 * 1.0400 = 12.48 ms.
+
+- The ratio of baseline medians is always equal to the ratio of baseline means even when f1 ≠ f2 because σ does not depend on f1 or f2.
 
 **`bench_diff` calculations**
 
-1. Given exec_count = 2500, the noise contributed by β(t) is effectively eliminated.
+- Given exec_count = 2500, the noise contributed by β(t) is effectively eliminated.
 
-2. From the model (*implication*), the bias of E(mean_diff_ln) is:
+- From the model (*implication 15*), the bias of E(mean_diff_ln) is at most:
 
-   - A<sub>D</sub> * (1 +  A<sub>D</sub>/A<sub>L</sub>) * (λ1+λ2)/2 * exp(σ<sup>2</sup>/2)  
+  - A<sub>D</sub>\*A<sub>U</sub>/A<sub>L</sub> * (λ1+λ2)/2 * exp(σ<sup>2</sup>/2)  
 
-     ≈ π / 60000 * (1 + π / 60000 / (1/2)) * (12 + 12)/2 * 1.04  
+    ≈ π / 60000 * 3 * (12 + 12)/2 * 1.0400  
 
-     = π / 60000 * (1 + π / 30000) * 12 * 1.04  
+    = π / 60000 * 3 * 12 * 1.0400  
 
-     ≈ 0.0006535
+    ≈ 0.001960
 
-3. So, the multiplicative bias on the estimate of λ1/λ2 (which is 1 in our example) is:
+- So, the multiplicative bias on the estimate of λ1/λ2 (= λ/λ = 1 in our example) is at most:
 
-   - exp(0.0006535) = 1.0006537, i.e., less than 1/10 of 1%.
+  - exp(0.001960) ≈ 1.001962, i.e., less than 2/10 of 1%.
 
-4. Recall that bias does not depend on the number of executions, so it is the same with only half the number of executions. Also, given the high exec_count assumed, the `bench_diff` results during the first half should be very close to those obtained during the second half.
+- Recall that bias does not depend on the number of executions, so it is the same with only half the number of executions. Also, given the high exec_count assumed, the `bench_diff` results during the first half should be very close to those obtained during the second half.
 
 ***Traditional* method calculations**
 
-1. With the traditional method, we benchmark f1 with exec_count = 2500 and then benchmark f2 (which is the same as f1 in our example) with exec_count = 2500.
+- With the traditional method, we benchmark f1 with exec_count = 2500 and then benchmark f2 (which is the same as f1 in our example) with exec_count = 2500.
 
-2. Given exec_count = 2500, the noise contributed by β(t) is effectively eliminated.
+- Given exec_count = 2500, the noise contributed by β(t) is effectively eliminated.
 
-3. The first benchmark of f1 takes place during the first 30 seconds. The calculated mean latency is approximately:
+- The first benchmark of f takes place during the first 30 seconds.
 
-   - λ1 / 30000 * **∫**<sub>0</sub><sup>30000</sup> α(t) dt  
+- The calculated sample mean latency is approximately:
 
-     = 12 / 30000 * (30000 + 1/2 * (-cos(30000 * 2\*π / 60000) + cos(0)) / (2\*π / 60000))  
+  - μ / 30000 * **∫**<sub>0</sub><sup>30000</sup> α(t) dt  
 
-     = 12 + 12/30000 * 1/2 * (-cos(π) + cos(0)) / (2\*π / 60000)  
+    = μ / 30000 * (30000 + 1/2 * (-cos(30000 * 2\*π / 60000) + cos(0)) / (2\*π / 60000))  
 
-     = 12 + 12 * (-cos(π) + cos(0)) / (2\*π)  
+    = μ + μ/30000 * 1/2 * (-cos(π) + cos(0)) / (2\*π / 60000)  
 
-     = 12 + 12 * (1 + 1) / (2\*π)  
+    = μ + μ * (-cos(π) + cos(0)) / (2\*π)  
 
-     = 12 * (1 + 1/π)  
+    = μ + μ * (1 + 1) / (2\*π)  
 
-     ≈ 12 * 1.3183
+    = μ * (1 + 1/π)  
 
-   - This is an upward error of more than 30%.
+    ≈ μ * 1.3183
 
-4. The second benchmark of f1 takes place during the second 30 seconds. The calculated mean latency is approximately:
+  - This is an upward error of more than 30%.
 
-   - λ1 / 30000 * **∫**<sub>30000</sub><sup>60000</sup> α(t) dt  
+- The second benchmark of f takes place during the second 30 seconds.
 
-     = 12 / 30000 * (30000 + 1/2 * (-cos(60000 * 2\*π / 60000) + cos(30000 * 2\*π / 60000)) / (2\*π / 60000))  
+- The calculated sample mean latency is approximately:
 
-     = 12 + 12/30000 * 1/2 * (-cos(2\*π) + cos(π)) / (2\*π / 60000)  
+  - μ / 30000 * **∫**<sub>30000</sub><sup>60000</sup> α(t) dt  
 
-     = 12 + 12 * (-cos(2\*π) + cos(π)) / (2\*π)  
+    = μ / 30000 * (30000 + 1/2 * (-cos(60000 * 2\*π / 60000) + cos(30000 * 2\*π / 60000)) / (2\*π / 60000))  
 
-     = 12 + 12 * (-1 + -1) / (2\*π)  
+    = μ + μ/30000 * 1/2 * (-cos(2\*π) + cos(π)) / (2\*π / 60000)  
 
-     = 12 * (1 - 1/π)  
+    = μ + μ * (-cos(2\*π) + cos(π)) / (2\*π)  
 
-     ≈ 12 * 0.6817
+    = μ + μ * (-1 + -1) / (2\*π)  
 
-   - This is an downward error of more than 30%.
+    = μ * (1 - 1/π)  
 
-5. The estimated ratio λ1 / λ1 is approximately 1.3183 / 0.6817 ≈ 1.9338, an estimating error of close to !00%.
+    ≈ μ * 0.6817
+
+  - This is a downward error of more than 30%.
+
+- The estimated ratio of mean latencies is approximately 1.3183 / 0.6817 ≈ 1.9338, an estimating error of 93% in comparison with the baseline ratio of means μ1/μ2 = 1 (which is also equal to the baseline ratio of medians λ1/λ2).
+
+
+**Closing comments for the example**
+
+- In this example, the estimate of λ1/λ2 (or equivalently μ1/μ2) provided by `bench_diff` is accurate to within 2/10 of 1% of the true value of 1. By contrast, the estimate of μ1/μ2 provided by the traditional method is off by 93%.
+- If we "run" `bench_diff` during the model's first 30 seconds, we still get a very accurate estimate of λ1/λ2 but the individual (sample mean) estimates of μ1 and μ2 are both deflated by more than 30%, just like with the *traditional* method.
+- Likewise, if we "run" `bench_diff` during the model's last 30 seconds, we still get a very accurate estimate of λ1/λ2 but the individual (sample mean) estimates of μ1 and μ2 are both inflated by more than 30%, just like with the *traditional* method.
+- The key point of `bench_diff` is to repeatedly run both functions in close time proximity to each other so that the *ratios* of the two functions' latencies are close to the baseline even if the individual latencies themselves are distorted by time-dependent noise.
 
 # Limitations
 

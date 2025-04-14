@@ -161,9 +161,11 @@ Following is a simple mathematical model of time-dependent random noise. This mo
 
 16. Thus, assuming the above product is sufficiently small, the estimates of the ratio of latency medians produced by `bench_diff` should be sufficiently accurate.  
 
+    Rate of change of α(t) < 20% per second, which means A<sub>D</sub> < .0002 when time is measured in milliseconds and A<sub>D</sub> < .0000002 when time is measured in microseconds.
+
     In practice, A<sub>U</sub>/A<sub>L</sub> < 2 and σ < 0.3, so the product A<sub>U</sub>/A<sub>L</sub> * exp(σ<sup>2</sup>/2) < 2.1.
 
-    Notice that while the variability of the statistic mean_diff_ln varies with the sample size (exec_count), this bias upper bound does not change.
+    Notice that while the variability of the statistic mean_diff_ln depends on sample size (exec_count), this bias upper bound does not change.
 
 ## Comparative Example
 

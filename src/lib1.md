@@ -11,7 +11,7 @@ One could tackle these challenges by running the individual benchmarks, one afte
 
 The present library provides a convenient, efficient, and statistically sound alternative to the above cumbersome methodology.
 
-`bench_diff` has been validated by extensive benchmark testing. In addition, a simple mathematical model provides additional corroboration for this library's benchmarking approach.
+`bench_diff` has been validated by extensive benchmark testing.
 
 # Quick Start
 

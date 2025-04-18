@@ -1,6 +1,6 @@
 # A Model of Time-Dependent Random Noise
 
-Following is a simple mathematical model of time-dependent random noise. This model provides additional corroboration for the `bench_diff` approach. Nonetheless, the model's fit with reality is not necessary to validate `bench_diff` as the test benchmarks discussed previously provide independent validation of the library.
+Following is a simple mathematical model of time-dependent random noise. This model is an aid to reasoning about time-dependent random noise and the `bench_diff` approach. Nonetheless, the model's fit with reality is not necessary to validate `bench_diff` as the test benchmarks discussed previously provide independent validation of the library.
 
 ## The Model
 
@@ -43,11 +43,9 @@ This section calculates the expected absolute error of **mean_diff_ln** (see *De
    - ln(L(f1, t<sub>1</sub>)) = ln(λ1) + ln(α(t<sub>1</sub>)) + ln(β(t<sub>1</sub>))
    - ln(L(f2, t<sub>2</sub>)) = ln(λ2) + ln(α(t<sub>1</sub> + Δt<sub>1</sub>)) + ln(β(t<sub>2</sub>))
 
-4. Based on the bound on **α'(t)** from *Assumption 5*:
+4. By Lagrange's mean value theorem and the bounds on **α(t)** and **α'(t)** from *Assumption 5*:
 
    - ln(α(t<sub>1</sub> + Δt<sub>1</sub>))  
-
-     By Lagrange's mean value theorem:
 
      = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * α'(t<sub>p</sub>)/α(t<sub>p</sub>)  **[** _for some t<sub>p</sub> between t<sub>1</sub> and Δt<sub>1</sub>_ **]**  
 
@@ -177,100 +175,6 @@ This section calculates the expected absolute error of **mean_diff_ln** (see *De
 
      - **mean_absolute_error(mean_diff_ln) ≲ (λ1+λ2)/2 * A<sub>D</sub>\*A<sub>U</sub>/A<sub>L</sub> * exp(σ<sup>2</sup>/2)**
 
-
-**Mean Square Error of mean_diff_ln**
-
-This section calculates the mean square error of **mean_diff_ln** (see *Definition 7*) as an estimator of **ln(λ1/λ2)**. In this section, we will assume, without loss of generality, that  **A<sub>L</sub> = 1** (refer to the comments under *Assumption 6*).
-
-1. Defining the mean square error:
-
-   - **square_error(mean_diff_ln)** =<sub>def</sub> (mean_diff_ln - ln(λ1/λ2))<sup>2</sup>  
-
-     = ((mean_diff_ln - E(mean_diff_ln)) + (E(mean_diff_ln) - ln(λ1/λ2)))<sup>2</sup>  
-
-     = (mean_diff_ln - E(mean_diff_ln))<sup>2</sup>  
-
-        \+ (E(mean_diff_ln) - ln(λ1/λ2))<sup>2</sup>  
-
-        \+ 2 * (mean_diff_ln - E(mean_diff_ln)) * (E(mean_diff_ln) - ln(λ1/λ2))  
-
-2. Taking expectations on the above equation:
-
-   - **mean_square_error(mean_diff_ln)** =<sub>def</sub> E(square_error(mean_diff_ln))  
-
-     = E((mean_diff_ln - E(mean_diff_ln))<sup>2</sup>)  
-
-        \+ (E(mean_diff_ln) - ln(λ1/λ2))<sup>2</sup>  
-
-        \+ 2 * E(mean_diff_ln - E(mean_diff_ln)) * (E(mean_diff_ln) - ln(λ1/λ2))  
-
-     Using the definition of variance **Var(X)** =<sub>def</sub> E((X - E(X))<sup>2</sup>) and the fact that E(mean_diff_ln - E(mean_diff_ln)) = 0:
-
-     = Var(mean_diff_ln) + (E(mean_diff_ln) - ln(λ1/λ2))<sup>2</sup>  
-
-     = Var(mean_diff_ln) + |E(mean_diff_ln) - ln(λ1/λ2)|<sup>2</sup>  
-
-     ≤ Var(mean_diff_ln) + E(|mean_diff_ln - ln(λ1/λ2)|)<sup>2</sup>  
-
-     By *Mean Absolute Error Point 12*:  
-
-     ≤ Var(mean_diff_ln) + ((λ1+λ2)/2 * A<sub>D</sub>\*A<sub>U</sub>/A<sub>L</sub> * exp(σ<sup>2</sup>/2) + 2 * σ / √(n\*π))<sup>2</sup>  
-
-3. Calculating the variance of mean_diff_ln from *Mean Absolute Error Point 8*:
-
-   - Var(mean_diff_ln)  
-
-     = Var( (1/n) * (∑<sub>i:odd</sub> (ln(L(f1, t<sub>1,i</sub>)) - ln(L(f2, t<sub>2,i</sub>))) + ∑<sub>i:even</sub> (ln(L(f1, t<sub>1,i</sub>)) - ln(L(f2, t<sub>2,i</sub>)))) )  
-
-     = (1/n<sup>2</sup>) * Var( ∑<sub>i:odd</sub> (ln(L(f1, t<sub>1,i</sub>)) - ln(L(f2, t<sub>2,i</sub>))) + ∑<sub>i:even</sub> (ln(L(f1, t<sub>1,i</sub>)) - ln(L(f2, t<sub>2,i</sub>))) )  
-
-     = (1/n<sup>2</sup>) * Var(  
-
-     ​     ∑<sub>i:odd</sub> (ln(λ1) + ln(α(t<sub>1,i</sub>)) + ln(β(t<sub>1,i</sub>)) - ln(λ2) - ln(α(t<sub>2,i</sub>)) - ln(β(t<sub>2,i</sub>)))  
-
-        \+ ∑<sub>i:even</sub> (ln(λ1) + ln(α(t<sub>1,i</sub>)) + ln(β(t<sub>1,i</sub>)) - ln(λ2) - ln(α(t<sub>2,i</sub>)) - ln(β(t<sub>2,i</sub>))) )  
-
-     = (1/n<sup>2</sup>) * ( ∑<sub>i:odd</sub> (Var(ln(α(t<sub>1,i</sub>))) + Var(ln(α(t<sub>2,i</sub>))) + Var(ln(β(t<sub>1,i</sub>))) + Var(ln(β(t<sub>2,i</sub>))) - 2 * Cov(ln(α(t<sub>1,i</sub>)), ln(α(t<sub>2,i</sub>))) - 2 * Cov(ln(β(t<sub>1,i</sub>)), ln(α(t<sub>2,i</sub>))))  
-
-     ​                \+ ∑<sub>i:even</sub> (Var(ln(α(t<sub>1,i</sub>))) + Var(ln(α(t<sub>2,i</sub>))) + Var(ln(β(t<sub>1,i</sub>))) + Var(ln(β(t<sub>2,i</sub>))) - 2 * Cov(ln(α(t<sub>1,i</sub>)), ln(α(t<sub>2,i</sub>))) - 2 * Cov(ln(β(t<sub>2,i</sub>)), ln(α(t<sub>1,i</sub>)))) )  
-     
-     *Notice that other covariances are zero. For example, Cov(ln(α(t<sub>1,i</sub>)), ln(β(t<sub>1,i</sub>))) and Cov(ln(α(t<sub>1,i</sub>)), ln(β(t<sub>2,i</sub>))) are both zero when i is odd because in that case t<sub>1,i</sub> is determined before either β(t<sub>1,i</sub>) or β(t<sub>2,i</sub>) are generated and all β(t)s are mutually independent.*
-
-4. Calculating values and bounds for the variance and covariance terms above:
-
-   - Var(ln(α(t<sub>1,i</sub>))) ≤ (ln(A<sub>U</sub>))<sup>2</sup>
-   - Var(ln(α(t<sub>2,i</sub>))) ≤ (ln(A<sub>U</sub>))<sup>2</sup>
-   - Var(ln(β(t<sub>1,i</sub>))) = σ<sup>2</sup>
-   - Var(ln(β(t<sub>2,i</sub>))) = σ<sup>2</sup>
-   - |Cov(ln(α(t<sub>1,i</sub>)), ln(α(t<sub>2,i</sub>)))| ≤ (ln(A<sub>U</sub>))<sup>2</sup>
-   - |Cov(ln(β(t<sub>1,i</sub>)), ln(α(t<sub>2,i</sub>)))| ≤ ln(A<sub>U</sub>) * σ / √(2\*π)
-   - |Cov(ln(β(t<sub>2,i</sub>)), ln(α(t<sub>1,i</sub>)))| ≤ ln(A<sub>U</sub>) * σ / √(2\*π)
-
-5. Substituting the right hand sides of *Point 4* above into *Point 3*:
-
-   - Var(mean_diff_ln)  
-
-     ≤ (1/n<sup>2</sup>) * ( ∑<sub>i:odd</sub> ((ln(A<sub>U</sub>))<sup>2</sup> + (ln(A<sub>U</sub>))<sup>2</sup> + σ<sup>2</sup> + σ<sup>2</sup> + 2 * (ln(A<sub>U</sub>))<sup>2</sup> + 2 * ln(A<sub>U</sub>) * σ / √(2\*π))  
-
-     ​                \+ ∑<sub>i:even</sub> ((ln(A<sub>U</sub>))<sup>2</sup> + (ln(A<sub>U</sub>))<sup>2</sup> + σ<sup>2</sup> + σ<sup>2</sup> + 2 * (ln(A<sub>U</sub>))<sup>2</sup> + 2 * ln(A<sub>U</sub>) * σ / √(2\*π)) )  
-
-     = (1/n) * ((ln(A<sub>U</sub>))<sup>2</sup> + (ln(A<sub>U</sub>))<sup>2</sup> + σ<sup>2</sup> + σ<sup>2</sup> + 2 * (ln(A<sub>U</sub>))<sup>2</sup> + 2 * ln(A<sub>U</sub>) * σ / √(2\*π))  
-
-     = (2/n) * ((ln(A<sub>U</sub>))<sup>2</sup> + σ<sup>2</sup> + (ln(A<sub>U</sub>))<sup>2</sup> + ln(A<sub>U</sub>) * σ / √(2\*π))
-
-6. Therefore, substituting *Point 5* into *Point 2*:
-
-   - mean_square_error(mean_diff_ln)  
-
-     ≤ (2/n) * ((ln(A<sub>U</sub>))<sup>2</sup> + σ<sup>2</sup> + (ln(A<sub>U</sub>))<sup>2</sup> + ln(A<sub>U</sub>) * σ / √(2\*π)) + ( (λ1+λ2)/2 * A<sub>D</sub>\*A<sub>U</sub>/A<sub>L</sub> * exp(σ<sup>2</sup>/2) + 2 * σ / √(n\*π) )<sup>2</sup>
-
-7. So, for a large sample size n, the above upper bound on the mean square error of mean_diff_ln becomes:  
-
-   - **mean_square_error(mean_diff_ln) ≲ ((λ1+λ2)/2 * A<sub>D</sub>\*A<sub>U</sub>/A<sub>L</sub> * exp(σ<sup>2</sup>/2))<sup>2</sup>**
-
-   And:
-
-   - √(mean_square_error(mean_diff_ln)) ≲ (λ1+λ2)/2 * A<sub>D</sub>\*A<sub>U</sub>/A<sub>L</sub> * exp(σ<sup>2</sup>/2)
 
 **Parameter Estimates**
 

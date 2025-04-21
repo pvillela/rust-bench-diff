@@ -11,12 +11,14 @@ use std::{
 static WARMUP_MILLIS: AtomicU64 = AtomicU64::new(3_000);
 
 /// The currently defined number of milliseconds used to "warm-up" the benchmark. The default is 3,000 ms.
+///
+/// Use [`set_warmup_millis`] to change the value.
 pub fn get_warmup_millis() -> u64 {
     WARMUP_MILLIS.load(Ordering::Relaxed)
 }
 
 /// Changes the number of milliseconds used to "warm-up" the benchmark. The default is 3,000 ms.
-pub fn set_wamup_millis(millis: u64) {
+pub fn set_warmup_millis(millis: u64) {
     WARMUP_MILLIS.store(millis, Ordering::Relaxed);
 }
 
@@ -158,11 +160,12 @@ impl DiffState {
         mut f2: impl FnMut(),
         exec_count: usize,
         pre_exec: impl FnOnce(),
-        mut exec_status: impl FnMut(),
+        mut exec_status: impl FnMut(usize),
+        init_status_count: usize,
     ) {
         pre_exec();
 
-        for _ in 1..=exec_count / 2 {
+        for i in 1..=exec_count / 2 {
             let pairs = duo_exec(&mut f1, &mut f2);
 
             for (latency1, latency2) in pairs {
@@ -171,7 +174,8 @@ impl DiffState {
                 self.capture_data(elapsed1, elapsed2);
             }
 
-            exec_status();
+            // `i * 2` to account for duos
+            exec_status(init_status_count + i * 2);
         }
     }
 
@@ -188,7 +192,15 @@ impl DiffState {
         let warmup_millis = get_warmup_millis();
         let start = Instant::now();
         for i in 1.. {
-            self.execute(unit, &mut f1, &mut f2, WARMUP_INCREMENT_COUNT, || {}, || {});
+            self.execute(
+                unit,
+                &mut f1,
+                &mut f2,
+                WARMUP_INCREMENT_COUNT,
+                || {},
+                |_| {},
+                0,
+            );
             let elapsed = Instant::now().duration_since(start);
             warmup_status(i, elapsed.as_millis() as u64, warmup_millis);
             if elapsed.ge(&Duration::from_millis(warmup_millis)) {
@@ -231,11 +243,15 @@ impl DiffState {
 /// - `f2` - second target for comparison.
 /// - `exec_count` - number of executions (sample size) for each function.
 /// - `warmup_status` - is invoked every so often during warm-up and can be used to output the warm-up status,
-///   e.g., how much warm-up time has elapsed and the target warm-up time.
+///   e.g., how much warm-up time has elapsed and the target warm-up time. The first argument is the warm-up
+///   execution iteration, the second is the elapsed warm-up time, and the third is the target warm-up time.
+///   (See the source code of [`bench_diff_with_status`] for an example.)
 /// - `pre_exec` - is invoked once at the beginning of data collection, after warm-up. It can be used,
 ///   for example, to output a preamble to the execution status (see `exec_status` below).
 /// - `exec_status` - is invoked after the execution of each *duo* and can be used to output on the execution
-///   status, e.g., how many samples have been collected for the pair of functions versus `exec_count`.
+///   status, e.g., how many observations have been collected for the pair of functions versus `exec_count`.
+///   Its argument is the current number of executions performed.
+///   (See the source code of [`bench_diff_with_status`] for an example.)
 pub fn bench_diff_x(
     unit: LatencyUnit,
     mut f1: impl FnMut(),
@@ -243,7 +259,7 @@ pub fn bench_diff_x(
     exec_count: usize,
     mut warmup_status: impl FnMut(usize, u64, u64),
     pre_exec: impl FnOnce(),
-    mut exec_status: impl FnMut(),
+    mut exec_status: impl FnMut(usize),
 ) -> DiffOut {
     let exec_count2 = exec_count / 2;
 
@@ -257,10 +273,19 @@ pub fn bench_diff_x(
         exec_count2,
         pre_exec,
         &mut exec_status,
+        0,
     );
 
     let mut state_rev = DiffState::new();
-    state_rev.execute(unit, &mut f2, &mut f1, exec_count2, || (), &mut exec_status);
+    state_rev.execute(
+        unit,
+        &mut f2,
+        &mut f1,
+        exec_count2,
+        || (),
+        &mut exec_status,
+        exec_count2,
+    );
 
     state
         .merge_reversed(state_rev)
@@ -289,13 +314,12 @@ pub fn bench_diff(
     f2: impl FnMut(),
     exec_count: usize,
 ) -> DiffOut {
-    bench_diff_x(unit, f1, f2, exec_count, |_, _, _| {}, || (), || ())
+    bench_diff_x(unit, f1, f2, exec_count, |_, _, _| {}, || (), |_| ())
 }
 
 /// Compares latencies for two closures `f1` and `f2` and outputs information about the benchmark and its
 /// execution status. Execution status is output to `stderr`.
 ///
-/// At the beginning of the functions
 /// This function repeatedly executes *duos* of pairs (`f1`, `f2`), (`f2`, `f1`) and collects the resulting
 /// latency data in a [`DiffOut`] object.
 /// Prior to data collection, the benchmark is "warmed-up" by executing the duos of pairs for
@@ -346,10 +370,8 @@ pub fn bench_diff_with_status(
 
     let exec_status = {
         let mut status_len: usize = 0;
-        let mut i = 0;
 
-        move || {
-            i += 2; // account for duos
+        move |i| {
             eprint!("{}", "\u{8}".repeat(status_len));
             let status = format!("{i} of {exec_count}.");
             status_len = status.len();

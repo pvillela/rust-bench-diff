@@ -145,7 +145,7 @@ fn cmd_line_args() -> Option<(usize, String)> {
 
     let nrepeats = match args.nth(1) {
         Some(v) if v.ne("--bench") => v.parse::<usize>().expect(&format!(
-            "1st argument, if provided, must be non-negative integer; was \"{v}\""
+            "*** 1st argument, if provided, must be non-negative integer; was \"{v}\""
         )),
         _ => return None,
     };
@@ -163,42 +163,41 @@ pub fn get_args() -> Args {
 
     let scale_name = env::var("SCALE_NAME").unwrap_or("micros_scale".into());
 
+    let all_fn_name_pairs = || -> Vec<(String, String)> {
+        FN_NAME_PAIRS
+            .iter()
+            .map(|(name1, name2)| (name1.to_string(), name2.to_string()))
+            .collect()
+    };
+
     let fn_name_pairs: Vec<(String, String)> = {
         let fn_name_pairs_res = env::var("FN_NAME_PAIRS");
         match &fn_name_pairs_res {
-            Ok(s) if s == "all" => FN_NAME_PAIRS
-                .iter()
-                .map(|(name1, name2)| (name1.to_string(), name2.to_string()))
-                .collect(),
+            Ok(s) if s == "all" => all_fn_name_pairs(),
             Ok(s) => s
                 .split_whitespace()
                 .map(|x| {
                     let pair_v = x.split("/").collect::<Vec<_>>();
                     let err_msg =
-                    "properly formatted function name pair must contain one `/` and no whitespace: "
+                    "*** properly formatted function name pair must contain one `/` and no whitespace: "
                         .to_string() + x;
                     assert!(pair_v.len() == 2, "{err_msg}");
                     (pair_v[0].to_string(), pair_v[1].to_string())
                 })
                 .collect::<Vec<_>>(),
-            Err(_) => {
-                vec![
-                    ("base_median_no_var".into(), "base_median_no_var".into()),
-                    ("base_median_no_var".into(), "hi_1pct_median_no_var".into()),
-                ]
-            }
+            Err(_) => all_fn_name_pairs(),
         }
     };
 
     let verbose: bool = {
-        let verbose_str = env::var("VERBOSE").unwrap_or("true".into());
+        let verbose_str = env::var("VERBOSE").unwrap_or("false".into());
         verbose_str
             .parse()
             .expect("VERBOSE environment variable has invalid string representation of boolean")
     };
 
     let noise_stats: bool = {
-        let noise_stats_str = env::var("NOISE_STATS").unwrap_or("true".into());
+        let noise_stats_str = env::var("NOISE_STATS").unwrap_or("false".into());
         noise_stats_str
             .parse()
             .expect("NOISE_STATS environment variable has invalid string representation of boolean")

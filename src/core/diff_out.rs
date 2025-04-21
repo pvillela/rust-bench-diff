@@ -157,12 +157,12 @@ impl DiffOut {
         sample_stdev(self.n(), self.sum_ln_f1, self.sum2_ln_f1)
     }
 
-    /// Mean of the natural logarithms of `f1`'s latencies.
+    /// Mean of the natural logarithms of `f2`'s latencies.
     pub fn mean_ln_f2(&self) -> f64 {
         sample_mean(self.n(), self.sum_ln_f2)
     }
 
-    /// Standard deviation of the natural logarithms `f1`'s latecies.
+    /// Standard deviation of the natural logarithms `f2`'s latecies.
     pub fn stdev_ln_f2(&self) -> f64 {
         sample_stdev(self.n(), self.sum_ln_f2, self.sum2_ln_f2)
     }
@@ -181,7 +181,7 @@ impl DiffOut {
     }
 
     /// Mean of the differences between the natural logarithms of paired latencies of `f1` and `f2`.
-    /// (*Not* the difference between the mean of the natural logarithms of `f1`'s latencies and
+    /// (Same as the difference between the mean of the natural logarithms of `f1`'s latencies and
     /// the mean of the natural logarithms of`f2`'s latencies.)
     pub fn mean_diff_ln_f1_f2(&self) -> f64 {
         sample_mean(self.n(), self.sum_diff_ln_f1_f2)
@@ -194,7 +194,7 @@ impl DiffOut {
         sample_stdev(self.n(), self.sum_diff_ln_f1_f2, self.sum2_diff_ln_f1_f2)
     }
 
-    /// Appproximation of the ratio of the median of `f1`'s latencies to the median of `f2`'s latencies,
+    /// Estimated ratio of the median `f1` latency to the median `f2` latency,
     /// computed as the `exp()` of [`Self::mean_diff_ln_f1_f2`].
     pub fn ratio_medians_f1_f2_from_lns(&self) -> f64 {
         self.mean_diff_ln_f1_f2().exp()

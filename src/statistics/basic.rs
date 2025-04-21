@@ -77,12 +77,12 @@ pub fn bernoulli_p_hat(n: u64, successes: f64) -> f64 {
 /// - `p_hat`: estimate of mean of the Bernoulli distribution. See [`bernoulli_p_hat`].
 /// - `alpha`: confidence level.
 pub fn bernoulli_psucc_ci(n: u64, p_hat: f64, alpha: f64) -> Ci {
-    let nr = n as f64;
+    let nf = n as f64;
     let p = p_hat;
     let z_alpha_2 = z_alpha(alpha / 2.);
-    let mid = p + z_alpha_2.powi(2) / (2. * nr);
-    let delta = z_alpha_2 * (p * (1. - p) / nr + z_alpha_2.powi(2) / (4. * nr.powi(2))).sqrt();
-    let denom = 1. + z_alpha_2.powi(2) / nr;
+    let mid = p + z_alpha_2.powi(2) / (2. * nf);
+    let delta = z_alpha_2 * (p * (1. - p) / nf + z_alpha_2.powi(2) / (4. * nf.powi(2))).sqrt();
+    let denom = 1. + z_alpha_2.powi(2) / nf;
     Ci((mid - delta) / denom, (mid + delta) / denom)
 }
 
@@ -170,7 +170,7 @@ impl SampleMoments {
         self.count
     }
 
-    pub fn nr(&self) -> f64 {
+    pub fn nf(&self) -> f64 {
         self.count as f64
     }
 
@@ -179,7 +179,7 @@ impl SampleMoments {
     }
 
     pub fn mean(&self) -> f64 {
-        self.sum / self.nr()
+        self.sum / self.nf()
     }
 
     pub fn sum2(&self) -> f64 {
@@ -222,8 +222,8 @@ impl Default for SampleMoments {
 }
 
 pub fn welch_t(moments_a: &SampleMoments, moments_b: &SampleMoments) -> f64 {
-    let n_a = moments_a.nr();
-    let n_b = moments_b.nr();
+    let n_a = moments_a.nf();
+    let n_b = moments_b.nf();
     let dx = moments_a.mean() - moments_b.mean();
     let s2_a = moments_a.stdev().powi(2);
     let s2_b = moments_b.stdev().powi(2);
@@ -234,8 +234,8 @@ pub fn welch_t(moments_a: &SampleMoments, moments_b: &SampleMoments) -> f64 {
 }
 
 pub fn welch_df(moments_a: &SampleMoments, moments_b: &SampleMoments) -> f64 {
-    let n_a = moments_a.nr();
-    let n_b = moments_b.nr();
+    let n_a = moments_a.nf();
+    let n_b = moments_b.nf();
     let s2_a = moments_a.stdev().powi(2);
     let s2_b = moments_b.stdev().powi(2);
     let s2_mean_a = s2_a / n_a;
@@ -257,8 +257,8 @@ pub fn welch_alt_hyp_ci(
     alt_hyp: AltHyp,
     alpha: f64,
 ) -> Ci {
-    let n_a = moments_a.nr();
-    let n_b = moments_b.nr();
+    let n_a = moments_a.nf();
+    let n_b = moments_b.nf();
     let dx = moments_a.mean() - moments_b.mean();
     let s2_a = moments_a.stdev().powi(2);
     let s2_b = moments_b.stdev().powi(2);
@@ -297,14 +297,14 @@ pub fn welch_test(
 }
 
 pub fn student_one_sample_t(moments: &SampleMoments, mu0: f64) -> f64 {
-    let n = moments.nr();
+    let n = moments.nf();
     let mean = moments.mean();
     let s = moments.stdev();
     (mean - mu0) / s * n.sqrt()
 }
 
 pub fn student_one_sample_df(moments: &SampleMoments) -> f64 {
-    moments.nr() - 1.
+    moments.nf() - 1.
 }
 
 pub fn student_one_sample_p(moments: &SampleMoments, mu0: f64, alt_hyp: AltHyp) -> f64 {
@@ -324,7 +324,7 @@ pub fn student_one_sample_alt_hyp_ci(moments: &SampleMoments, alt_hyp: AltHyp, a
     };
 
     let mid = moments.mean();
-    let delta = (moments.stdev() / moments.nr().sqrt()) * t0;
+    let delta = (moments.stdev() / moments.nf().sqrt()) * t0;
 
     match alt_hyp {
         AltHyp::Lt => Ci(-f64::INFINITY, mid + delta),

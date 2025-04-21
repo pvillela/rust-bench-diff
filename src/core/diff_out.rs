@@ -80,11 +80,11 @@ impl DiffOut {
         self.hist_f1.len()
     }
 
-    /// Number of observations (sample size) for a function, as a floating point (*r*eal or *r*ational) number.
+    /// Number of observations (sample size) for a function, as a floating point number.
     ///
     /// It is the same value for `f1` and `f2`.
     #[inline(always)]
-    pub fn nr(&self) -> f64 {
+    pub fn nf(&self) -> f64 {
         self.hist_f1.len() as f64
     }
 
@@ -328,7 +328,7 @@ impl DiffOut {
     /// Degrees of freedom for Student's one-sample t-test for
     /// `mean(latency(f1) - latency(f2))`.
     pub fn student_diff_df(&self) -> f64 {
-        self.nr() - 1.
+        self.nf() - 1.
     }
 
     #[cfg(feature = "dev_support")]
@@ -390,7 +390,7 @@ impl DiffOut {
     /// Degrees of freedom for Student's one-sample t-test for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_df(&self) -> f64 {
-        self.nr() - 1.
+        self.nf() - 1.
     }
 
     /// Student's one-sample confidence interval for

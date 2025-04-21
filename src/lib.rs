@@ -18,8 +18,6 @@
 //! ````
 //!
 #![doc = include_str!("lib2.md")]
-//!
-
 #![deny(clippy::unwrap_used)]
 
 mod core;

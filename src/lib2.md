@@ -162,27 +162,22 @@ This section calculates a bound on |E(mean_diff_ln) - ln(λ<sub>1</sub>/λ<sub>2
 
       ≤ (1/n) * λ<sub>1</sub> * ∑<sub>i:odd</sub>  E(β(t<sub>1,i</sub>) * |ε<sub>1</sub>(t<sub>1,i</sub>)|) + (1/n) * λ<sub>2</sub> * ∑<sub>i:even</sub> E(β(t<sub>2,i</sub>) * |ε<sub>2</sub>(t<sub>2,i</sub>)|)  
 
-      ≤ (1/n) * λ<sub>1</sub> * ∑<sub>i:odd</sub>  E(β(t<sub>1,i</sub>) * A<sub>D</sub>\*(1\+λ<sub>1</sub>\*A<sub>D</sub>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*β(t<sub>1,i</sub>))) + 
-
-         (1/n) * λ<sub>2</sub> * ∑<sub>i:even</sub> E(β(t<sub>2,i</sub>) * A<sub>D</sub>\*(1\+λ<sub>2</sub>\*A<sub>D</sub>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*β(t<sub>2,i</sub>)))  
+      ≤ (1/n) * λ<sub>1</sub> * ∑<sub>i:odd</sub>  E(β(t<sub>1,i</sub>) * A<sub>D</sub>\*(1\+λ<sub>1</sub>\*A<sub>D</sub>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*β(t<sub>1,i</sub>))) +  
+      (1/n) * λ<sub>2</sub> * ∑<sub>i:even</sub> E(β(t<sub>2,i</sub>) * A<sub>D</sub>\*(1\+λ<sub>2</sub>\*A<sub>D</sub>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*β(t<sub>2,i</sub>)))  
 
       = (1/n) * λ<sub>1</sub> * ∑<sub>i:odd</sub>  (A<sub>D</sub>\*E(β(t<sub>1,i</sub>) + λ<sub>1</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*E(β(t<sub>1,i</sub>)<sup>2</sup>)) + 
-
-         (1/n) * λ<sub>2</sub> * ∑<sub>i:even</sub> (A<sub>D</sub>\*E(β(t<sub>2,i</sub>) + λ<sub>2</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*E(β(t<sub>2,i</sub>)<sup>2</sup>))  
+      (1/n) * λ<sub>2</sub> * ∑<sub>i:even</sub> (A<sub>D</sub>\*E(β(t<sub>2,i</sub>) + λ<sub>2</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*E(β(t<sub>2,i</sub>)<sup>2</sup>))  
 
       By the expectation of log-normal distributions:  
 
-      = (1/n) * λ<sub>1</sub> * ∑<sub>i:odd</sub>  (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>1</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp((2\*σ)<sup>2</sup>/2)) + 
+      = (1/n) * λ<sub>1</sub> * ∑<sub>i:odd</sub>  (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>1</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp((2\*σ)<sup>2</sup>/2)) +  
+      (1/n) * λ<sub>2</sub> * ∑<sub>i:even</sub> (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>2</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp((2\*σ)<sup>2</sup>/2))  
 
-         (1/n) * λ<sub>2</sub> * ∑<sub>i:even</sub> (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>2</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp((2\*σ)<sup>2</sup>/2))  
+      = (1/n) * λ<sub>1</sub> * ∑<sub>i:odd</sub>  (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>1</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>)) +  
+      (1/n) * λ<sub>2</sub> * ∑<sub>i:even</sub> (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>2</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>))  
 
-      = (1/n) * λ<sub>1</sub> * ∑<sub>i:odd</sub>  (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>1</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>)) + 
-
-         (1/n) * λ<sub>2</sub> * ∑<sub>i:even</sub> (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>2</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>))  
-
-      = λ<sub>1</sub> / 2 * (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>1</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>)) + 
-
-         λ<sub>2</sub> / 2 * (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>2</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>))  
+      = λ<sub>1</sub> / 2 * (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>1</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>)) +  
+      λ<sub>2</sub> / 2 * (A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + λ<sub>2</sub>\*A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>))  
 
       = (λ<sub>1</sub>\+λ<sub>2</sub>)/2 * A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + (λ<sub>1</sub><sup>2</sup>+λ<sub>2</sub><sup>2</sup>)/2 * A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>)
 
@@ -215,20 +210,18 @@ This section calculates the expected absolute error of **mean_diff_ln** (see *De
    - **mean_absolute_error(mean_diff_ln)** =<sub>def</sub> E(absolute_error(mean_diff_ln))  
 
        ≤ (1/n) * λ<sub>1</sub> * ∑<sub>i:odd</sub>  E(β(t<sub>1,i</sub>) * |ε<sub>1</sub>(t<sub>1,i</sub>)|) + (1/n) * λ<sub>2</sub> * ∑<sub>i:even</sub> E(β(t<sub>2,i</sub>) * |ε<sub>2</sub>(t<sub>2,i</sub>)|) +  
-
-          (1/n) * E(|∑<sub>i:odd</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>))) - ∑<sub>i:even</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>)))|)  
-       
-       By *Expectation Point 2*, the first line on the right hand side of the above inequality is bounded by the last line of *Expectation Point 2*. Thus:  
+      (1/n) * E(|∑<sub>i:odd</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>))) - ∑<sub>i:even</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>)))|)  
+      
+      By *Expectation Point 2*, the first line on the right hand side of the above inequality is bounded by the last line of *Expectation Point 2*. Thus:  
        
        ≤ (λ<sub>1</sub>\+λ<sub>2</sub>)/2 * A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + (λ<sub>1</sub><sup>2</sup>+λ<sub>2</sub><sup>2</sup>)/2 * A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>) + 
        
-          (1/n) * E(|∑<sub>i:odd</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>))) - ∑<sub>i:even</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>)))|)  
+      (1/n) * E(|∑<sub>i:odd</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>))) - ∑<sub>i:even</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>)))|)  
        
        By *Expectation Point 3*:  
        
-       = BE +  
-       
-          (1/n) * E(|∑<sub>i:odd</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>))) - ∑<sub>i:even</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>)))|)  
+       = BE +   
+      (1/n) * E(|∑<sub>i:odd</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>))) - ∑<sub>i:even</sub> (ln(β(t<sub>1,i</sub>)) - ln(β(t<sub>2,i</sub>)))|)  
        
        On the line immediately above, term inside the absolute value is the sum of 2*n independently distributed normal random variables with mean 0 and standard deviation σ. It is, therefore, a normal distribution with mean 0 and standard deviation σ\*√(2\*n). From the formula for the expectation of the absolute value of a normal random variable, we get:  
        

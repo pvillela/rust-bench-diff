@@ -1,6 +1,8 @@
 # A Model of Time-Dependent Random Noise
 
-Following is a simple mathematical model of time-dependent random noise. This model is an aid to reasoning about time-dependent random noise and the `bench_diff` approach. Nonetheless, the model's fit with reality is not necessary to validate `bench_diff` as the test benchmarks discussed previously provide independent validation of the library.
+Following is a simple mathematical model of time-dependent random noise. This model is useful for reasoning about time-dependent noise and helps in understanding why `bench_diff` is more effective than traditional benchmarking for the comparison of latencies between two functions.
+
+Nonetheless, the model's fit with reality is not necessary to validate `bench_diff` as the test benchmarks discussed previously provide independent validation of the library.
 
 ## The Model
 
@@ -64,7 +66,7 @@ This section expands **mean_diff_ln** (see *Definition 7*) to facilitate subsequ
 
      = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * α'(t<sub>p</sub>)/α(t<sub>1</sub>) * α(t<sub>1</sub>)/α(t<sub>p</sub>)  
 
-     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * α'(t<sub>p</sub>)/α(t<sub>1</sub>) * (1 + α(t<sub>1</sub>)/α(t<sub>p</sub>) - α(t<sub>1</sub>)/α(t<sub>1</sub>)  
+     = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * α'(t<sub>p</sub>)/α(t<sub>1</sub>) * (1 + α(t<sub>1</sub>)/α(t<sub>p</sub>) - α(t<sub>1</sub>)/α(t<sub>1</sub>))  
 
      = ln(α(t<sub>1</sub>)) + Δt<sub>1</sub> * α'(t<sub>p</sub>)/α(t<sub>1</sub>) * (1 + α(t<sub>1</sub>) * 1/(α(t<sub>p</sub>) - 1/α(t<sub>1</sub>)))  
 
@@ -126,7 +128,7 @@ This section expands **mean_diff_ln** (see *Definition 7*) to facilitate subsequ
 
    - ln(L(f<sub>1</sub>, t<sub>1'</sub>)) - ln(L(f<sub>2</sub>, t<sub>2'</sub>) = ln(λ<sub>1</sub>/λ<sub>2</sub>) + λ<sub>2</sub> * β(t<sub>2'</sub>) * ε<sub>2</sub>(t<sub>2'</sub>) - ln(β(t<sub>1'</sub>)) + ln(β(t<sub>2'</sub>))  
 
-     **[** _where ε<sub>2</sub>(t<sub>2'</sub>) =<sub>def</sub> α'(t<sub>p'</sub>)\*(1\-α(t<sub>2'</sub>)\*α'(t<sub>q'</sub>)/α(t<sub>q'</sub>)<sup>2</sup>\*(t<sub>p'</sub>\-t<sub>2'</sub>)), and thus |ε<sub>2</sub>(t<sub>2'</sub>)| ≤ A<sub>D</sub>\*(1\+λ<sub>2</sub>\*A<sub>D</sub>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*β(t<sub>2'</sub>))) (see Point 6)_**]**
+     **[** _where ε<sub>2</sub>(t<sub>2'</sub>) =<sub>def</sub> α'(t<sub>p'</sub>)\*(1\-α(t<sub>2'</sub>)\*α'(t<sub>q'</sub>)/α(t<sub>q'</sub>)<sup>2</sup>\*(t<sub>p'</sub>\-t<sub>2'</sub>)), and thus |ε<sub>2</sub>(t<sub>2'</sub>)| ≤ A<sub>D</sub>\*(1\+λ<sub>2</sub>\*A<sub>D</sub>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*β(t<sub>2'</sub>))) (see Point 6)_ **]**
 
 8. Assuming the number of latency observations for each function is **n** and considering the two cases as described in *Point 7*, we can calculate the sample mean difference between the natural logarithms of the observed latencies (see *Definition 7*):  
 
@@ -291,9 +293,9 @@ This section calculates the expected absolute error of **mean_diff_ln** (see *De
 
      = ((λ<sub>1</sub>\+λ<sub>2</sub>)/2 * A<sub>D</sub>\*exp(σ<sup>2</sup>/2) + (λ<sub>1</sub><sup>2</sup>+λ<sub>2</sub><sup>2</sup>)/2 * A<sub>D</sub><sup>2</sup>\*A<sub>U</sub><sup>2</sup>/A<sub>L</sub><sup>2</sup>\*exp(2\*σ<sup>2</sup>)) * (√(π/2) * 2.58 + 1)
 
-**Parameter Values**
+**Reasonable Parameter Values**
 
-Following are some reasonable parameter values to expect in practice:
+In practice, one could reasonably expect the time-dependent random noise parameters to be no greater (and likely substantially lower) than the following:
 
 - Rate of change of α(t) < 5% per second, which means A<sub>D</sub> < .00005 when time is measured in milliseconds and A<sub>D</sub> < .00000005 when time is measured in microseconds.
 - A<sub>U</sub>/A<sub>L</sub> < 2

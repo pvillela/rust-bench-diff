@@ -9,9 +9,9 @@ Due to these effects, at the microseconds latency magnitude, a function that is 
 
 One could tackle these challenges by running the individual benchmarks, one after the other, repeating that multiple times, and using appropriate statistical methods to compare the two observed latency distributions. This is, however, quite time consuming and requires careful planning and analysis.
 
-The present library provides a convenient, efficient, and statistically sound alternative to the above cumbersome methodology.
+The present library has been validated by extensive benchmark testing and provides a convenient, efficient, and statistically sound alternative to the above cumbersome methodology.
 
-`bench_diff` has been validated by extensive benchmark testing.
+For the mathematically inclined reader, a later section presents a simple [model](#a-model-of-time-dependent-random-noise) to reason about time-dependent random noise.
 
 # Quick Start
 
@@ -49,9 +49,21 @@ An important tool used for data collection in this library is the [hdrhistogram]
 
 # Statistics
 
-Standard summary statistics (mean, standard deviation, median, percentiles, min, max) and a variety of inferential statistics (e.g., hypothesis tests, confidence intervals, t values, p values) are implemented.
+Standard summary statistics (mean, standard deviation, median, percentiles, min, max) and a variety of inferential statistics (e.g., hypothesis tests, confidence intervals, t values, p values) are implemented for the [`DiffOut`] struct, which is output from the library's core benchmarking functions.
 
 Much of the statistical inference supported by this library is based on the assumption that latency distributions tend to have an approximately lognormal distribution. This is a widely made assumption, which is supported by theory as well as empirical data. While the lognormal assumption underlies much of the statistical inference capability in this library, benchmarks using functions with controlled latencies have been conducted (see [Testing](#testing) below) to validate the soundness of the statistics.
+
+**t-tests**
+
+The [`DiffOut`] struct has two sets of methods associated with t-tests:
+- The methods whose names include the string `welch` correspond to statistics associated with the Welch
+  two-sample t-test for the difference between the means of the natural logarithms of the latencies of `f1`
+  and `f2`.
+- The methods whose names include the string `student` correspond to statistics associated with the Student
+  one-sample t-test for equality to 0 of the mean of the differences of the natural logarithms of the paired
+  latencies of `f1` and `f2`.
+- In benchmark tests (with typical large sample sizes) the Welch and Student variants produced roughly the same results
+  in terms of Type I and Type II error rates, though the Student confidence intervals tended to be a little tighter.
 
 # Testing
 

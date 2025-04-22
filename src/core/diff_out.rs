@@ -20,7 +20,7 @@ use crate::statistics::{self, bernoulli_psucc_ci};
 /// Its methods provide descriptive and inferential statistics about the latency samples of the two
 /// benchmarked functions, individually and in relation to each other.
 ///
-/// *NOTE*: All statistics involving differences refer to a value for `f1` minus the corresponding
+/// All statistics involving differences refer to a value for `f1` minus the corresponding
 /// value for `f2`.
 pub struct DiffOut {
     pub(super) hist_f1: Timing,
@@ -265,8 +265,8 @@ impl DiffOut {
     /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm),
     /// with confidence level `(1 - alpha)`.
     ///
-    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
-    /// performance analysis theory and empirical data.
+    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
     ///
     /// This is also the confidence interval for the difference of medians of logarithms under the above assumption.
     pub fn welch_ln_ci(&self, alpha: f64) -> Ci {
@@ -279,8 +279,8 @@ impl DiffOut {
     /// `median(latency(f1)) / median(latency(f2))`,
     /// with confidence level `(1 - alpha)`.
     ///
-    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
-    /// performance analysis theory and empirical data.
+    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn welch_ratio_ci(&self, alpha: f64) -> Ci {
         let Ci(log_low, log_high) = self.welch_ln_ci(alpha);
         let low = log_low.exp();
@@ -293,8 +293,8 @@ impl DiffOut {
     /// `median(latency(f1)) / median(latency(f2))`,
     /// with confidence level `(1 - alpha)`.
     ///
-    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
-    /// performance analysis theory and empirical data.
+    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn welch_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.welch_ratio_ci(alpha);
         ci.position_of(value)
@@ -304,8 +304,8 @@ impl DiffOut {
     /// `median(latency(f1)) == median(latency(f2))`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
     ///
-    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
-    /// performance analysis theory and empirical data.
+    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn welch_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
         let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
@@ -397,8 +397,8 @@ impl DiffOut {
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     /// with confidence level `(1 - alpha)`.
     ///
-    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
-    /// performance analysis theory and empirical data.
+    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn student_diff_ln_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
@@ -412,8 +412,8 @@ impl DiffOut {
     /// `median(latency(f1)) / median(latency(f2))`,
     /// with confidence level `(1 - alpha)`.
     ///
-    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
-    /// performance analysis theory and empirical data.
+    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn student_ratio_ci(&self, alpha: f64) -> Ci {
         let Ci(log_low, log_high) = self.student_diff_ln_ci(alpha);
         let low = log_low.exp();
@@ -426,8 +426,8 @@ impl DiffOut {
     /// `median(latency(f1)) / median(latency(f2))`,
     /// with confidence level `(1 - alpha)`.
     ///
-    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
-    /// performance analysis theory and empirical data.
+    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn student_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.student_ratio_ci(alpha);
         ci.position_of(value)
@@ -437,8 +437,8 @@ impl DiffOut {
     /// `median(latency(f1)) == median(latency(f2))`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
     ///
-    /// Assumes that both `latency(f1)` and `latency(f2)` are log-normal. This assumption is widely supported by
-    /// performance analysis theory and empirical data.
+    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn student_diff_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.hist_f1.len(),

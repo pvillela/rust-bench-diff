@@ -1,6 +1,6 @@
 [package]
 name = "bench_diff"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2024"
 license = "MIT"
 description = "Reliably compare the latencies of two functions/closures."
@@ -15,19 +15,7 @@ keywords = [
     "difference",
 ]
 categories = ["development-tools::profiling"]
-exclude = [
-    "CHANGELOG.md",
-    "*.sh",
-    ".gitignore",
-    "examples",
-    "bench_support",
-    "test_support",
-    "dev_utils",
-    "benches/basic_bench.rs",
-    "benches/busy_bench.rs",
-    "benches/main_bench.rs",
-    "benches/naive_bench.rs",
-]
+exclude = ["CHANGELOG.md", "*.sh", ".gitignore", "examples"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

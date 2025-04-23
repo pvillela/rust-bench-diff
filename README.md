@@ -11,7 +11,8 @@ Due to these effects, at the microseconds latency magnitude, a function that is 
 
 One could tackle these challenges by running the individual benchmarks, one after the other, repeating that multiple times, and using appropriate statistical methods to compare the two observed latency distributions. This is, however, quite time consuming and requires careful planning and analysis.
 
-The present library provides a convenient, efficient, and statistically sound alternative to the above cumbersome methodology.
+The present library has been validated by extensive benchmark testing and provides a convenient, efficient, and statistically sound alternative to the above more cumbersome methodology.
+
 
 ## Documentation
 

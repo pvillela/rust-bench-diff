@@ -387,6 +387,7 @@ pub fn wilcoxon_rank_sum_test_no_ties_adjust(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod base_test {
     //! Tests other than `test_w` used R's wilcox.test function to generate expected results.
     //! https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/wilcox.test
@@ -603,6 +604,7 @@ mod base_test {
 
 #[cfg(test)]
 #[cfg(feature = "hypors")]
+#[allow(clippy::unwrap_used)]
 mod test_with_hypors {
     use super::*;
     use crate::{dev_utils::ApproxEq, statistics::AltHyp};
@@ -624,10 +626,10 @@ mod test_with_hypors {
             hist_b.record(*v).unwrap();
         }
 
-        let (ranked_items, _) = wilcoxon_ranked_items_ties_sum_prod(&mut hist_a, &mut hist_b);
+        let (ranked_items, _) = wilcoxon_ranked_items_ties_sum_prod(&hist_a, &hist_b);
         println!("{ranked_items:?}");
 
-        let rank_sum_b = wilcoxon_rank_sum_w(&mut hist_a, &mut hist_b);
+        let rank_sum_b = wilcoxon_rank_sum_w(&hist_a, &hist_b);
         println!("rank_sum_b={rank_sum_b}");
 
         let n_a = sample_a.len() as f64;
@@ -635,20 +637,19 @@ mod test_with_hypors {
         let rank_sum_a = (1. + n_a + n_b) * (n_a + n_b) / 2. - rank_sum_b;
         println!("rank_sum_a={rank_sum_a}");
 
-        let wilcoxon_rank_sum_a_lt_b_p = wilcoxon_rank_sum_p(&mut hist_a, &mut hist_b, AltHyp::Lt);
+        let wilcoxon_rank_sum_a_lt_b_p = wilcoxon_rank_sum_p(&hist_a, &hist_b, AltHyp::Lt);
         println!("wilcoxon_rank_sum_a_lt_b_p={wilcoxon_rank_sum_a_lt_b_p}");
         let wilcoxon_rank_sum_a_lt_b_p_no_ties_adjust: f64 =
-            wilcoxon_rank_sum_p_no_ties_adjust(&mut hist_a, &mut hist_b, AltHyp::Lt);
+            wilcoxon_rank_sum_p_no_ties_adjust(&hist_a, &hist_b, AltHyp::Lt);
         println!(
             "wilcoxon_rank_sum_a_lt_b_p_no_ties_adjust={wilcoxon_rank_sum_a_lt_b_p_no_ties_adjust}"
         );
-        let wilcoxon_rank_sum_a_gt_b_p = wilcoxon_rank_sum_p(&mut hist_a, &mut hist_b, AltHyp::Gt);
+        let wilcoxon_rank_sum_a_gt_b_p = wilcoxon_rank_sum_p(&hist_a, &hist_b, AltHyp::Gt);
         println!("wilcoxon_rank_sum_a_gt_b_p={wilcoxon_rank_sum_a_gt_b_p}");
-        let wilcoxon_rank_sum_a_ne_b_p: f64 =
-            wilcoxon_rank_sum_p(&mut hist_a, &mut hist_b, AltHyp::Ne);
+        let wilcoxon_rank_sum_a_ne_b_p: f64 = wilcoxon_rank_sum_p(&hist_a, &hist_b, AltHyp::Ne);
         println!("wilcoxon_rank_sum_a_ne_b_p={wilcoxon_rank_sum_a_ne_b_p}");
         let wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust: f64 =
-            wilcoxon_rank_sum_p_no_ties_adjust(&mut hist_a, &mut hist_b, AltHyp::Ne);
+            wilcoxon_rank_sum_p_no_ties_adjust(&hist_a, &hist_b, AltHyp::Ne);
         println!(
             "wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust={wilcoxon_rank_sum_a_ne_b_p_no_ties_adjust}"
         );

@@ -1,3 +1,5 @@
+//! Structs and enums for confidence intervals and hypothesis tests.
+
 mod basic;
 #[doc(hidden)]
 pub use basic::*;

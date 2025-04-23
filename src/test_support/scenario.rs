@@ -116,7 +116,9 @@ pub fn get_scenario(name1: &str, name2: &str) -> &'static Scenario {
     SCENARIO_SPECS
         .iter()
         .find(|spec| spec.name1 == name1 && spec.name2 == name2)
-        .expect(&format!(
-            "invalid fn name pair: ({name1}, {name2}); valid name pairs are: {FN_NAME_PAIRS:?}"
-        ))
+        .unwrap_or_else(|| {
+            panic!(
+                "invalid fn name pair: ({name1}, {name2}); valid name pairs are: {FN_NAME_PAIRS:?}"
+            )
+        })
 }

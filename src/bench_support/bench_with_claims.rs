@@ -230,21 +230,18 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             if noise_stats {
                 let ratio_medians_from_lns_noise = ratio_medians_from_lns_noises
                     .entry((name1, name2))
-                    .or_insert_with(|| SampleMoments::default());
+                    .or_default();
 
                 ratio_medians_from_lns_noise.collect_value(diff_out.mean_diff_ln_f1_f2().exp());
 
-                let diff_ratio_medians_noise = diff_ratio_medians_noises
-                    .entry((name1, name2))
-                    .or_insert_with(|| SampleMoments::default());
+                let diff_ratio_medians_noise =
+                    diff_ratio_medians_noises.entry((name1, name2)).or_default();
 
                 diff_ratio_medians_noise.collect_value(
                     diff_out.ratio_medians_f1_f2() - diff_out.ratio_medians_f1_f2_from_lns(),
                 );
 
-                let diff_ln_stdev_noise = diff_ln_stdev_noises
-                    .entry((name1, name2))
-                    .or_insert_with(|| SampleMoments::default());
+                let diff_ln_stdev_noise = diff_ln_stdev_noises.entry((name1, name2)).or_default();
                 diff_ln_stdev_noise.collect_value(diff_out.stdev_diff_ln_f1_f2());
             }
         }

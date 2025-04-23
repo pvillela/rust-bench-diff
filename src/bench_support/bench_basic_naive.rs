@@ -115,31 +115,29 @@ pub fn get_args() -> Args {
     let target_relative_diff_pct_str = with_default(env::var("TARGET_RELATIVE_DIFF_PCT"), "5");
     let target_relative_diff_pct =target_relative_diff_pct_str
         .parse::<u32>()
-        .expect(&format!(
-            "TARGET_RELATIVE_DIFF_PCT, if provided, must be a non-negative integer; was \"{target_relative_diff_pct_str}\""
-        ));
+        .unwrap_or_else(|_| panic!("TARGET_RELATIVE_DIFF_PCT, if provided, must be a non-negative integer; was \"{target_relative_diff_pct_str}\""));
 
     let latency_unit_str = with_default(env::var("LATENCY_UNIT"), "nano");
     let latency_unit = match latency_unit_str.to_lowercase() {
-        s @ _ if s == "nano" => LatencyUnit::Nano,
-        s @ _ if s == "micro" => LatencyUnit::Micro,
-        s @ _ if s == "milli" => LatencyUnit::Milli,
-        s @ _ => panic!("invalid LATENCY_UNIT environment variable value: {s}"),
+        s if s == "nano" => LatencyUnit::Nano,
+        s if s == "micro" => LatencyUnit::Micro,
+        s if s == "milli" => LatencyUnit::Milli,
+        s => panic!("invalid LATENCY_UNIT environment variable value: {s}"),
     };
 
     let base_median_str = with_default(env::var("BASE_MEDIAN"), "100000");
-    let base_median = base_median_str.parse::<f64>().expect(&format!(
-        "BASE_MEDIAN, if provided, must be a non-negative number; was \"{base_median_str}\""
-    ));
+    let base_median = base_median_str.parse::<f64>().unwrap_or_else(|_| {
+        panic!("BASE_MEDIAN, if provided, must be a non-negative number; was \"{base_median_str}\"")
+    });
     assert!(
         base_median >= 0.,
         "BASE_MEDIAN, if provided, must be a non-negative number; was \"{base_median_str}\""
     );
 
     let exec_count_str = with_default(env::var("EXEC_COUNT"), "2000");
-    let exec_count = exec_count_str.parse::<usize>().expect(&format!(
-        "EXEC_COUNT, if provided, must be a non-negative integer; was \"{exec_count_str}\""
-    ));
+    let exec_count = exec_count_str.parse::<usize>().unwrap_or_else(|_| {
+        panic!("EXEC_COUNT, if provided, must be a non-negative integer; was \"{exec_count_str}\"")
+    });
 
     Args {
         target_relative_diff_pct,

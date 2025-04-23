@@ -95,10 +95,8 @@ pub fn get_scale_params(name: &str) -> &ScaleParams {
         .iter()
         .map(|p| p.name.clone())
         .collect::<Vec<_>>();
-    &SCALE_PARAMS
+    SCALE_PARAMS
         .iter()
         .find(|pair| pair.name == name)
-        .expect(&format!(
-            "invalid params name: {name}; valid names are: {valid_names:?}"
-        ))
+        .unwrap_or_else(|| panic!("invalid params name: {name}; valid names are: {valid_names:?}"))
 }

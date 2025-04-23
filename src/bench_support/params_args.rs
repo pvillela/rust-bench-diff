@@ -24,6 +24,7 @@ pub struct CalibratedFnParams {
     pub hi_stdev_ln: f64,
 }
 
+#[allow(clippy::large_enum_variant)]
 pub enum MyFnMut {
     Det {
         median_effort: u32,
@@ -70,6 +71,7 @@ impl MyFnMut {
     }
 }
 
+#[allow(clippy::type_complexity)]
 const NAMED_FNS: [(&str, fn(&CalibratedFnParams) -> MyFnMut); 12] = {
     const fn hi_1pct_effort(c: &CalibratedFnParams) -> u32 {
         (c.effort as f64 * HI_1PCT_FACTOR) as u32
@@ -127,7 +129,7 @@ pub fn get_fn(name: &str) -> fn(&CalibratedFnParams) -> MyFnMut {
     NAMED_FNS
         .iter()
         .find(|pair| pair.0 == name)
-        .expect(&format!("invalid fn name: {name}"))
+        .unwrap_or_else(|| panic!("invalid fn name: {name}"))
         .1
 }
 
@@ -144,9 +146,9 @@ fn cmd_line_args() -> Option<(usize, String)> {
     let mut args = std::env::args();
 
     let nrepeats = match args.nth(1) {
-        Some(v) if v.ne("--bench") => v.parse::<usize>().expect(&format!(
-            "*** 1st argument, if provided, must be non-negative integer; was \"{v}\""
-        )),
+        Some(v) if v.ne("--bench") => v.parse::<usize>().unwrap_or_else(|_| {
+            panic!("*** 1st argument, if provided, must be non-negative integer; was \"{v}\"")
+        }),
         _ => return None,
     };
 

@@ -290,7 +290,7 @@ impl ClaimResults {
         self.summary
             .iter()
             .filter(|(_, v)| **v > 0)
-            .map(|(k, v)| (k.clone(), *v))
+            .map(|(k, v)| (*k, *v))
             .collect()
     }
 
@@ -298,7 +298,7 @@ impl ClaimResults {
         self.summary
             .iter()
             .filter(|(_, v)| **v == 0)
-            .map(|(k, _)| k.clone())
+            .map(|(k, _)| *k)
             .collect()
     }
 
@@ -348,7 +348,7 @@ impl ClaimResults {
             .filter(|(((name1, name2), claim_name), count)| {
                 predicate(name1, name2, claim_name, **count)
             })
-            .map(|(k, v)| (k.clone(), *v))
+            .map(|(k, v)| (*k, *v))
             .collect::<BTreeMap<_, _>>()
     }
 }

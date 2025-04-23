@@ -14,7 +14,7 @@ use hdrhistogram::Histogram;
 #[cfg(feature = "dev_support")]
 use crate::statistics::{self, bernoulli_psucc_ci};
 
-/// Contains the data resulting from a benchmark comparing functions `f1` and `f2`.
+/// Contains the data resulting from a benchmark comparing two closures `f1` and `f2`.
 ///
 /// It is returned by the core benchmarking functions in this library.
 /// Its methods provide descriptive and inferential statistics about the latency samples of the two

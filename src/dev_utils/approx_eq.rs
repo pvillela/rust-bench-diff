@@ -35,18 +35,18 @@ mod test {
     #[test]
     fn test_approx_eq() {
         {
-            let w: f32 = 123.4444;
-            let x: f32 = 123.444444;
-            let y: f32 = 123.444454;
-            let z: f32 = 123.444455;
-            let epsilon: f32 = 0.00001;
+            let w: f32 = 123.444;
+            let x: f32 = 123.44444;
+            let y: f32 = 123.44454;
+            let z: f32 = 123.44455;
+            let epsilon: f32 = 0.0001;
 
             assert!(x.approx_eq(y, epsilon), "x must be approx_eq to y");
             assert!(!x.approx_eq(z, epsilon), "x must not be approx_eq to z");
 
-            assert_eq!(w, x.round_to(4), "w must equal x.round_to(4)");
-            assert_ne!(w, y.round_to(4), "w must not equal y.round_to(4)");
-            assert_ne!(w, z.round_to(4), "w must not equal z.round_to(4)");
+            assert_eq!(w, x.round_to(3), "w must equal x.round_to(4)");
+            assert_ne!(w, y.round_to(3), "w must not equal y.round_to(4)");
+            assert_ne!(w, z.round_to(3), "w must not equal z.round_to(4)");
         }
 
         {

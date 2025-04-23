@@ -2,6 +2,7 @@
 
 use super::DiffOut;
 use std::{
+    cmp,
     error::Error,
     io::{Write, stderr},
     sync::atomic::{AtomicU64, Ordering},
@@ -119,16 +120,16 @@ impl DiffState {
 
         let diff = elapsed1 as i64 - elapsed2 as i64;
 
-        if diff < 0 {
-            self.hist_f1_lt_f2
+        match diff.cmp(&0) {
+            cmp::Ordering::Less => self
+                .hist_f1_lt_f2
                 .record(diff as u64)
-                .expect("can't happen: histogram is auto-resizable");
-        } else if diff > 0 {
-            self.hist_f1_gt_f2
+                .expect("can't happen: histogram is auto-resizable"),
+            cmp::Ordering::Greater => self
+                .hist_f1_gt_f2
                 .record(-diff as u64)
-                .expect("can't happen: histogram is auto-resizable");
-        } else {
-            self.count_f1_eq_f2 += 1;
+                .expect("can't happen: histogram is auto-resizable"),
+            cmp::Ordering::Equal => self.count_f1_eq_f2 += 1,
         }
 
         assert!(elapsed1 > 0, "f1 latency must be > 0");
@@ -397,6 +398,7 @@ pub fn bench_diff_with_status(
 
 #[cfg(test)]
 #[cfg(feature = "test_support")]
+#[allow(clippy::type_complexity)]
 mod test {
     use super::*;
     use crate::{
@@ -410,6 +412,7 @@ mod test {
     use rand_distr::LogNormal;
     use std::{fmt::Debug, ops::Deref};
 
+    #[allow(clippy::large_enum_variant)]
     enum MyFnMut {
         Det {
             median: f64,
@@ -498,7 +501,7 @@ mod test {
         NAMED_FNS
             .iter()
             .find(|pair| pair.0 == name)
-            .expect(&format!("invalid fn name: {name}"))
+            .unwrap_or_else(|| panic!("invalid fn name: {name}"))
             .1
     }
 
@@ -594,7 +597,7 @@ mod test {
         );
     }
 
-    const SCALE_NAMES: [&'static str; 1] = [
+    const SCALE_NAMES: [&str; 1] = [
         "micros_scale",
         // "millis_scale",
         // "nanos_scale"

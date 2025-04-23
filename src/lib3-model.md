@@ -25,6 +25,7 @@ This section defines the model per se.
    A couple of points to notice about this model:  
 
    - λ<sub>1</sub> and λ<sub>2</sub> can't be determined independently of α. If we multiply λ<sub>1</sub> and λ<sub>2</sub> by a constant factor r and divide α by the same factor, we end up with an exactly equivalent model. Nonetheless, the ratio λ<sub>1</sub>/λ<sub>2</sub> remains the same regardless of the multiplier r, so the model is useful to reason about the ratio of the function latencies or, equivalently, the difference of the logarithm of the latencies.
+     - This spurious degree of freedom in the model can be removed, without loss of generality, by assuming the lowest value of α(t) is 1 = A<sub>L</sub>.
    - As a log-normally distributed random variable, β(t) can take arbitrarily small positive values, which implies that the function latencies can take arbitrarily small values. That is clearly not 100% realistic. It is, however, a reasonable approximation of reality, especially when σ is close to 0, in which case the values of β(t) are clustered around 1.
 
 7. Let **mean_diff_ln** be the sample mean difference between the natural logarithms of the observed latencies.
@@ -362,14 +363,14 @@ We will define an example of the above model and compare how `bench_diff` and th
 
 - So, the multiplicative error on the estimate of λ<sub>1</sub>/λ<sub>2</sub> (= λ/λ = 1 in our example) is at most, with 99% confidence:
 
-  - exp(0.00277) ≈ 1.00278, i.e., less than 3/10 of 1%
+  - exp(0.00277) ≈ 1.00278, i.e., less than 3/10 of 1% error.
 
 - Recall that the error bound does not depend on the number of executions, so it is the same with only half the number of executions. Also, given the high exec_count assumed, the `bench_diff` results during the first half should be very close to those obtained during the second half.
 
 - If instead of λ = λ<sub>1</sub> = λ<sub>2</sub> = 12 ms and exec_count = 2500 we assume λ = λ<sub>1</sub> = λ<sub>2</sub> = 120 ms and exec_count = 250, then, with 99% confidence:
 
   - |mean_diff_ln - ln(λ<sub>1</sub>/λ<sub>2</sub>)| ≤ 0.0284
-  - Multiplicative error ≤ 1.0289, i.e., about 3%.
+  - Multiplicative error ≤ 1.0289, i.e., about 3% error.
 
 
 ***Traditional* method calculations**
@@ -424,6 +425,3 @@ We will define an example of the above model and compare how `bench_diff` and th
 - The key point of `bench_diff` is to repeatedly run both functions in close time proximity to each other so that the *ratios* of the two functions' latencies are close to the baseline even if the individual latencies themselves are distorted by time-dependent noise.
 - If instead of λ = λ<sub>1</sub> = λ<sub>2</sub> = 12 ms and exec_count = 2500 we assume λ = λ<sub>1</sub> = λ<sub>2</sub> = 120 ms and exec_count = 250, then the accuracy of the `bench_diff` results is worse, but it is still much better (at around a 3% error) than the *traditional* result (which remains about the same at around a 54% error).
 
-# Limitations
-
-This library works well for latencies at the microseconds or milliseconds order of magnitude, but not for latencies at the nanoseconds order of magnitude.

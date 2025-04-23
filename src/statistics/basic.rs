@@ -292,7 +292,7 @@ pub fn welch_test(
     alt_hyp: AltHyp,
     alpha: f64,
 ) -> HypTestResult {
-    let p = welch_p(&moments_a, &moments_b, alt_hyp);
+    let p = welch_p(moments_a, moments_b, alt_hyp);
     HypTestResult::new(p, alpha, alt_hyp)
 }
 
@@ -343,7 +343,7 @@ pub fn student_one_sample_test(
     alt_hyp: AltHyp,
     alpha: f64,
 ) -> HypTestResult {
-    let p = student_one_sample_p(&moments, mu0, alt_hyp);
+    let p = student_one_sample_p(moments, mu0, alt_hyp);
     HypTestResult::new(p, alpha, alt_hyp)
 }
 

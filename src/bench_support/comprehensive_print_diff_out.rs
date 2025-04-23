@@ -1,23 +1,20 @@
 //! Function that prints a variety of statistics from [`DiffOut`]. Used in some of the example benchmarks.
 
-use bench_diff::{DiffOut, statistics::AltHyp};
+use crate::{DiffOut, statistics::AltHyp};
 
 const ALPHA: f64 = 0.05;
 
-pub fn print_diff_out(out: &DiffOut) {
-    let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
-    let ratio_medians_f1_f2_from_lns = out.ratio_medians_f1_f2_from_lns();
-
+pub fn comprehensive_print_diff_out(out: &DiffOut) {
     println!();
     println!("summary_f1={:?}", out.summary_f1());
     println!();
     println!("summary_f2={:?}", out.summary_f2());
     println!();
     println!(
-        "ratio_medians_f1_f2={}, ratio_medians_f1_f2_from_lns={}, diff={}",
-        ratio_medians_f1_f2,
-        ratio_medians_f1_f2_from_lns,
-        ratio_medians_f1_f2 - ratio_medians_f1_f2_from_lns
+        "ratio_medians_f1_f2={}, ratio_medians_f1_f2_from_lns={}, ratio_mins_f1_f2={}",
+        out.ratio_medians_f1_f2(),
+        out.ratio_medians_f1_f2_from_lns(),
+        out.ratio_mins_f1_f2()
     );
     println!();
     println!("welch_ratio_ci={:?}", out.welch_ratio_ci(ALPHA),);

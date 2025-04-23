@@ -132,6 +132,12 @@ impl DiffOut {
         self.median_f1() / self.median_f2()
     }
 
+    #[cfg(feature = "dev_support")]
+    /// Ratio of the minimum of `f1`'s latencies to the minimum of `f2`'s latencies.
+    pub fn ratio_mins_f1_f2(&self) -> f64 {
+        self.summary_f1().min as f64 / self.summary_f2().min as f64
+    }
+
     /// Count of paired observations where `f1`'s latency is less than `f2`'s.
     pub fn count_f1_lt_f2(&self) -> u64 {
         self.hist_f1_lt_f2.len()

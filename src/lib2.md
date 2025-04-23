@@ -295,7 +295,9 @@ This section calculates the expected absolute error of **mean_diff_ln** (see *De
 
 **Reasonable Parameter Values**
 
-In practice, one could reasonably expect the time-dependent random noise parameters to be no greater (and likely substantially lower) than the following:
+Assume, without loss of generality, that the lowest value of α(t) is 1 = A<sub>L</sub>.
+
+In practice, one could reasonably expect the time-dependent random noise parameters to be no greater (and likely substantially lower) than the values below:
 
 - Rate of change of α(t) < 5% per second, which means A<sub>D</sub> < .00005 when time is measured in milliseconds and A<sub>D</sub> < .00000005 when time is measured in microseconds.
 - A<sub>U</sub>/A<sub>L</sub> < 2

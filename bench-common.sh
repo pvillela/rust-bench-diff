@@ -14,6 +14,15 @@
 
 export RUSTFLAGS="-Awarnings"
 
+# $1: number of repetitions (default = 1)
+# $2: run name (default = "")
+
+# Default:
+# SCALE_NAME="micros_scale"
+# FN_NAME_PAIRS="all"
+# VERBOSE="false"
+# NOISE_STATS="false"
+
 echo "Started at: `date +"%H:%M:%S"`"
 
 # FN_NAME_PAIRS="base_median_no_var/base_median_no_var base_median_no_var/hi_1pct_median_no_var hi_1pct_median_no_var/base_median_no_var" \

@@ -22,7 +22,7 @@ To run a benchmark with `bench_diff`, follow these simple steps:
 1. Add the `bench_diff` dependency in `Cargo.toml`:
 
    ```toml
-   [dependencies]
+   [dev-dependencies]
    bench_diff = "1"
    ```
 

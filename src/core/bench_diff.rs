@@ -334,7 +334,8 @@ pub fn bench_diff(
 /// - `f2` - second target for comparison.
 /// - `exec_count` - number of executions (sample size) for each function.
 /// - `header` - is invoked once at the start of this function's execution; it can be used, for example,
-///   to output information about the functions being compared to `stdout` and/or `stderr`.
+///   to output information about the functions being compared to `stdout` and/or `stderr`. The first
+///   argument is the the `LatencyUnit` and the second argument is the `exec_count`.
 pub fn bench_diff_with_status(
     unit: LatencyUnit,
     f1: impl FnMut(),
@@ -390,8 +391,6 @@ pub fn bench_diff_with_status(
         pre_exec,
         exec_status,
     );
-
-    println!();
 
     diff_out
 }

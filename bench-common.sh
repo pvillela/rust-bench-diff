@@ -18,10 +18,10 @@ export RUSTFLAGS="-Awarnings"
 # $2: run name (default = "")
 
 # Default:
-# SCALE_NAME="micros_scale"
-# FN_NAME_PAIRS="all"
-# VERBOSE="false"
-# NOISE_STATS="false"
+# SCALE_NAME="micros_scale" \
+# FN_NAME_PAIRS="all" \
+# VERBOSE="false" \
+# NOISE_STATS="false" \
 
 echo "Started at: `date +"%H:%M:%S"`"
 

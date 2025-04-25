@@ -1,6 +1,6 @@
 [package]
 name = "bench_diff"
-version = "1.0.3"
+version = "1.0.4"
 edition = "2024"
 license = "MIT"
 description = "Reliably compare the latencies of two functions/closures."
@@ -27,6 +27,7 @@ exclude = [
     "benches/busy_bench.rs",
     "benches/main_bench.rs",
     "benches/naive_bench.rs",
+    "statistics/wilcoxon.rs",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

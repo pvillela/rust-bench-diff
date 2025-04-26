@@ -84,12 +84,13 @@ pub fn bench_naive(unit: LatencyUnit, mut f: impl FnMut(), exec_count: usize) ->
         }
     };
 
-    let mut state = DiffState::new();
+    let mut out = DiffOut::new();
+    let mut state = DiffState::new(&mut out);
     warm_up(&mut state, unit, &mut f, &mut warm_up_status);
     state.reset();
 
     execute(&mut state, unit, &mut f, exec_count, pre_exec, exec_status);
-    state
+    out
 }
 
 fn relative_diff(x: f64, y: f64) -> f64 {

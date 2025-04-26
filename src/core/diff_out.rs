@@ -28,13 +28,13 @@ pub struct DiffOut {
     pub(super) hist_f1_lt_f2: Timing, //todo: replace with count, sum and sum of squares of ratios
     pub(super) count_f1_eq_f2: u64,
     pub(super) hist_f1_gt_f2: Timing, //todo: replace with count, sum and sum of squares of ratios
+    pub(super) sum_f1: i64,
+    pub(super) sum_f2: i64,
     pub(super) sum_ln_f1: f64,
     pub(super) sum2_ln_f1: f64,
     pub(super) sum_ln_f2: f64,
     pub(super) sum2_ln_f2: f64,
-    pub(super) sum_diff_f1_f2: f64,
-    pub(super) sum2_diff_f1_f2: f64,
-    pub(super) sum_diff_ln_f1_f2: f64,
+    pub(super) sum2_diff_f1_f2: i64,
     pub(super) sum2_diff_ln_f1_f2: f64,
 }
 
@@ -46,14 +46,14 @@ impl DiffOut {
         let hist_f1_lt_f2 = Histogram::<u64>::new_from(&hist_f1);
         let count_f1_eq_f2 = 0;
         let hist_f1_gt_f2 = Histogram::<u64>::new_from(&hist_f1);
-        let sum_ln_f1 = 0.0_f64;
-        let sum2_ln_f1 = 0.0_f64;
-        let sum_ln_f2 = 0.0_f64;
-        let sum2_ln_f2 = 0.0_f64;
-        let sum_diff_f1_f2 = 0.0_f64;
-        let sum2_diff_f1_f2 = 0.0_f64;
-        let sum_diff_ln_f1_f2 = 0.0_f64;
-        let sum2_diff_ln_f1_f2 = 0.0_f64;
+        let sum_f1 = 0;
+        let sum_f2 = 0;
+        let sum_ln_f1 = 0.;
+        let sum2_ln_f1 = 0.;
+        let sum_ln_f2 = 0.;
+        let sum2_ln_f2 = 0.;
+        let sum2_diff_f1_f2 = 0;
+        let sum2_diff_ln_f1_f2 = 0.;
 
         Self {
             hist_f1,
@@ -61,13 +61,13 @@ impl DiffOut {
             hist_f1_lt_f2,
             count_f1_eq_f2,
             hist_f1_gt_f2,
+            sum_f1,
+            sum_f2,
             sum_ln_f1,
             sum2_ln_f1,
             sum_ln_f2,
             sum2_ln_f2,
-            sum_diff_f1_f2,
             sum2_diff_f1_f2,
-            sum_diff_ln_f1_f2,
             sum2_diff_ln_f1_f2,
         }
     }
@@ -100,6 +100,14 @@ impl DiffOut {
     /// Includes sample size, mean, standard deviation, median, several percentiles, min, and max.
     pub fn summary_f2(&self) -> SummaryStats {
         summary_stats(&self.hist_f2)
+    }
+
+    fn sum_diff_f1_f2(&self) -> f64 {
+        (self.sum_f1 - self.sum_f2) as f64
+    }
+
+    fn sum_diff_ln_f1_f2(&self) -> f64 {
+        self.sum_ln_f1 - self.sum_ln_f2
     }
 
     /// Mean of `f1`'s latencies.
@@ -176,28 +184,28 @@ impl DiffOut {
     /// Mean of the differences between paired latencies of `f1` and `f2`.
     /// Equal to the difference between the mean of `f1`'s latencies and the mean of `f2`'s latencies.
     pub fn mean_diff_f1_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_diff_f1_f2)
+        sample_mean(self.n(), self.sum_diff_f1_f2())
     }
 
     /// Standard deviation of the differences between paired latencies of `f1` and `f2`.
     /// (*Not* the difference between the standard deviation of `f1`'s latencies and
     /// the standard deviation of`f2`'s latencies.)
     pub fn stdev_diff_f1_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_diff_f1_f2, self.sum2_diff_f1_f2)
+        sample_stdev(self.n(), self.sum_diff_f1_f2(), self.sum2_diff_f1_f2 as f64)
     }
 
     /// Mean of the differences between the natural logarithms of paired latencies of `f1` and `f2`.
     /// (Same as the difference between the mean of the natural logarithms of `f1`'s latencies and
     /// the mean of the natural logarithms of`f2`'s latencies.)
     pub fn mean_diff_ln_f1_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_diff_ln_f1_f2)
+        sample_mean(self.n(), self.sum_diff_ln_f1_f2())
     }
 
     /// Standard deviation of the differences between the natural logarithms of paired latencies of `f1` and `f2`.
     /// (*Not* the difference between the standard deviation of the natural logarithms of `f1`'s latencies and
     /// the standard deviation of the natural logarithms of`f2`'s latencies.)
     pub fn stdev_diff_ln_f1_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_diff_ln_f1_f2, self.sum2_diff_ln_f1_f2)
+        sample_stdev(self.n(), self.sum_diff_ln_f1_f2(), self.sum2_diff_ln_f1_f2)
     }
 
     /// Estimated ratio of the median `f1` latency to the median `f2` latency,
@@ -324,8 +332,8 @@ impl DiffOut {
     pub fn student_diff_t(&self) -> f64 {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
-            self.sum_diff_f1_f2,
-            self.sum2_diff_f1_f2,
+            self.sum_diff_f1_f2(),
+            self.sum2_diff_f1_f2 as f64,
         );
         student_one_sample_t(&moments, 0.)
     }
@@ -347,8 +355,8 @@ impl DiffOut {
     pub fn student_diff_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
-            self.sum_diff_f1_f2,
-            self.sum2_diff_f1_f2,
+            self.sum_diff_f1_f2(),
+            self.sum2_diff_f1_f2 as f64,
         );
         student_one_sample_ci(&moments, alpha)
     }
@@ -376,8 +384,8 @@ impl DiffOut {
     pub fn student_diff_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
-            self.sum_diff_f1_f2,
-            self.sum2_diff_f1_f2,
+            self.sum_diff_f1_f2(),
+            self.sum2_diff_f1_f2 as f64,
         );
         student_one_sample_test(&moments, 0., alt_hyp, alpha)
     }
@@ -387,7 +395,7 @@ impl DiffOut {
     pub fn student_diff_ln_t(&self) -> f64 {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
-            self.sum_diff_ln_f1_f2,
+            self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
         student_one_sample_t(&moments, 0.)
@@ -408,7 +416,7 @@ impl DiffOut {
     pub fn student_diff_ln_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
-            self.sum_diff_ln_f1_f2,
+            self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
         student_one_sample_ci(&moments, alpha)
@@ -448,7 +456,7 @@ impl DiffOut {
     pub fn student_diff_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.hist_f1.len(),
-            self.sum_diff_ln_f1_f2,
+            self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
         student_one_sample_test(&moments, 0., alt_hyp, alpha)

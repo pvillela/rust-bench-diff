@@ -5,7 +5,7 @@
 //! cargo bench --bench simple_bench
 //! ```
 
-use bench_diff::{DiffOut, LatencyUnit, bench_diff_with_status, statistics::AltHyp};
+use bench_diff::{DiffOut, LatencyUnit, bench_diff_with_status, stats_types::AltHyp};
 use std::{thread, time::Duration};
 
 /// This function's latency is at least 21ms.

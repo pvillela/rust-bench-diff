@@ -1,4 +1,4 @@
-use super::{AltHyp, Ci, HypTestResult};
+use super::core::{AltHyp, Ci, HypTestResult, SampleMoments};
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 
 /// Returns the p-value for a z-value from the standard normal.
@@ -36,189 +36,6 @@ pub fn z_alpha(alpha: f64) -> f64 {
 pub fn t_alpha(df: f64, alpha: f64) -> f64 {
     let stud = StudentsT::new(0., 1., df).expect("degrees of freedom must be > 0");
     stud.cdf(-alpha)
-}
-
-#[inline(always)]
-pub fn sample_mean(n: u64, sum: f64) -> f64 {
-    sum / n as f64
-}
-
-#[inline(always)]
-pub fn sample_sum2_deviations(n: u64, sum: f64, sum2: f64) -> f64 {
-    sum2 - sum.powi(2) / n as f64
-}
-
-#[inline(always)]
-pub fn sample_var(n: u64, sum: f64, sum2: f64) -> f64 {
-    sample_sum2_deviations(n, sum, sum2) / (n as f64 - 1.)
-}
-
-#[inline(always)]
-pub fn sample_stdev(n: u64, sum: f64, sum2: f64) -> f64 {
-    sample_var(n, sum, sum2).sqrt()
-}
-
-#[cfg(feature = "dev_support")]
-/// Estimator of mean of Bernoulli distribution.
-///
-/// Arguments:
-/// - `n`: number of trials.
-/// - `successes`: number of successes (`1`s) observed.
-pub fn bernoulli_p_hat(n: u64, successes: f64) -> f64 {
-    successes / n as f64
-}
-
-#[cfg(feature = "dev_support")]
-/// Confidence interval for the probability of success of a Bernoulli distribution computed from a
-/// sample of trials (Wilson score interval).
-///
-/// Arguments:
-/// - `n`: number of trials.
-/// - `p_hat`: estimate of mean of the Bernoulli distribution. See [`bernoulli_p_hat`].
-/// - `alpha`: confidence level.
-pub fn bernoulli_psucc_ci(n: u64, p_hat: f64, alpha: f64) -> Ci {
-    let nf = n as f64;
-    let p = p_hat;
-    let z_alpha_2 = z_alpha(alpha / 2.);
-    let mid = p + z_alpha_2.powi(2) / (2. * nf);
-    let delta = z_alpha_2 * (p * (1. - p) / nf + z_alpha_2.powi(2) / (4. * nf.powi(2))).sqrt();
-    let denom = 1. + z_alpha_2.powi(2) / nf;
-    Ci((mid - delta) / denom, (mid + delta) / denom)
-}
-
-#[cfg(feature = "dev_support")]
-/// Normal approximation z-value for standardized sample mean of Bernoulli distribution under the hypothesis that
-/// the probability of success is `p0`.
-///
-/// Arguments:
-/// - `p_hat`: estimate of mean of the Bernoulli distribution. See [`bernoulli_p_hat`].
-/// - `p0`: probability of success under null hypothesis.
-pub fn bernoulli_normal_approx_z(n: u64, p_hat: f64, p0: f64) -> f64 {
-    (p_hat - p0) / (p0 * (1. - p0) / n as f64).sqrt()
-}
-
-#[cfg(feature = "dev_support")]
-/// Normal approximation p-value for standardized sample mean of Bernoulli distribution under the hypothesis that
-/// the probability of success is `p0`.
-///
-/// Arguments:
-/// - `n`: number of trials.
-/// - `p_hat`: estimate of mean of the Bernoulli distribution. See [`bernoulli_p_hat`].
-/// - `p0`: probability of success under null hypothesis.
-/// - `alt_hyp`: alternative hypothesis.
-pub fn bernoulli_normal_approx_p(n: u64, p_hat: f64, p0: f64, alt_hyp: AltHyp) -> f64 {
-    let z = bernoulli_normal_approx_z(n, p_hat, p0);
-    z_to_p(z, alt_hyp)
-}
-
-#[cfg(feature = "dev_support")]
-pub fn bernoulli_test(n: u64, p_hat: f64, p0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-    let p = bernoulli_normal_approx_p(n, p_hat, p0, alt_hyp);
-    HypTestResult::new(p, alpha, alt_hyp)
-}
-
-pub struct SampleMoments {
-    count: u64,
-    sum: f64,
-    sum2: f64,
-    min: f64,
-    max: f64,
-}
-
-impl SampleMoments {
-    pub fn new(count: u64, sum: f64, sum2: f64) -> Self {
-        Self {
-            count,
-            sum,
-            sum2,
-            min: f64::NAN,
-            max: f64::NAN,
-        }
-    }
-
-    pub fn new_with_min_max(count: u64, sum: f64, sum2: f64, min: f64, max: f64) -> Self {
-        Self {
-            count,
-            sum,
-            sum2,
-            min,
-            max,
-        }
-    }
-
-    pub fn empty() -> Self {
-        Self::new(0, 0., 0.)
-    }
-
-    pub fn collect_value(&mut self, value: f64) {
-        self.count += 1;
-        self.sum += value;
-        self.sum2 += value * value;
-        self.min = value.min(self.min);
-        self.max = value.max(self.max);
-    }
-
-    pub fn from_slice(dataset: &[f64]) -> Self {
-        let mut moments = SampleMoments::empty();
-        for value in dataset {
-            moments.collect_value(*value);
-        }
-        moments
-    }
-
-    pub fn n(&self) -> u64 {
-        self.count
-    }
-
-    pub fn nf(&self) -> f64 {
-        self.count as f64
-    }
-
-    pub fn sum(&self) -> f64 {
-        self.sum
-    }
-
-    pub fn mean(&self) -> f64 {
-        self.sum / self.nf()
-    }
-
-    pub fn sum2(&self) -> f64 {
-        self.sum2
-    }
-
-    pub fn sum2_deviations(&self) -> f64 {
-        sample_sum2_deviations(self.n(), self.sum, self.sum2)
-    }
-
-    /// Returns `Nan` if  `self.n()` == 1
-    pub fn var(&self) -> f64 {
-        sample_var(self.n(), self.sum, self.sum2)
-    }
-
-    /// Returns `Nan` if  `self.n()` == 1
-    pub fn stdev(&self) -> f64 {
-        sample_stdev(self.n(), self.sum, self.sum2)
-    }
-
-    pub fn min(&self) -> f64 {
-        self.min
-    }
-
-    pub fn max(&self) -> f64 {
-        self.max
-    }
-}
-
-impl Default for SampleMoments {
-    fn default() -> Self {
-        Self {
-            count: 0,
-            sum: 0.,
-            sum2: 0.,
-            min: f64::NAN,
-            max: f64::NAN,
-        }
-    }
 }
 
 pub fn welch_t(moments_a: &SampleMoments, moments_b: &SampleMoments) -> f64 {
@@ -355,8 +172,8 @@ mod test {
 
     use super::*;
     use crate::{
+        basic_stats::core::{AltHyp, Hyp},
         dev_utils::ApproxEq,
-        statistics::{AltHyp, Hyp},
     };
 
     const ALPHA: f64 = 0.05;

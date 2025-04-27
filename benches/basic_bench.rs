@@ -5,7 +5,7 @@
 //! cargo bench --bench basic_bench --features bench
 //! ```
 
-use bench_diff::{DiffOut, statistics::AltHyp};
+use bench_diff::{DiffOut, stats_types::AltHyp};
 use bench_diff::{
     bench_diff_with_status,
     bench_support::bench_basic_naive::{

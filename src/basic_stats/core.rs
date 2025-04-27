@@ -1,3 +1,129 @@
+use hdrhistogram::iterators::all;
+
+#[inline(always)]
+pub fn sample_mean(n: u64, sum: f64) -> f64 {
+    sum / n as f64
+}
+
+#[inline(always)]
+pub fn sample_sum2_deviations(n: u64, sum: f64, sum2: f64) -> f64 {
+    sum2 - sum.powi(2) / n as f64
+}
+
+#[inline(always)]
+pub fn sample_var(n: u64, sum: f64, sum2: f64) -> f64 {
+    sample_sum2_deviations(n, sum, sum2) / (n as f64 - 1.)
+}
+
+#[inline(always)]
+pub fn sample_stdev(n: u64, sum: f64, sum2: f64) -> f64 {
+    sample_var(n, sum, sum2).sqrt()
+}
+
+pub struct SampleMoments {
+    count: u64,
+    sum: f64,
+    sum2: f64,
+    min: f64,
+    max: f64,
+}
+
+impl SampleMoments {
+    pub fn new(count: u64, sum: f64, sum2: f64) -> Self {
+        Self {
+            count,
+            sum,
+            sum2,
+            min: f64::NAN,
+            max: f64::NAN,
+        }
+    }
+
+    pub fn new_with_min_max(count: u64, sum: f64, sum2: f64, min: f64, max: f64) -> Self {
+        Self {
+            count,
+            sum,
+            sum2,
+            min,
+            max,
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self::new(0, 0., 0.)
+    }
+
+    pub fn collect_value(&mut self, value: f64) {
+        self.count += 1;
+        self.sum += value;
+        self.sum2 += value * value;
+        self.min = value.min(self.min);
+        self.max = value.max(self.max);
+    }
+
+    pub fn from_slice(dataset: &[f64]) -> Self {
+        let mut moments = SampleMoments::empty();
+        for value in dataset {
+            moments.collect_value(*value);
+        }
+        moments
+    }
+
+    pub fn n(&self) -> u64 {
+        self.count
+    }
+
+    pub fn nf(&self) -> f64 {
+        self.count as f64
+    }
+
+    pub fn sum(&self) -> f64 {
+        self.sum
+    }
+
+    pub fn mean(&self) -> f64 {
+        self.sum / self.nf()
+    }
+
+    pub fn sum2(&self) -> f64 {
+        self.sum2
+    }
+
+    pub fn sum2_deviations(&self) -> f64 {
+        sample_sum2_deviations(self.n(), self.sum, self.sum2)
+    }
+
+    /// Returns `Nan` if  `self.n()` == 1
+    pub fn var(&self) -> f64 {
+        sample_var(self.n(), self.sum, self.sum2)
+    }
+
+    /// Returns `Nan` if  `self.n()` == 1
+    pub fn stdev(&self) -> f64 {
+        sample_stdev(self.n(), self.sum, self.sum2)
+    }
+
+    pub fn min(&self) -> f64 {
+        self.min
+    }
+
+    pub fn max(&self) -> f64 {
+        self.max
+    }
+}
+
+impl Default for SampleMoments {
+    fn default() -> Self {
+        Self {
+            count: 0,
+            sum: 0.,
+            sum2: 0.,
+            min: f64::NAN,
+            max: f64::NAN,
+        }
+    }
+}
+
 /// Alternative statistical hypothesis to the null hypothesis of equality.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AltHyp {

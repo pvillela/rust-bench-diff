@@ -13,7 +13,7 @@
 mod core;
 pub use core::*;
 
-pub mod statistics;
+pub(crate) mod basic_stats;
 
 #[doc(hidden)]
 #[cfg(feature = "test_support")]
@@ -27,3 +27,5 @@ pub mod bench_support;
 #[doc(hidden)]
 #[cfg(feature = "test_support")]
 pub mod test_support;
+
+pub mod stats_types;

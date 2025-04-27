@@ -1,8 +1,8 @@
 use super::{ALPHA, BETA};
 use crate::{
     DiffOut,
+    basic_stats::core::{Hyp, HypTestResult, PositionWrtCi},
     dev_utils::ApproxEq,
-    statistics::{Hyp, HypTestResult, PositionWrtCi},
 };
 use std::{
     collections::{BTreeMap, BTreeSet},

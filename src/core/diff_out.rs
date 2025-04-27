@@ -1,18 +1,22 @@
 //! Module defining the key data structure produced by [`crate::bench_diff`].
 
 use crate::{
-    SummaryStats, Timing, new_timing,
-    statistics::{
-        AltHyp, Ci, HypTestResult, PositionWrtCi, SampleMoments, sample_mean, sample_stdev,
-        student_one_sample_ci, student_one_sample_t, student_one_sample_test, welch_ci, welch_df,
-        welch_t, welch_test,
+    SummaryStats, Timing,
+    basic_stats::{
+        core::{
+            AltHyp, Ci, HypTestResult, PositionWrtCi, SampleMoments, sample_mean, sample_stdev,
+        },
+        normal::{
+            student_one_sample_ci, student_one_sample_t, student_one_sample_test, welch_ci,
+            welch_df, welch_t, welch_test,
+        },
     },
-    summary_stats,
+    new_timing, summary_stats,
 };
 use hdrhistogram::Histogram;
 
 #[cfg(feature = "dev_support")]
-use crate::statistics::{self, bernoulli_psucc_ci};
+use crate::basic_stats::{bernoulli, wilcoxon};
 
 /// Contains the data resulting from a benchmark comparing two closures `f1` and `f2`.
 ///
@@ -229,7 +233,7 @@ impl DiffOut {
     pub fn bernoulli_ci(&self, alpha: f64) -> Ci {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
         let n = self.n();
-        bernoulli_psucc_ci(n, p_hat, alpha)
+        bernoulli::bernoulli_psucc_ci(n, p_hat, alpha)
     }
 
     #[cfg(feature = "dev_support")]
@@ -248,7 +252,7 @@ impl DiffOut {
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
     pub fn bernoulli_test(&self, p0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let p_hat = self.bernoulli_prob_f1_gt_f2();
-        statistics::bernoulli_test(self.n(), p_hat, p0, alt_hyp, alpha)
+        bernoulli::bernoulli_test(self.n(), p_hat, p0, alt_hyp, alpha)
     }
 
     #[cfg(feature = "dev_support")]
@@ -465,25 +469,25 @@ impl DiffOut {
     #[cfg(feature = "dev_support")]
     /// Wilcoxon rank sum *W* statistic for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_w(&self) -> f64 {
-        statistics::wilcoxon_rank_sum_w(&self.hist_f1, &self.hist_f2)
+        wilcoxon::wilcoxon_rank_sum_w(&self.hist_f1, &self.hist_f2)
     }
 
     #[cfg(feature = "dev_support")]
     /// Wilcoxon rank sum normal approximation *z* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
-        statistics::wilcoxon_rank_sum_z(&self.hist_f1, &self.hist_f2)
+        wilcoxon::wilcoxon_rank_sum_z(&self.hist_f1, &self.hist_f2)
     }
 
     #[cfg(feature = "dev_support")]
     /// Wilcoxon rank sum normal approximation *p* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
-        statistics::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
+        wilcoxon::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
     }
 
     #[cfg(feature = "dev_support")]
     /// Wilcoxon rank sum test for for `latency(f1)` and `latency(f2)`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
     pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-        statistics::wilcoxon_rank_sum_test(&self.hist_f1, &self.hist_f2, alt_hyp, alpha)
+        wilcoxon::wilcoxon_rank_sum_test(&self.hist_f1, &self.hist_f2, alt_hyp, alpha)
     }
 }

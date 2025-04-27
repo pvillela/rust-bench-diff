@@ -2,9 +2,10 @@
 
 use super::params_args::{Args, calibrated_fn_params, get_args, get_fn};
 use crate::{
-    DiffOut, bench_diff, bench_diff_with_status,
+    DiffOut,
+    basic_stats::core::{AltHyp, SampleMoments},
+    bench_diff, bench_diff_with_status,
     dev_utils::nest_btree_map,
-    statistics::{AltHyp, SampleMoments},
     test_support::{
         ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, get_scale_params, get_scenario,
     },

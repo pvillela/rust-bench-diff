@@ -13,17 +13,28 @@
 mod core;
 pub use core::*;
 
-pub mod statistics;
-
 #[doc(hidden)]
-#[cfg(feature = "test_support")]
-pub mod dev_utils;
+pub mod basic_stats;
 
-// intended only to be used by benches
-#[doc(hidden)]
-#[cfg(feature = "bench")]
+#[cfg(feature = "_bench")]
 pub mod bench_support;
 
 #[doc(hidden)]
-#[cfg(feature = "test_support")]
-pub mod test_support;
+pub mod bench_utils;
+
+#[cfg(feature = "_dev_support")]
+pub(crate) mod dev_utils;
+
+#[cfg(feature = "_test_support")]
+pub(crate) mod test_support;
+
+/// Structs and enums for confidence intervals and hypothesis tests.
+pub mod stats_types {
+    pub use super::basic_stats::core::{AltHyp, Ci, Hyp, HypTestResult, PositionWrtCi};
+}
+
+#[deprecated(since = "1.0.4", note = "use mod `stats_types` instead")]
+/// Structs and enums for confidence intervals and hypothesis tests.
+pub mod statistics {
+    pub use super::stats_types::*;
+}

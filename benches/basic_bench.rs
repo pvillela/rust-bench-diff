@@ -2,16 +2,16 @@
 //!
 //! To run the bench:
 //! ```
-//! cargo bench --bench basic_bench --features bench
+//! cargo bench --bench basic_bench --features _bench
 //! ```
 
-use bench_diff::{DiffOut, statistics::AltHyp};
+use bench_diff::{DiffOut, stats_types::AltHyp};
 use bench_diff::{
     bench_diff_with_status,
     bench_support::bench_basic_naive::{
         ANOMALY_TOLERANCE, Args, get_args, report_median_mean_anomalies,
     },
-    test_support::{busy_work, calibrate_busy_work},
+    bench_utils::work_fns::{busy_work, calibrate_busy_work},
 };
 
 fn main() {

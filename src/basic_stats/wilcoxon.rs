@@ -1,4 +1,7 @@
-use super::{AltHyp, HypTestResult, z_to_p};
+use super::{
+    core::{AltHyp, HypTestResult},
+    normal::z_to_p,
+};
 use hdrhistogram::{
     Histogram,
     iterators::{HistogramIterator, IterationValue, recorded::Iter},
@@ -387,6 +390,7 @@ pub fn wilcoxon_rank_sum_test_no_ties_adjust(
 }
 
 #[cfg(test)]
+#[cfg(feature = "_dev_support")]
 #[allow(clippy::unwrap_used)]
 mod base_test {
     //! Tests other than `test_w` used R's wilcox.test function to generate expected results.
@@ -394,8 +398,8 @@ mod base_test {
 
     use super::*;
     use crate::{
+        basic_stats::core::{AltHyp, Hyp},
         dev_utils::ApproxEq,
-        statistics::{AltHyp, Hyp},
     };
     use hdrhistogram::Histogram;
 
@@ -603,11 +607,11 @@ mod base_test {
 }
 
 #[cfg(test)]
-#[cfg(feature = "hypors")]
+#[cfg(feature = "_hypors")]
 #[allow(clippy::unwrap_used)]
 mod test_with_hypors {
     use super::*;
-    use crate::{dev_utils::ApproxEq, statistics::AltHyp};
+    use crate::{basic_stats::core::AltHyp, dev_utils::ApproxEq};
     use hdrhistogram::Histogram;
     use hypors::{common::TailType, mann_whitney::u_test};
     use polars::prelude::*;

@@ -1,9 +1,9 @@
 //! Module that supports test benchmarks, with the definition of target functions, test scenarios,
 //! their parameterization, and passing of arguments from environment variables and the command line.
 
-use crate::test_support::{
-    FN_NAME_PAIRS, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams, busy_work,
-    calibrate_busy_work,
+use crate::{
+    bench_utils::work_fns::{busy_work, calibrate_busy_work},
+    test_support::{FN_NAME_PAIRS, HI_1PCT_FACTOR, HI_10PCT_FACTOR, HI_25PCT_FACTOR, ScaleParams},
 };
 use rand::{SeedableRng, distr::Distribution, prelude::StdRng};
 use rand_distr::LogNormal;

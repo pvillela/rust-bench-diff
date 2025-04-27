@@ -37,7 +37,7 @@ echo "Started at: `date +"%H:%M:%S"`"
 # FN_NAME_PAIRS="hi_1pct_median_no_var/base_median_no_var" \
 # cargo bench --bench main_bench --features bench --target-dir target/bench-target -- $1 hi-1pct-no-var/base-no-var
 
-cargo bench --bench main_bench --features bench --target-dir target/bench-target -- $1 $2
+cargo bench --bench main_bench --features _bench --target-dir target/bench-target -- $1 $2
 
 echo ""
 echo "Finished at: `date +"%H:%M:%S"`"

@@ -2,7 +2,7 @@
 //!
 //! To run the bench:
 //! ```
-//! cargo bench --bench naive_bench --features bench
+//! cargo bench --bench naive_bench --features _bench
 //! ```
 
 use bench_diff::{
@@ -10,7 +10,7 @@ use bench_diff::{
     bench_support::bench_basic_naive::{
         ANOMALY_TOLERANCE, Args, bench_naive, get_args, report_median_mean_anomalies,
     },
-    test_support::{busy_work, calibrate_busy_work},
+    bench_utils::work_fns::{busy_work, calibrate_busy_work},
 };
 
 fn main() {

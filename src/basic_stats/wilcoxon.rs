@@ -606,7 +606,7 @@ mod base_test {
 }
 
 #[cfg(test)]
-#[cfg(feature = "hypors")]
+#[cfg(feature = "_hypors")]
 #[allow(clippy::unwrap_used)]
 mod test_with_hypors {
     use super::*;

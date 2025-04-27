@@ -2,7 +2,7 @@
 //!
 //! To run the bench:
 //! ```
-//! cargo bench --bench basic_bench --features bench
+//! cargo bench --bench basic_bench --features _bench
 //! ```
 
 use bench_diff::{DiffOut, stats_types::AltHyp};

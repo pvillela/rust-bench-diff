@@ -21,7 +21,7 @@ echo
 
 for ((i=1; i<=$1; i++)); do
     echo "*** i=$i ***" | tee /dev/stderr
-    cargo bench --bench basic_bench --features bench --target-dir target/bench-target
+    cargo bench --bench basic_bench --features _bench --target-dir target/bench-target
 done
 
 echo ""

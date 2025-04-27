@@ -1,5 +1,5 @@
 //! Example demonstrating [`busy_work`] and [`calibrate_busy_work`].
-//! This example requires the undocumented feature "test_support".
+//! This example requires the undocumented feature "_test_support".
 //!
 //! To run the example:
 //! ```

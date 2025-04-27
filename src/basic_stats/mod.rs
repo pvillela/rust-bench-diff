@@ -2,7 +2,7 @@
 pub mod core;
 
 #[allow(unused)]
-#[cfg(feature = "dev_support")]
+#[cfg(feature = "_dev_support")]
 pub mod bernoulli;
 
 #[allow(unused)]
@@ -10,5 +10,5 @@ pub mod bernoulli;
 pub mod normal;
 
 #[allow(unused)]
-#[cfg(feature = "dev_support")]
+#[cfg(feature = "_dev_support")]
 pub mod wilcoxon;

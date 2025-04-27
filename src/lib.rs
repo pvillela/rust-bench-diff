@@ -16,16 +16,16 @@ pub use core::*;
 pub(crate) mod basic_stats;
 
 #[doc(hidden)]
-#[cfg(feature = "test_support")]
+#[cfg(feature = "_test_support")]
 pub mod dev_utils;
 
 // intended only to be used by benches
 #[doc(hidden)]
-#[cfg(feature = "bench")]
+#[cfg(feature = "_bench")]
 pub mod bench_support;
 
 #[doc(hidden)]
-#[cfg(feature = "test_support")]
+#[cfg(feature = "_test_support")]
 pub mod test_support;
 
 pub mod stats_types;

@@ -2,7 +2,7 @@
 //!
 //! To run the bench:
 //! ```
-//! cargo bench --bench busy_bench --features bench_support
+//! cargo bench --bench busy_bench --features _bench
 //! ```
 
 use bench_diff::{

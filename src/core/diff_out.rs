@@ -15,7 +15,7 @@ use crate::{
 };
 use hdrhistogram::Histogram;
 
-#[cfg(feature = "dev_support")]
+#[cfg(feature = "_dev_support")]
 use crate::basic_stats::{bernoulli, wilcoxon};
 
 /// Contains the data resulting from a benchmark comparing two closures `f1` and `f2`.
@@ -144,7 +144,7 @@ impl DiffOut {
         self.median_f1() / self.median_f2()
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Ratio of the minimum of `f1`'s latencies to the minimum of `f2`'s latencies.
     pub fn ratio_mins_f1_f2(&self) -> f64 {
         self.summary_f1().min as f64 / self.summary_f2().min as f64
@@ -218,7 +218,7 @@ impl DiffOut {
         self.mean_diff_ln_f1_f2().exp()
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Estimate of the probability that `f1`s latency is greater than `f2`s in a paired observation
     /// (Bernoulli distribution).
     pub fn bernoulli_prob_f1_gt_f2(&self) -> f64 {
@@ -226,7 +226,7 @@ impl DiffOut {
             / (self.count_f1_lt_f2() + self.count_f1_eq_f2 + self.count_f1_gt_f2()) as f64
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Confidence interval (Wilson score interval) for the mean of the Bernoulli distribution
     /// whose parameter *p* is the probability probability that `f1`s latency is greater than `f2`s
     /// (in a paired observation).
@@ -236,7 +236,7 @@ impl DiffOut {
         bernoulli::bernoulli_psucc_ci(n, p_hat, alpha)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Position of `value` with respect to the
     /// confidence interval (Wilson score interval) for the mean of the Bernoulli distribution
     /// whose parameter *p* is the probability probability that `f1`s latency is greater than `f2`s
@@ -246,7 +246,7 @@ impl DiffOut {
         ci.position_of(value)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Statistical test of the hypothesis that
     /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `p0`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
@@ -255,7 +255,7 @@ impl DiffOut {
         bernoulli::bernoulli_test(self.n(), p_hat, p0, alt_hyp, alpha)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Statistical test of the hypothesis that
     /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `0.5`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
@@ -330,7 +330,7 @@ impl DiffOut {
         welch_test(&moments1, &moments2, alt_hyp, alpha)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Student's one-sample t statistic for
     /// `mean(latency(f1) - latency(f2))`.
     pub fn student_diff_t(&self) -> f64 {
@@ -342,14 +342,14 @@ impl DiffOut {
         student_one_sample_t(&moments, 0.)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Degrees of freedom for Student's one-sample t-test for
     /// `mean(latency(f1) - latency(f2))`.
     pub fn student_diff_df(&self) -> f64 {
         self.nf() - 1.
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Student's confidence interval for
     /// `mean(latency(f1) - latency(f2))`,
     /// with confidence level `(1 - alpha)`.
@@ -365,7 +365,7 @@ impl DiffOut {
         student_one_sample_ci(&moments, alpha)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Position of `value` with respect to
     /// Student's confidence interval for
     /// `mean(latency(f1) - latency(f2))`,
@@ -378,7 +378,7 @@ impl DiffOut {
         ci.position_of(value)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Student's one-sample test of the hypothesis that
     /// `mean(latency(f1) - latency(f2)) == 0`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
@@ -466,25 +466,25 @@ impl DiffOut {
         student_one_sample_test(&moments, 0., alt_hyp, alpha)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum *W* statistic for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_w(&self) -> f64 {
         wilcoxon::wilcoxon_rank_sum_w(&self.hist_f1, &self.hist_f2)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum normal approximation *z* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
         wilcoxon::wilcoxon_rank_sum_z(&self.hist_f1, &self.hist_f2)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum normal approximation *p* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
         wilcoxon::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
     }
 
-    #[cfg(feature = "dev_support")]
+    #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum test for for `latency(f1)` and `latency(f2)`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
     pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {

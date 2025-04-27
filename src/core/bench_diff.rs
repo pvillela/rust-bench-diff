@@ -422,7 +422,7 @@ pub fn bench_diff_with_status(
 }
 
 #[cfg(test)]
-#[cfg(feature = "test_support")]
+#[cfg(feature = "_test_support")]
 #[allow(clippy::type_complexity)]
 mod test {
     use super::*;

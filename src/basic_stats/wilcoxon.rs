@@ -390,6 +390,7 @@ pub fn wilcoxon_rank_sum_test_no_ties_adjust(
 }
 
 #[cfg(test)]
+#[cfg(feature = "_dev_support")]
 #[allow(clippy::unwrap_used)]
 mod base_test {
     //! Tests other than `test_w` used R's wilcox.test function to generate expected results.

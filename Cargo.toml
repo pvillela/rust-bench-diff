@@ -44,15 +44,14 @@ polars = { version = "0.43", optional = true }                      # required b
 [features]
 # All features below are for internal development use only
 _bench = ["_test_support"] # intended only to be used by benches
-_dev_support = []
+_dev_support = ["dep:sha2"]
 _test_support = [
     "_dev_support",
-    "dep:sha2",
     "dep:rand",
     "dep:rand_distr",
 ] # intended only for tests and benches
 _hypors = [
-    "_test_support",
+    "_dev_support",
     "dep:hypors",
     "dep:polars",
 ] # to enable Wilcoxon rank sum test functionality

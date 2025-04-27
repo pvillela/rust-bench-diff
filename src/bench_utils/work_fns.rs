@@ -1,6 +1,6 @@
 //! Module that provides functions to simulate work, used to support the validation of benchmarking frameworks.
 
-use crate::latency;
+use super::latency;
 use sha2::{Digest, Sha256};
 use std::{hint::black_box, thread, time::Duration};
 

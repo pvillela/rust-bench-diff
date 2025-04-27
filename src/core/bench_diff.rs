@@ -1,5 +1,7 @@
 //! Main module implementing functions to compare the difference in latency between two closures.
 
+use crate::bench_utils::latency;
+
 use super::{DiffOut, Timing};
 use std::{
     cmp,
@@ -64,14 +66,6 @@ impl LatencyUnit {
     pub fn latency_from_f64(&self, elapsed: f64) -> Duration {
         self.latency_from_u64(elapsed as u64)
     }
-}
-
-/// Invokes `f` once and returns its latency.
-#[inline(always)]
-pub fn latency(f: impl FnOnce()) -> Duration {
-    let start = Instant::now();
-    f();
-    Instant::now().duration_since(start)
 }
 
 /// Invokes `f1` then `f2` then `f2` then `f1` and returns two pairs of latencies. For each pair,

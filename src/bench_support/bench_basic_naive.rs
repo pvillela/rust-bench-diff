@@ -1,6 +1,6 @@
 //! Functions to support the "naive" comparison benchmarking approach, where each function is benchmarked separately.
 
-use crate::{DiffOut, DiffState, LatencyUnit, latency};
+use crate::{DiffOut, DiffState, LatencyUnit, bench_utils::latency};
 use std::{
     env::{self, VarError},
     io::{Write, stderr, stdout},

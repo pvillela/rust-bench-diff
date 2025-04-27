@@ -7,8 +7,8 @@
 
 use bench_diff::{
     DiffOut, LatencyUnit, bench_diff_with_status,
-    bench_support::comprehensive_print_diff_out,
-    test_support::{busy_work, calibrate_busy_work},
+    bench_support::print_diff_out::comprehensive_print_diff_out,
+    bench_utils::work_fns::{busy_work, calibrate_busy_work},
 };
 use std::time::Duration;
 

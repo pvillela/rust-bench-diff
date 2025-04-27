@@ -1,13 +1,15 @@
 //! Example demonstrating [`busy_work`] and [`calibrate_busy_work`].
-//! This example requires the undocumented feature "_test_support".
+//! This example requires the undocumented feature "_dev_support".
 //!
 //! To run the example:
 //! ```
-//! cargo run -r --example calibration --features test_support
+//! cargo run -r --example calibration --features _dev_support
 //! ```
 
-use bench_diff::latency;
-use bench_diff::test_support::{busy_work, calibrate_busy_work};
+use bench_diff::bench_utils::{
+    latency,
+    work_fns::{busy_work, calibrate_busy_work},
+};
 use std::time::Duration;
 
 fn main() {

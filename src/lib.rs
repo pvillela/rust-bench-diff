@@ -28,4 +28,13 @@ pub mod bench_support;
 #[cfg(feature = "_test_support")]
 pub mod test_support;
 
-pub mod stats_types;
+/// Structs and enums for confidence intervals and hypothesis tests.
+pub mod stats_types {
+    pub use crate::basic_stats::core::{AltHyp, Ci, Hyp, HypTestResult, PositionWrtCi};
+}
+
+#[deprecated(since = "1.0.4", note = "use mod `stats_types` instead")]
+/// Structs and enums for confidence intervals and hypothesis tests.
+pub mod statistics {
+    pub use super::stats_types::*;
+}

@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Refactored to avoid allocation of histograms subsequent to warm-up.
+- Deprecated `statistics` module, replacing it with equivalent `stats_types` module. This is the only publicly visible change and it does not impact compatibility with previous versions.
+- Renamed all private features, prefixing them with '_'.
+- Other internal housekeeping.
 
 ## [1.0.4] - 2025-04-25
 

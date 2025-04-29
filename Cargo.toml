@@ -1,6 +1,6 @@
 [package]
 name = "bench_diff"
-version = "1.0.5"
+version = "1.0.6"
 edition = "2024"
 license = "MIT"
 description = "Reliably compare the latencies of two functions/closures."
@@ -20,8 +20,9 @@ exclude = [
     "*.sh",
     ".gitignore",
     "examples",
+    "R",
     "bench_support",
-    "_test_support",
+    "test_support",
     "dev_utils",
     "benches/basic_bench.rs",
     "benches/busy_bench.rs",
@@ -43,18 +44,18 @@ polars = { version = "0.43", optional = true }                      # required b
 
 [features]
 # All features below are for internal development use only
-_bench = ["_test_support"] # intended only to be used by benches
-_dev_support = ["dep:sha2"]
+_bench = ["_test_support", "dep:sha2"] # intended only to be used by benches
+_dev_support = [] # to hide functionality developed but not intended for clients
 _test_support = [
     "_dev_support",
     "dep:rand",
     "dep:rand_distr",
 ] # intended only for tests and benches
 _hypors = [
-    "_dev_support",
+    "_test_support",
     "dep:hypors",
     "dep:polars",
-] # to enable Wilcoxon rank sum test functionality
+] # to test Wilcoxon rank sum test functionality
 
 [[bench]]
 name = "main_bench"

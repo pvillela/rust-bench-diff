@@ -22,7 +22,7 @@ pub mod bench_support;
 #[doc(hidden)]
 pub mod bench_utils;
 
-#[cfg(feature = "_dev_support")]
+#[cfg(feature = "_test_support")]
 pub(crate) mod dev_utils;
 
 #[cfg(feature = "_test_support")]

@@ -1,5 +1,3 @@
-use hdrhistogram::iterators::all;
-
 #[inline(always)]
 pub fn sample_mean(n: u64, sum: f64) -> f64 {
     sum / n as f64

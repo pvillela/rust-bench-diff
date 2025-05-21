@@ -1,22 +1,22 @@
 //! Module defining the key data structure produced by [`crate::bench_diff`].
 
 use crate::{
-    SummaryStats, Timing,
-    basic_stats::{
-        core::{
-            AltHyp, Ci, HypTestResult, PositionWrtCi, SampleMoments, sample_mean, sample_stdev,
-        },
-        normal::{
-            student_one_sample_ci, student_one_sample_t, student_one_sample_test, welch_ci,
-            welch_df, welch_t, welch_test,
-        },
+    SummaryStats, Timing, new_timing,
+    stats_types::{AltHyp, Ci, HypTestResult, PositionWrtCi},
+    summary_stats,
+};
+use basic_stats::{
+    aok::{AokBasicStats, AokFloat},
+    core::{SampleMoments, sample_mean, sample_stdev},
+    normal::{
+        student_1samp_ci, student_1samp_t, student_1samp_test, welch_ci, welch_df, welch_t,
+        welch_test,
     },
-    new_timing, summary_stats,
 };
 use hdrhistogram::Histogram;
 
 #[cfg(feature = "_dev_support")]
-use crate::basic_stats::{bernoulli, wilcoxon};
+use basic_stats::{binomial, wilcoxon::RankSum};
 
 /// Contains the data resulting from a benchmark comparing two closures `f1` and `f2`.
 ///
@@ -167,49 +167,49 @@ impl DiffOut {
 
     /// Mean of the natural logarithms of `f1`'s latencies.
     pub fn mean_ln_f1(&self) -> f64 {
-        sample_mean(self.n(), self.sum_ln_f1)
+        sample_mean(self.n(), self.sum_ln_f1).aok()
     }
 
     /// Standard deviation of the natural logarithms `f1`'s latecies.
     pub fn stdev_ln_f1(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_ln_f1, self.sum2_ln_f1)
+        sample_stdev(self.n(), self.sum_ln_f1, self.sum2_ln_f1).aok()
     }
 
     /// Mean of the natural logarithms of `f2`'s latencies.
     pub fn mean_ln_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_ln_f2)
+        sample_mean(self.n(), self.sum_ln_f2).aok()
     }
 
     /// Standard deviation of the natural logarithms `f2`'s latecies.
     pub fn stdev_ln_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_ln_f2, self.sum2_ln_f2)
+        sample_stdev(self.n(), self.sum_ln_f2, self.sum2_ln_f2).aok()
     }
 
     /// Mean of the differences between paired latencies of `f1` and `f2`.
     /// Equal to the difference between the mean of `f1`'s latencies and the mean of `f2`'s latencies.
     pub fn mean_diff_f1_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_diff_f1_f2())
+        sample_mean(self.n(), self.sum_diff_f1_f2()).aok()
     }
 
     /// Standard deviation of the differences between paired latencies of `f1` and `f2`.
     /// (*Not* the difference between the standard deviation of `f1`'s latencies and
     /// the standard deviation of`f2`'s latencies.)
     pub fn stdev_diff_f1_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_diff_f1_f2(), self.sum2_diff_f1_f2 as f64)
+        sample_stdev(self.n(), self.sum_diff_f1_f2(), self.sum2_diff_f1_f2 as f64).aok()
     }
 
     /// Mean of the differences between the natural logarithms of paired latencies of `f1` and `f2`.
     /// (Same as the difference between the mean of the natural logarithms of `f1`'s latencies and
     /// the mean of the natural logarithms of`f2`'s latencies.)
     pub fn mean_diff_ln_f1_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_diff_ln_f1_f2())
+        sample_mean(self.n(), self.sum_diff_ln_f1_f2()).aok()
     }
 
     /// Standard deviation of the differences between the natural logarithms of paired latencies of `f1` and `f2`.
     /// (*Not* the difference between the standard deviation of the natural logarithms of `f1`'s latencies and
     /// the standard deviation of the natural logarithms of`f2`'s latencies.)
     pub fn stdev_diff_ln_f1_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_diff_ln_f1_f2(), self.sum2_diff_ln_f1_f2)
+        sample_stdev(self.n(), self.sum_diff_ln_f1_f2(), self.sum2_diff_ln_f1_f2).aok()
     }
 
     /// Estimated ratio of the median `f1` latency to the median `f2` latency,
@@ -221,8 +221,8 @@ impl DiffOut {
     #[cfg(feature = "_dev_support")]
     /// Estimate of the probability that `f1`s latency is greater than `f2`s in a paired observation
     /// (Bernoulli distribution).
-    pub fn bernoulli_prob_f1_gt_f2(&self) -> f64 {
-        (self.count_f1_gt_f2() as f64 + self.count_f1_eq_f2 as f64 / 2.)
+    pub fn binomial_prob_f1_gt_f2(&self) -> f64 {
+        (self.count_f1_gt_f2() as f64)
             / (self.count_f1_lt_f2() + self.count_f1_eq_f2 + self.count_f1_gt_f2()) as f64
     }
 
@@ -230,10 +230,12 @@ impl DiffOut {
     /// Confidence interval (Wilson score interval) for the mean of the Bernoulli distribution
     /// whose parameter *p* is the probability probability that `f1`s latency is greater than `f2`s
     /// (in a paired observation).
-    pub fn bernoulli_ci(&self, alpha: f64) -> Ci {
-        let p_hat = self.bernoulli_prob_f1_gt_f2();
+    pub fn binomial_ci(&self, alpha: f64) -> Ci {
+        use basic_stats::aok::AokBasicStats;
+
         let n = self.n();
-        bernoulli::bernoulli_psucc_ci(n, p_hat, alpha)
+        let n_s = self.count_f1_gt_f2();
+        binomial::binomial_ws_ci(n, n_s, alpha).aok()
     }
 
     #[cfg(feature = "_dev_support")]
@@ -241,8 +243,8 @@ impl DiffOut {
     /// confidence interval (Wilson score interval) for the mean of the Bernoulli distribution
     /// whose parameter *p* is the probability probability that `f1`s latency is greater than `f2`s
     /// (in a paired observation).
-    pub fn bernoulli_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
-        let ci = self.bernoulli_ci(alpha);
+    pub fn binomial_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
+        let ci = self.binomial_ci(alpha);
         ci.position_of(value)
     }
 
@@ -250,17 +252,18 @@ impl DiffOut {
     /// Statistical test of the hypothesis that
     /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `p0`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
-    pub fn bernoulli_test(&self, p0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-        let p_hat = self.bernoulli_prob_f1_gt_f2();
-        bernoulli::bernoulli_test(self.n(), p_hat, p0, alt_hyp, alpha)
+    pub fn binomial_test(&self, p0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        use basic_stats::aok::AokBasicStats;
+
+        binomial::exact_binomial_test(self.n(), self.count_f1_gt_f2(), p0, alt_hyp, alpha).aok()
     }
 
     #[cfg(feature = "_dev_support")]
     /// Statistical test of the hypothesis that
     /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `0.5`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
-    pub fn bernoulli_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-        self.bernoulli_test(1. / 2., alt_hyp, alpha)
+    pub fn binomial_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        self.binomial_test(1. / 2., alt_hyp, alpha)
     }
 
     /// Welch's t statistic for
@@ -268,7 +271,7 @@ impl DiffOut {
     pub fn welch_ln_t(&self) -> f64 {
         let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
         let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
-        welch_t(&moments1, &moments2)
+        welch_t(&moments1, &moments2).aok()
     }
 
     /// Degrees of freedom for Welch's t-test for
@@ -276,7 +279,7 @@ impl DiffOut {
     pub fn welch_ln_df(&self) -> f64 {
         let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
         let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
-        welch_df(&moments1, &moments2)
+        welch_df(&moments1, &moments2).aok()
     }
 
     /// Welch confidence interval for
@@ -290,7 +293,7 @@ impl DiffOut {
     pub fn welch_ln_ci(&self, alpha: f64) -> Ci {
         let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
         let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
-        welch_ci(&moments1, &moments2, alpha)
+        welch_ci(&moments1, &moments2, alpha).aok()
     }
 
     /// Welch confidence interval for
@@ -327,7 +330,7 @@ impl DiffOut {
     pub fn welch_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
         let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
-        welch_test(&moments1, &moments2, alt_hyp, alpha)
+        welch_test(&moments1, &moments2, alt_hyp, alpha).aok()
     }
 
     #[cfg(feature = "_dev_support")]
@@ -339,7 +342,7 @@ impl DiffOut {
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
-        student_one_sample_t(&moments, 0.)
+        student_1samp_t(&moments, 0.).aok()
     }
 
     #[cfg(feature = "_dev_support")]
@@ -362,7 +365,7 @@ impl DiffOut {
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
-        student_one_sample_ci(&moments, alpha)
+        student_1samp_ci(&moments, alpha).aok()
     }
 
     #[cfg(feature = "_dev_support")]
@@ -391,7 +394,7 @@ impl DiffOut {
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
-        student_one_sample_test(&moments, 0., alt_hyp, alpha)
+        student_1samp_test(&moments, 0., alt_hyp, alpha).aok()
     }
 
     /// Student's one-sample t statistic for
@@ -402,7 +405,7 @@ impl DiffOut {
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
-        student_one_sample_t(&moments, 0.)
+        student_1samp_t(&moments, 0.).aok()
     }
 
     /// Degrees of freedom for Student's one-sample t-test for
@@ -423,7 +426,7 @@ impl DiffOut {
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
-        student_one_sample_ci(&moments, alpha)
+        student_1samp_ci(&moments, alpha).aok()
     }
 
     /// Student's one-sample confidence interval for
@@ -463,31 +466,50 @@ impl DiffOut {
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
-        student_one_sample_test(&moments, 0., alt_hyp, alpha)
+        student_1samp_test(&moments, 0., alt_hyp, alpha).aok()
+    }
+
+    #[cfg(feature = "_dev_support")]
+    /// Wilcoxon rank sum struct.
+    fn rank_sum(&self) -> RankSum {
+        let iter_f1 = self.hist_f1.iter_recorded().map(|x| {
+            let value = x.value_iterated_to();
+            let count = x.count_at_value();
+            (value as f64, count)
+        });
+
+        let iter_f2 = self.hist_f2.iter_recorded().map(|x| {
+            let value = x.value_iterated_to();
+            let count = x.count_at_value();
+            (value as f64, count)
+        });
+
+        RankSum::from_iters_with_counts(iter_f1, iter_f2)
+            .expect("data should be in strictly increasing order")
     }
 
     #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum *W* statistic for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_w(&self) -> f64 {
-        wilcoxon::wilcoxon_rank_sum_w(&self.hist_f1, &self.hist_f2)
+        self.rank_sum().w()
     }
 
     #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum normal approximation *z* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
-        wilcoxon::wilcoxon_rank_sum_z(&self.hist_f1, &self.hist_f2)
+        self.rank_sum().z().aok()
     }
 
     #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum normal approximation *p* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
-        wilcoxon::wilcoxon_rank_sum_p(&self.hist_f1, &self.hist_f2, alt_hyp)
+        self.rank_sum().z_p(alt_hyp).aok()
     }
 
     #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum test for for `latency(f1)` and `latency(f2)`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
     pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-        wilcoxon::wilcoxon_rank_sum_test(&self.hist_f1, &self.hist_f2, alt_hyp, alpha)
+        self.rank_sum().z_test(alt_hyp, alpha).aok()
     }
 }

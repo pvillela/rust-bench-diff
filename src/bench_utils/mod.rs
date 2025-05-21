@@ -1,5 +1,5 @@
 mod latency;
 pub use latency::*;
 
-#[cfg(feature = "_dev_support")]
+#[cfg(feature = "_bench")]
 pub mod work_fns;

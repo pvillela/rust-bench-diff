@@ -2,14 +2,14 @@
 
 use super::params_args::{Args, calibrated_fn_params, get_args, get_fn};
 use crate::{
-    DiffOut,
-    basic_stats::core::{AltHyp, SampleMoments},
-    bench_diff, bench_diff_with_status,
+    DiffOut, bench_diff, bench_diff_with_status,
     dev_utils::nest_btree_map,
+    stats_types::AltHyp,
     test_support::{
         ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, get_scale_params, get_scenario,
     },
 };
+use basic_stats::{aok::AokFloat, core::SampleMoments};
 use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
 
 fn print_diff_out(out: &DiffOut) {
@@ -85,22 +85,19 @@ fn print_diff_out(out: &DiffOut) {
         out.count_f1_eq_f2(),
         out.count_f1_gt_f2()
     );
+    println!("binomial_prob_f1_gt_f2={:?}", out.binomial_prob_f1_gt_f2());
+    println!("binomial_ci={:?}", out.binomial_ci(ALPHA),);
     println!(
-        "bernoulli_prob_f1_gt_f2={:?}",
-        out.bernoulli_prob_f1_gt_f2()
-    );
-    println!("bernoulli_ci={:?}", out.bernoulli_ci(ALPHA),);
-    println!(
-        "bernoulli_eq_half_test_lt:{:?}",
-        out.bernoulli_eq_half_test(AltHyp::Lt, ALPHA)
+        "binomial_eq_half_test_lt:{:?}",
+        out.binomial_eq_half_test(AltHyp::Lt, ALPHA)
     );
     println!(
-        "bernoulli_eq_half_test_eq:{:?}",
-        out.bernoulli_eq_half_test(AltHyp::Ne, ALPHA)
+        "binomial_eq_half_test_eq:{:?}",
+        out.binomial_eq_half_test(AltHyp::Ne, ALPHA)
     );
     println!(
-        "bernoulli_eq_half_test_gt:{:?}",
-        out.bernoulli_eq_half_test(AltHyp::Gt, ALPHA)
+        "binomial_eq_half_test_gt:{:?}",
+        out.binomial_eq_half_test(AltHyp::Gt, ALPHA)
     );
     println!();
     println!(
@@ -317,22 +314,26 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
                     ratio_medians_from_lns_noises
                         .get(&(name1, name2))
                         .unwrap()
-                        .mean(),
+                        .mean()
+                        .aok(),
                     ratio_medians_from_lns_noises
                         .get(&(name1, name2))
                         .unwrap()
                         .stdev()
+                        .aok()
                 );
                 println!(
                     "diff_ratio_medians_noise_mean={}, diff_ratio_medians_noise_stdev={}, diff_ratio_medians_noise_min={}, diff_ratio_medians_noise_max={}",
                     diff_ratio_medians_noises
                         .get(&(name1, name2))
                         .unwrap()
-                        .mean(),
+                        .mean()
+                        .aok(),
                     diff_ratio_medians_noises
                         .get(&(name1, name2))
                         .unwrap()
-                        .stdev(),
+                        .stdev()
+                        .aok(),
                     diff_ratio_medians_noises
                         .get(&(name1, name2))
                         .unwrap()
@@ -344,8 +345,16 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
                 );
                 println!(
                     "diff_ln_stdev_noise_mean={}, diff_ln_stdev_noise_stdev={}",
-                    diff_ln_stdev_noises.get(&(name1, name2)).unwrap().mean(),
-                    diff_ln_stdev_noises.get(&(name1, name2)).unwrap().stdev()
+                    diff_ln_stdev_noises
+                        .get(&(name1, name2))
+                        .unwrap()
+                        .mean()
+                        .aok(),
+                    diff_ln_stdev_noises
+                        .get(&(name1, name2))
+                        .unwrap()
+                        .stdev()
+                        .aok()
                 );
             }
         }

@@ -1,6 +1,6 @@
 //! Function that prints a variety of statistics from [`DiffOut`]. Used in some of the example benchmarks.
 
-use crate::{DiffOut, basic_stats::core::AltHyp};
+use crate::{DiffOut, stats_types::AltHyp};
 
 const ALPHA: f64 = 0.05;
 

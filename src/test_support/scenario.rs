@@ -4,7 +4,7 @@
 use super::{ALPHA, Claim, ClaimResults};
 use crate::{
     DiffOut,
-    basic_stats::core::{AltHyp, Hyp},
+    stats_types::{AltHyp, Hyp},
 };
 use std::sync::LazyLock;
 

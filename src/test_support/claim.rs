@@ -1,8 +1,8 @@
 use super::{ALPHA, BETA};
 use crate::{
     DiffOut,
-    basic_stats::core::{Hyp, HypTestResult, PositionWrtCi},
     dev_utils::ApproxEq,
+    stats_types::{AltHyp, Hyp, HypTestResult, PositionWrtCi},
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -49,6 +49,13 @@ fn check_hyp_test_result(res: HypTestResult, accept_hyp: Hyp) -> Option<String> 
     }
 }
 
+fn alt_hyp(hyp: Hyp) -> AltHyp {
+    match hyp {
+        Hyp::Alt(alt) => alt,
+        Hyp::Null => AltHyp::Ne,
+    }
+}
+
 impl Claim {
     pub fn invoke(&self, out: &DiffOut) -> Option<String> {
         self.f.invoke(out)
@@ -59,7 +66,7 @@ impl Claim {
             name: "welch_ratio_test",
             f: ClaimFn::Hyp(
                 |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.welch_ln_test(accept_hyp.alt_hyp(), alpha);
+                    let res = out.welch_ln_test(alt_hyp(accept_hyp), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
@@ -73,7 +80,7 @@ impl Claim {
             name: "student_diff_test",
             f: ClaimFn::Hyp(
                 |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.student_diff_test(accept_hyp.alt_hyp(), alpha);
+                    let res = out.student_diff_test(alt_hyp(accept_hyp), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
@@ -87,7 +94,7 @@ impl Claim {
             name: "student_ratio_test",
             f: ClaimFn::Hyp(
                 |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.student_diff_ln_test(accept_hyp.alt_hyp(), alpha);
+                    let res = out.student_diff_ln_test(alt_hyp(accept_hyp), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
@@ -181,7 +188,7 @@ impl Claim {
             name: "wilcoxon_rank_sum_test",
             f: ClaimFn::Hyp(
                 |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.wilcoxon_rank_sum_test(accept_hyp.alt_hyp(), alpha);
+                    let res = out.wilcoxon_rank_sum_test(alt_hyp(accept_hyp), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
@@ -190,12 +197,12 @@ impl Claim {
         }
     }
 
-    pub fn bernoulli_test(accept_hyp: Hyp, alpha: f64) -> Claim {
+    pub fn binomial_test(accept_hyp: Hyp, alpha: f64) -> Claim {
         Claim {
-            name: "bernoulli_test",
+            name: "binomial_test",
             f: ClaimFn::Hyp(
                 |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.bernoulli_eq_half_test(accept_hyp.alt_hyp(), alpha);
+                    let res = out.binomial_eq_half_test(alt_hyp(accept_hyp), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
@@ -210,7 +217,7 @@ impl Claim {
             Claim::student_diff_test(accept_hyp, alpha),
             Claim::student_ratio_test(accept_hyp, alpha),
             Claim::wilcoxon_rank_sum_test(accept_hyp, alpha),
-            Claim::bernoulli_test(accept_hyp, alpha),
+            Claim::binomial_test(accept_hyp, alpha),
             //
             Claim::ratio_medians_f1_f2_near_ratio_from_lns(),
             Claim::ratio_medians_f1_f2_near_target(target),
@@ -224,7 +231,7 @@ impl Claim {
         // "student_diff_test",
         "student_ratio_test",
         // "wilcoxon_rank_sum_test",
-        // "bernoulli_test",
+        // "binomial_test",
         "target_ratio_medians_f1_f2_in_welch_ratio_ci",
         "target_ratio_medians_f1_f2_in_student_ratio_ci",
     ];

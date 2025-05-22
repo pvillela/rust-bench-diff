@@ -202,7 +202,7 @@ impl Claim {
             name: "binomial_test",
             f: ClaimFn::Hyp(
                 |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.binomial_eq_half_test(alt_hyp(accept_hyp), alpha);
+                    let res = out.exact_binomial_f1_gt_f2_eq_half_test(alt_hyp(accept_hyp), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,

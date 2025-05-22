@@ -7,7 +7,7 @@ This library addresses the ordering effect and random noise challenges as follow
   - Each function is executed as many times preceded by itself as preceded by the other function. This removes the ordering effect.
   - Because the function excutions are paired, those executions are in close time proximity to each other, so the time-dependent variation is effectively neutralized in the comparison of latencies (even though it may persist in the latency distributions of the individual functions).
   - Latencies can be compared pairwise, as well as overall for both functions. This enables the analysis of data with statistical methods targeting either two independent samples or a single paired sample.
-- The number of function executions can be specified according to the desired levels of confidence and fine-grained discrimination. More on this in the [Statistical Details](#statistical-details) section.
+- The number of function executions can be specified according to the desired levels of confidence and fine-grained discrimination.
 - It warms-up by executing the above pattern for some time (3 seconds by default) before it starts tallying the results. This is similar to the `Criterion` warm-up strategy.
 
 An important tool used for data collection in this library is the [hdrhistogram](https://docs.rs/hdrhistogram/latest/hdrhistogram/) crate, which provides an efficient histogram implementation with high fidelity for wide ranges of positive values. Additionally, accumulators are used to support some inferential statistics.

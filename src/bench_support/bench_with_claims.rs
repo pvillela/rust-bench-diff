@@ -85,19 +85,19 @@ fn print_diff_out(out: &DiffOut) {
         out.count_f1_eq_f2(),
         out.count_f1_gt_f2()
     );
-    println!("binomial_prob_f1_gt_f2={:?}", out.binomial_prob_f1_gt_f2());
-    println!("binomial_ci={:?}", out.binomial_ci(ALPHA),);
+    println!("binomial_prob_f1_gt_f2={:?}", out.prop_f1_gt_f2());
+    println!("binomial_ci={:?}", out.binomial_f1_gt_f2_ws_ci(ALPHA),);
     println!(
         "binomial_eq_half_test_lt:{:?}",
-        out.binomial_eq_half_test(AltHyp::Lt, ALPHA)
+        out.exact_binomial_f1_gt_f2_eq_half_test(AltHyp::Lt, ALPHA)
     );
     println!(
         "binomial_eq_half_test_eq:{:?}",
-        out.binomial_eq_half_test(AltHyp::Ne, ALPHA)
+        out.exact_binomial_f1_gt_f2_eq_half_test(AltHyp::Ne, ALPHA)
     );
     println!(
         "binomial_eq_half_test_gt:{:?}",
-        out.binomial_eq_half_test(AltHyp::Gt, ALPHA)
+        out.exact_binomial_f1_gt_f2_eq_half_test(AltHyp::Gt, ALPHA)
     );
     println!();
     println!(

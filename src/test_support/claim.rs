@@ -1,4 +1,5 @@
-use super::{ALPHA, BETA};
+use statrs::distribution::{Binomial, DiscreteCDF};
+
 use crate::{
     DiffOut,
     dev_utils::ApproxEq,
@@ -226,12 +227,12 @@ impl Claim {
         ]
     }
 
-    pub const CRITICAL_NAMES: [&'static str; 4] = [
+    pub const CRITICAL_NAMES: [&'static str; 6] = [
         "welch_ratio_test",
         // "student_diff_test",
         "student_ratio_test",
-        // "wilcoxon_rank_sum_test",
-        // "binomial_test",
+        "wilcoxon_rank_sum_test",
+        "binomial_test",
         "target_ratio_medians_f1_f2_in_welch_ratio_ci",
         "target_ratio_medians_f1_f2_in_student_ratio_ci",
     ];
@@ -309,27 +310,35 @@ impl ClaimResults {
             .collect()
     }
 
+    /// Counts of claims that exceed their Type I or Type II errors, with tolerance tau.
+    ///
+    /// Calculation for alpha when median(latency(f1)) == median(latency(f2)).
+    /// - Hyp0: Prob(latency(f1) > latency(f2) == 0.5), for example. It could be any null hypothesis that should be accepted.
+    /// - Type I error = Prob(Hyp0 rejected) should be <= α.
+    /// - Thus, number of Hyp0 rejections in nrepeat trials should be <= binomial_inv_cdf(nrepeats, 1-α, τ).
+    ///
+    /// Calculation for beta when median(latency(f1)) < median(latency(f2)).
+    /// - Hyp0: Prob(latency(f1) > latency(f2) == 0.5), for example. It could be any null hypothesis that should be rejected.
+    /// - Type II error = Prob(Hyp0 accepted) should be <= β.
+    /// - Thus, number of Hyp0 acceptances in nrepeat trials should be <= binomial_inv_cdf(nrepeats, 1-β, τ).
     pub fn excess_type_i_and_ii_errors(
         &self,
         alpha: f64,
         beta: f64,
         claim_names: &[&'static str],
         nrepeats: usize,
-        nsigmas: f64,
+        tau: f64,
     ) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
-        let alpha_binomial_stdev: f64 = (nrepeats as f64 * ALPHA * (1. - ALPHA)).sqrt();
-        let beta_binomial_stdev: f64 = (nrepeats as f64 * BETA * (1. - BETA)).sqrt();
+        let alpha_binomial = Binomial::new(1. - alpha, nrepeats as u64).unwrap();
+        let max_alpha_count = alpha_binomial.inverse_cdf(tau);
 
-        // Normal approximations of binomial distribution: valid for ALPHA * nrepeats > 5
-        let max_alpha_count =
-            (nrepeats as f64 * alpha + alpha_binomial_stdev * nsigmas).ceil() as u32;
-        // Normal approximations of binomial distribution: valid for BETA * nrepeats > 5
-        let max_beta_count = (nrepeats as f64 * beta + beta_binomial_stdev * nsigmas).ceil() as u32;
+        let beta_binomial = Binomial::new(1. - beta, nrepeats as u64).unwrap();
+        let max_beta_count = beta_binomial.inverse_cdf(tau);
 
         let predicate = |name1: &'static str,
                          name2: &'static str,
                          claim_name: &'static str,
-                         count: u32|
+                         count: u64|
          -> bool {
             match (name1, name2, claim_name, count) {
                 _ if name1[..5] == name2[..5]
@@ -353,7 +362,7 @@ impl ClaimResults {
         self.summary
             .iter()
             .filter(|(((name1, name2), claim_name), count)| {
-                predicate(name1, name2, claim_name, **count)
+                predicate(name1, name2, claim_name, **count as u64)
             })
             .map(|(k, v)| (*k, *v))
             .collect::<BTreeMap<_, _>>()

@@ -608,8 +608,13 @@ mod test {
             }
         }
 
-        let type_i_and_ii_errors_2sigma =
-            results.excess_type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats, 2.);
+        let type_i_and_ii_errors_2sigma = results.excess_type_i_and_ii_errors(
+            ALPHA,
+            BETA,
+            &Claim::CRITICAL_NAMES,
+            nrepeats,
+            0.05,
+        );
         assert!(
             type_i_and_ii_errors_2sigma.is_empty(),
             "\n*** type_i_and_ii_errors_2sigma: {:?}\n",

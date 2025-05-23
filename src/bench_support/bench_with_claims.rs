@@ -317,7 +317,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             BETA_01,
             &Claim::CRITICAL_NAMES,
             nrepeats,
-            0.01,
+            0.05,
         );
         if !type_i_and_ii_errors_2sigma_beta_01.is_empty() {
             println!(

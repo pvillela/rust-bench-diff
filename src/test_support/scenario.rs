@@ -1,7 +1,7 @@
 //! Definition of [`Scenario`] and [`Claim`] types to support
 //! implementaton of main benchmarking logic to verify [`bench_diff`].
 
-use super::{ALPHA, Claim, ClaimResults};
+use super::{Claim, ClaimResults, ALPHA};
 use crate::{
     DiffOut,
     stats_types::{AltHyp, Hyp},

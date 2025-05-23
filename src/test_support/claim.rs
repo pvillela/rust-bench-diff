@@ -1,5 +1,4 @@
-use statrs::distribution::{Binomial, DiscreteCDF};
-
+use super::binomial_exact_gt_critical_value;
 use crate::{
     DiffOut,
     dev_utils::ApproxEq,
@@ -310,17 +309,23 @@ impl ClaimResults {
             .collect()
     }
 
-    /// Counts of claims that exceed their Type I or Type II errors, with tolerance tau.
+    /// Counts of claims that exceed their Type I or Type II errors, with tolerance `τ` or confidence `(1-τ)`.
     ///
     /// Calculation for alpha when median(latency(f1)) == median(latency(f2)).
     /// - Hyp0: Prob(latency(f1) > latency(f2) == 0.5), for example. It could be any null hypothesis that should be accepted.
     /// - Type I error = Prob(Hyp0 rejected) should be <= α.
-    /// - Thus, number of Hyp0 rejections in nrepeat trials should be <= binomial_inv_cdf(nrepeats, 1-α, τ).
+    /// - Thus, given the Type I error hypothesis above, let critical_value = binomial_inv_cdf(nrepeats, α, 1-τ):
+    ///   - Prob(number of Hyp0 rejections in nrepeat trials <= critical_value) >= 1-τ.
+    ///   - Equivalently, Prob(number of Hyp0 rejections in nrepeat trials > critical_value) < τ.
     ///
     /// Calculation for beta when median(latency(f1)) < median(latency(f2)).
     /// - Hyp0: Prob(latency(f1) > latency(f2) == 0.5), for example. It could be any null hypothesis that should be rejected.
     /// - Type II error = Prob(Hyp0 accepted) should be <= β.
-    /// - Thus, number of Hyp0 acceptances in nrepeat trials should be <= binomial_inv_cdf(nrepeats, 1-β, τ).
+    /// - Thus, given the Type II error hypothesis above, let critical_value = binomial_inv_cdf(nrepeats, β, 1-τ):
+    ///   - Prob(number of Hyp0 acceptances in nrepeat trials <= critical_value) >= 1-τ.
+    ///   - Equivalently, Prob(number of Hyp0 acceptances in nrepeat trials > critical_value) < τ.
+    ///
+    /// Returns a map from claim keys to the excessive number of errors associated with the key.
     pub fn excess_type_i_and_ii_errors(
         &self,
         alpha: f64,
@@ -329,11 +334,8 @@ impl ClaimResults {
         nrepeats: usize,
         tau: f64,
     ) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
-        let alpha_binomial = Binomial::new(1. - alpha, nrepeats as u64).unwrap();
-        let max_alpha_count = alpha_binomial.inverse_cdf(tau);
-
-        let beta_binomial = Binomial::new(1. - beta, nrepeats as u64).unwrap();
-        let max_beta_count = beta_binomial.inverse_cdf(tau);
+        let max_alpha_count = binomial_exact_gt_critical_value(nrepeats as u64, alpha, 1. - tau);
+        let max_beta_count = binomial_exact_gt_critical_value(nrepeats as u64, beta, 1. - tau);
 
         let predicate = |name1: &'static str,
                          name2: &'static str,

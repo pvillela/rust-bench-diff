@@ -6,7 +6,8 @@ use crate::{
     dev_utils::nest_btree_map,
     stats_types::AltHyp,
     test_support::{
-        ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, get_scale_params, get_scenario,
+        ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, binomial_exact_gt_critical_value,
+        binomial_nappr_gt_critical_value, get_scale_params, get_scenario,
     },
 };
 use basic_stats::{aok::AokFloat, core::SampleMoments};
@@ -165,6 +166,18 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
         println!("NOISE_STATS=\"{noise_stats}\"");
         println!("nrepeats={nrepeats}");
         println!("run_name=\"{run_name}\"");
+        println!("*** other parameters ***");
+        let tau = 0.05;
+        println!(
+            "ALPHA={ALPHA}, exact_type_i_gt_critical_value({tau})={}, approx_type_i_gt_critical_value({tau})={}",
+            binomial_exact_gt_critical_value(nrepeats as u64, ALPHA, 1. - tau),
+            binomial_nappr_gt_critical_value(nrepeats as u64, ALPHA, 1. - tau)
+        );
+        println!(
+            "BETA={BETA}, exact_type_ii_gt_critical_value({tau})={}, approx_type_ii_gt_critical_value({tau})={}",
+            binomial_exact_gt_critical_value(nrepeats as u64, BETA, 1. - tau),
+            binomial_nappr_gt_critical_value(nrepeats as u64, BETA, 1. - tau)
+        );
     };
 
     let calibrated_fn_params = calibrated_fn_params(scale_params);
@@ -276,7 +289,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             BETA,
             &Claim::CRITICAL_NAMES,
             nrepeats,
-            0.66,
+            0.33,
         );
         if !type_i_and_ii_errors_1sigma.is_empty() {
             println!(
@@ -290,7 +303,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             BETA,
             &Claim::CRITICAL_NAMES,
             nrepeats,
-            0.95,
+            0.05,
         );
         if !type_i_and_ii_errors_2sigma.is_empty() {
             println!(
@@ -304,7 +317,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             BETA_01,
             &Claim::CRITICAL_NAMES,
             nrepeats,
-            0.99,
+            0.01,
         );
         if !type_i_and_ii_errors_2sigma_beta_01.is_empty() {
             println!(

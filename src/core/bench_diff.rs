@@ -608,7 +608,7 @@ mod test {
             }
         }
 
-        let type_i_and_ii_errors_2sigma = results.excess_type_i_and_ii_errors(
+        let type_i_and_ii_errors_05 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA,
             &Claim::CRITICAL_NAMES,
@@ -616,9 +616,9 @@ mod test {
             0.05,
         );
         assert!(
-            type_i_and_ii_errors_2sigma.is_empty(),
-            "\n*** type_i_and_ii_errors_2sigma: {:?}\n",
-            nest_btree_map(type_i_and_ii_errors_2sigma)
+            type_i_and_ii_errors_05.is_empty(),
+            "\n*** type_i_and_ii_errors_05: {:?}\n",
+            nest_btree_map(type_i_and_ii_errors_05)
         );
     }
 

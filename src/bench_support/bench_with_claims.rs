@@ -284,45 +284,45 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             }
         }
 
-        let type_i_and_ii_errors_1sigma = results.excess_type_i_and_ii_errors(
+        let type_i_and_ii_errors_33 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA,
             &Claim::CRITICAL_NAMES,
             nrepeats,
             0.33,
         );
-        if !type_i_and_ii_errors_1sigma.is_empty() {
+        if !type_i_and_ii_errors_33.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_1sigma: {:?}",
-                nest_btree_map(type_i_and_ii_errors_1sigma)
+                ">>> type_i_and_ii_errors_33: {:?}",
+                nest_btree_map(type_i_and_ii_errors_33)
             );
         }
 
-        let type_i_and_ii_errors_2sigma = results.excess_type_i_and_ii_errors(
+        let type_i_and_ii_errors_05 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA,
             &Claim::CRITICAL_NAMES,
             nrepeats,
             0.05,
         );
-        if !type_i_and_ii_errors_2sigma.is_empty() {
+        if !type_i_and_ii_errors_05.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_2sigma: {:?}",
-                nest_btree_map(type_i_and_ii_errors_2sigma)
+                ">>> type_i_and_ii_errors_05: {:?}",
+                nest_btree_map(type_i_and_ii_errors_05)
             );
         }
 
-        let type_i_and_ii_errors_2sigma_beta_01 = results.excess_type_i_and_ii_errors(
+        let type_i_and_ii_errors_05_beta_01 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA_01,
             &Claim::CRITICAL_NAMES,
             nrepeats,
             0.05,
         );
-        if !type_i_and_ii_errors_2sigma_beta_01.is_empty() {
+        if !type_i_and_ii_errors_05_beta_01.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_2sigma_beta_01: {:?}",
-                nest_btree_map(type_i_and_ii_errors_2sigma_beta_01)
+                ">>> type_i_and_ii_errors_05_beta_01: {:?}",
+                nest_btree_map(type_i_and_ii_errors_05_beta_01)
             );
         }
 

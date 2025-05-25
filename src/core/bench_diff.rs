@@ -608,17 +608,17 @@ mod test {
             }
         }
 
-        let type_i_and_ii_errors_05 = results.excess_type_i_and_ii_errors(
+        let type_i_and_ii_errors_95 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA,
             &Claim::CRITICAL_NAMES,
             nrepeats,
-            0.05,
+            0.95,
         );
         assert!(
-            type_i_and_ii_errors_05.is_empty(),
-            "\n*** type_i_and_ii_errors_05: {:?}\n",
-            nest_btree_map(type_i_and_ii_errors_05)
+            type_i_and_ii_errors_95.is_empty(),
+            "\n*** type_i_and_ii_errors_95: {:?}\n",
+            nest_btree_map(type_i_and_ii_errors_95)
         );
     }
 

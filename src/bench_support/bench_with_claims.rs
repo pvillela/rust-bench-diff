@@ -6,8 +6,8 @@ use crate::{
     dev_utils::nest_btree_map,
     stats_types::AltHyp,
     test_support::{
-        ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, binomial_exact_gt_critical_value,
-        binomial_nappr_gt_critical_value, get_scale_params, get_scenario,
+        ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, binomial_inv_cdf,
+        binomial_nsigmas_gt_critical_value, get_scale_params, get_scenario,
     },
 };
 use basic_stats::{aok::AokFloat, core::SampleMoments};
@@ -167,16 +167,17 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
         println!("nrepeats={nrepeats}");
         println!("run_name=\"{run_name}\"");
         println!("*** other parameters ***");
-        let tau = 0.05;
+        let tau = 0.95;
+        let nsigmas = 2.;
         println!(
-            "ALPHA={ALPHA}, exact_type_i_gt_critical_value({tau})={}, approx_type_i_gt_critical_value({tau})={}",
-            binomial_exact_gt_critical_value(nrepeats as u64, ALPHA, 1. - tau),
-            binomial_nappr_gt_critical_value(nrepeats as u64, ALPHA, 1. - tau)
+            "ALPHA={ALPHA}, exact_type_i_gt_critical_value({tau})={}, nsigmas_type_i_gt_critical_value({nsigmas})={}",
+            binomial_inv_cdf(nrepeats as u64, ALPHA, tau),
+            binomial_nsigmas_gt_critical_value(nrepeats as u64, ALPHA, nsigmas)
         );
         println!(
-            "BETA={BETA}, exact_type_ii_gt_critical_value({tau})={}, approx_type_ii_gt_critical_value({tau})={}",
-            binomial_exact_gt_critical_value(nrepeats as u64, BETA, 1. - tau),
-            binomial_nappr_gt_critical_value(nrepeats as u64, BETA, 1. - tau)
+            "BETA={BETA}, exact_type_ii_gt_critical_value({tau})={}, nsigmas_type_ii_gt_critical_value({nsigmas})={}",
+            binomial_inv_cdf(nrepeats as u64, BETA, tau),
+            binomial_nsigmas_gt_critical_value(nrepeats as u64, BETA, nsigmas)
         );
     };
 
@@ -284,45 +285,45 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             }
         }
 
-        let type_i_and_ii_errors_33 = results.excess_type_i_and_ii_errors(
+        let type_i_and_ii_errors_67 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA,
             &Claim::CRITICAL_NAMES,
             nrepeats,
-            0.33,
+            0.67,
         );
-        if !type_i_and_ii_errors_33.is_empty() {
+        if !type_i_and_ii_errors_67.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_33: {:?}",
-                nest_btree_map(type_i_and_ii_errors_33)
+                ">>> type_i_and_ii_errors_67: {:?}",
+                nest_btree_map(type_i_and_ii_errors_67)
             );
         }
 
-        let type_i_and_ii_errors_05 = results.excess_type_i_and_ii_errors(
+        let type_i_and_ii_errors_95 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA,
             &Claim::CRITICAL_NAMES,
             nrepeats,
-            0.05,
+            0.95,
         );
-        if !type_i_and_ii_errors_05.is_empty() {
+        if !type_i_and_ii_errors_95.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_05: {:?}",
-                nest_btree_map(type_i_and_ii_errors_05)
+                ">>> type_i_and_ii_errors_95: {:?}",
+                nest_btree_map(type_i_and_ii_errors_95)
             );
         }
 
-        let type_i_and_ii_errors_05_beta_01 = results.excess_type_i_and_ii_errors(
+        let type_i_and_ii_errors_95_beta_01 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA_01,
             &Claim::CRITICAL_NAMES,
             nrepeats,
-            0.05,
+            0.95,
         );
-        if !type_i_and_ii_errors_05_beta_01.is_empty() {
+        if !type_i_and_ii_errors_95_beta_01.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_05_beta_01: {:?}",
-                nest_btree_map(type_i_and_ii_errors_05_beta_01)
+                ">>> type_i_and_ii_errors_95_beta_01: {:?}",
+                nest_btree_map(type_i_and_ii_errors_95_beta_01)
             );
         }
 

@@ -1,4 +1,4 @@
-use statrs::distribution::{Binomial, ContinuousCDF, DiscreteCDF, Normal};
+use statrs::distribution::{Binomial, DiscreteCDF};
 
 pub const ALPHA: f64 = 0.05;
 pub const BETA: f64 = 0.05;
@@ -19,18 +19,14 @@ pub fn default_hi_stdev_ln() -> f64 {
 /// Returns the highest value `n_c` for which `Prob(Binomial(n, p0) <= n_c) <= theta`.
 ///
 /// This is the exact inverse CDF of the binomial distribution.
-pub fn binomial_exact_gt_critical_value(n: u64, p0: f64, theta: f64) -> u64 {
+pub fn binomial_inv_cdf(n: u64, p0: f64, theta: f64) -> u64 {
     let binomial = Binomial::new(p0, n).expect("invalid arguments to binomial distribution");
     binomial.inverse_cdf(theta)
 }
 
-/// Returns an approximation of the highest value `n_c` for which `Prob(Binomial(n, p0) <= n_c) <= theta`
-/// using the normal approximation.
-///
-/// The normal approximations of the binomial distribution is acceptable for `p0 * nrepeats > 5`.
-pub fn binomial_nappr_gt_critical_value(n: u64, p0: f64, theta: f64) -> u64 {
+/// Returns the value that is `nsigmas` standard deviations higher than the median of `Binomial(n, p0)`.
+pub fn binomial_nsigmas_gt_critical_value(n: u64, p0: f64, nsigmas: f64) -> u64 {
     let mean = n as f64 * p0;
     let stdev: f64 = (n as f64 * p0 * (1. - p0)).sqrt();
-    let normal = Normal::new(mean, stdev).expect("invalid arguments to normal distribution");
-    normal.inverse_cdf(theta).ceil() as u64
+    (mean + nsigmas * stdev).ceil() as u64
 }

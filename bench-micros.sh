@@ -2,4 +2,4 @@
 
 export SCALE_NAME="micros_scale"
 
-./bench-common.sh $1
+./bench-common.sh $1 $2

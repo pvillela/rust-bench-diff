@@ -1,4 +1,4 @@
-use super::{ALPHA, BETA};
+use super::binomial_inv_cdf;
 use crate::{
     DiffOut,
     dev_utils::ApproxEq,
@@ -89,6 +89,7 @@ impl Claim {
         }
     }
 
+    #[allow(deprecated)]
     pub fn student_ratio_test(accept_hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "student_ratio_test",
@@ -162,6 +163,7 @@ impl Claim {
         }
     }
 
+    #[allow(deprecated)]
     pub fn target_ratio_medians_f1_f2_in_student_ratio_ci(target: f64, alpha: f64) -> Claim {
         Claim {
             name: "target_ratio_medians_f1_f2_in_student_ratio_ci",
@@ -202,7 +204,7 @@ impl Claim {
             name: "binomial_test",
             f: ClaimFn::Hyp(
                 |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.binomial_eq_half_test(alt_hyp(accept_hyp), alpha);
+                    let res = out.exact_binomial_f1_gt_f2_eq_half_test(alt_hyp(accept_hyp), alpha);
                     check_hyp_test_result(res, accept_hyp)
                 },
                 accept_hyp,
@@ -226,12 +228,12 @@ impl Claim {
         ]
     }
 
-    pub const CRITICAL_NAMES: [&'static str; 4] = [
+    pub const CRITICAL_NAMES: [&'static str; 6] = [
         "welch_ratio_test",
         // "student_diff_test",
         "student_ratio_test",
-        // "wilcoxon_rank_sum_test",
-        // "binomial_test",
+        "wilcoxon_rank_sum_test",
+        "binomial_test",
         "target_ratio_medians_f1_f2_in_welch_ratio_ci",
         "target_ratio_medians_f1_f2_in_student_ratio_ci",
     ];
@@ -309,27 +311,39 @@ impl ClaimResults {
             .collect()
     }
 
+    /// Counts of claims that exceed their Type I or Type II errors, with tolerance `τ`. The higher the value of `τ`,
+    /// the more tolerant we are about the accptable number of errors in `nrepeat` trials.
+    ///
+    /// Calculation for alpha when median(latency(f1)) == median(latency(f2)).
+    /// - Hyp0: Prob(latency(f1) > latency(f2) == 0.5), for example. It could be any null hypothesis that should be accepted.
+    /// - Type I error = Prob(Hyp0 rejected) should be <= α.
+    /// - Thus, given the Type I error hypothesis above, let critical_value = binomial_inv_cdf(nrepeats, α, τ):
+    ///   - Prob(number of Hyp0 rejections in nrepeat trials <= critical_value) >= τ.
+    ///   - Equivalently, Prob(number of Hyp0 rejections in nrepeat trials > critical_value) < 1-τ.
+    ///
+    /// Calculation for beta when median(latency(f1)) < median(latency(f2)).
+    /// - Hyp0: Prob(latency(f1) > latency(f2) == 0.5), for example. It could be any null hypothesis that should be rejected.
+    /// - Type II error = Prob(Hyp0 accepted) should be <= β.
+    /// - Thus, given the Type II error hypothesis above, let critical_value = binomial_inv_cdf(nrepeats, α, τ):
+    ///   - Prob(number of Hyp0 acceptances in nrepeat trials <= critical_value) >= τ.
+    ///   - Equivalently, Prob(number of Hyp0 acceptances in nrepeat trials > critical_value) < 1-τ.
+    ///
+    /// Returns a map from claim keys to the excessive number of errors associated with the key.
     pub fn excess_type_i_and_ii_errors(
         &self,
         alpha: f64,
         beta: f64,
         claim_names: &[&'static str],
         nrepeats: usize,
-        nsigmas: f64,
+        tau: f64,
     ) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
-        let alpha_binomial_stdev: f64 = (nrepeats as f64 * ALPHA * (1. - ALPHA)).sqrt();
-        let beta_binomial_stdev: f64 = (nrepeats as f64 * BETA * (1. - BETA)).sqrt();
-
-        // Normal approximations of binomial distribution: valid for ALPHA * nrepeats > 5
-        let max_alpha_count =
-            (nrepeats as f64 * alpha + alpha_binomial_stdev * nsigmas).ceil() as u32;
-        // Normal approximations of binomial distribution: valid for BETA * nrepeats > 5
-        let max_beta_count = (nrepeats as f64 * beta + beta_binomial_stdev * nsigmas).ceil() as u32;
+        let max_alpha_count = binomial_inv_cdf(nrepeats as u64, alpha, tau);
+        let max_beta_count = binomial_inv_cdf(nrepeats as u64, beta, tau);
 
         let predicate = |name1: &'static str,
                          name2: &'static str,
                          claim_name: &'static str,
-                         count: u32|
+                         count: u64|
          -> bool {
             match (name1, name2, claim_name, count) {
                 _ if name1[..5] == name2[..5]
@@ -353,7 +367,7 @@ impl ClaimResults {
         self.summary
             .iter()
             .filter(|(((name1, name2), claim_name), count)| {
-                predicate(name1, name2, claim_name, **count)
+                predicate(name1, name2, claim_name, **count as u64)
             })
             .map(|(k, v)| (*k, *v))
             .collect::<BTreeMap<_, _>>()

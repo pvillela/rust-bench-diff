@@ -23,7 +23,7 @@ To run a benchmark with `bench_diff`, follow these simple steps:
 
    ```toml
    [dev-dependencies]
-   bench_diff = "1"
+   bench_diff = "1.1"
    ```
 
 1. Create in `Cargo.toml` a `bench` section corresponding to the bench file. For example, given a file `benches/simple_bench.rs`, add the following to `Cargo.toml`:

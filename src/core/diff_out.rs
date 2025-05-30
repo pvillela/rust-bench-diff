@@ -219,18 +219,15 @@ impl DiffOut {
     }
 
     #[cfg(feature = "_dev_support")]
-    /// Estimate of the probability that `f1`s latency is greater than `f2`s in a paired observation
-    /// (Bernoulli distribution).
-    pub fn binomial_prob_f1_gt_f2(&self) -> f64 {
-        (self.count_f1_gt_f2() as f64)
-            / (self.count_f1_lt_f2() + self.count_f1_eq_f2 + self.count_f1_gt_f2()) as f64
+    /// Proportion of paired observations where `f1`s latency is greater than `f2`s.
+    pub fn prop_f1_gt_f2(&self) -> f64 {
+        (self.count_f1_gt_f2() as f64) / self.nf()
     }
 
     #[cfg(feature = "_dev_support")]
-    /// Confidence interval (Wilson score interval) for the mean of the Bernoulli distribution
-    /// whose parameter *p* is the probability probability that `f1`s latency is greater than `f2`s
-    /// (in a paired observation).
-    pub fn binomial_ci(&self, alpha: f64) -> Ci {
+    /// Confidence interval for the probability that `f1`s latency is greater than `f2`s
+    /// in a paired observation (Wilson score interval without continuity correction).
+    pub fn binomial_f1_gt_f2_ws_ci(&self, alpha: f64) -> Ci {
         use basic_stats::aok::AokBasicStats;
 
         let n = self.n();
@@ -240,11 +237,14 @@ impl DiffOut {
 
     #[cfg(feature = "_dev_support")]
     /// Position of `value` with respect to the
-    /// confidence interval (Wilson score interval) for the mean of the Bernoulli distribution
-    /// whose parameter *p* is the probability probability that `f1`s latency is greater than `f2`s
-    /// (in a paired observation).
-    pub fn binomial_value_position_wrt_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
-        let ci = self.binomial_ci(alpha);
+    /// confidence interval for the probability that `f1`s latency is greater than `f2`s
+    /// in a paired observation (Wilson score interval without continuity correction).
+    pub fn binomial_value_position_wrt_f1_gt_f2_ws_ci(
+        &self,
+        value: f64,
+        alpha: f64,
+    ) -> PositionWrtCi {
+        let ci = self.binomial_f1_gt_f2_ws_ci(alpha);
         ci.position_of(value)
     }
 
@@ -252,7 +252,12 @@ impl DiffOut {
     /// Statistical test of the hypothesis that
     /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `p0`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
-    pub fn binomial_test(&self, p0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+    pub fn exact_binomial_f1_gt_f2_test(
+        &self,
+        p0: f64,
+        alt_hyp: AltHyp,
+        alpha: f64,
+    ) -> HypTestResult {
         use basic_stats::aok::AokBasicStats;
 
         binomial::exact_binomial_test(self.n(), self.count_f1_gt_f2(), p0, alt_hyp, alpha).aok()
@@ -262,8 +267,12 @@ impl DiffOut {
     /// Statistical test of the hypothesis that
     /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `0.5`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
-    pub fn binomial_eq_half_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-        self.binomial_test(1. / 2., alt_hyp, alpha)
+    pub fn exact_binomial_f1_gt_f2_eq_half_test(
+        &self,
+        alt_hyp: AltHyp,
+        alpha: f64,
+    ) -> HypTestResult {
+        self.exact_binomial_f1_gt_f2_test(0.5, alt_hyp, alpha)
     }
 
     /// Welch's t statistic for
@@ -397,6 +406,7 @@ impl DiffOut {
         student_1samp_test(&moments, 0., alt_hyp, alpha).aok()
     }
 
+    #[deprecated = "Use `welch_ln_t` instead"]
     /// Student's one-sample t statistic for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_t(&self) -> f64 {
@@ -408,12 +418,14 @@ impl DiffOut {
         student_1samp_t(&moments, 0.).aok()
     }
 
+    #[deprecated = "Use `welch_ln_df` instead"]
     /// Degrees of freedom for Student's one-sample t-test for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_df(&self) -> f64 {
         self.nf() - 1.
     }
 
+    #[deprecated = "Use `welch_ln_ci` instead"]
     /// Student's one-sample confidence interval for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     /// with confidence level `(1 - alpha)`.
@@ -429,6 +441,8 @@ impl DiffOut {
         student_1samp_ci(&moments, alpha).aok()
     }
 
+    #[deprecated = "Use `welch_ratio_ci` instead"]
+    #[allow(deprecated)]
     /// Student's one-sample confidence interval for
     /// `median(latency(f1)) / median(latency(f2))`,
     /// with confidence level `(1 - alpha)`.
@@ -442,6 +456,8 @@ impl DiffOut {
         Ci(low, high)
     }
 
+    #[deprecated = "Use `welch_value_position_wrt_ratio_ci` instead"]
+    #[allow(deprecated)]
     /// Position of `value` with respect to
     /// Student's one-sample confidence interval for
     /// `median(latency(f1)) / median(latency(f2))`,
@@ -454,6 +470,7 @@ impl DiffOut {
         ci.position_of(value)
     }
 
+    #[deprecated = "Use `welch_ln_test` instead"]
     /// Student's one-sample test of the hypothesis that
     /// `median(latency(f1)) == median(latency(f2))`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.

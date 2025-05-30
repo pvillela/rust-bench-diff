@@ -6,7 +6,8 @@ use crate::{
     dev_utils::nest_btree_map,
     stats_types::AltHyp,
     test_support::{
-        ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, get_scale_params, get_scenario,
+        ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, binomial_inv_cdf,
+        binomial_nsigmas_gt_critical_value, get_scale_params, get_scenario,
     },
 };
 use basic_stats::{aok::AokFloat, core::SampleMoments};
@@ -42,20 +43,6 @@ fn print_diff_out(out: &DiffOut) {
         out.welch_ln_test(AltHyp::Gt, ALPHA)
     );
     println!();
-    println!("student_ratio_ci={:?}", out.student_ratio_ci(ALPHA),);
-    println!(
-        "student_diff_ln_test_lt:{:?}",
-        out.student_diff_ln_test(AltHyp::Lt, ALPHA)
-    );
-    println!(
-        "student_diff_ln_test_eq:{:?}",
-        out.student_diff_ln_test(AltHyp::Ne, ALPHA)
-    );
-    println!(
-        "student_diff_ln_test_gt:{:?}",
-        out.student_diff_ln_test(AltHyp::Gt, ALPHA)
-    );
-    println!();
     println!("mean_diff_f1_f2={}", out.mean_diff_f1_f2());
     println!(
         "relative_mean_diff_f1_f2={}",
@@ -85,19 +72,19 @@ fn print_diff_out(out: &DiffOut) {
         out.count_f1_eq_f2(),
         out.count_f1_gt_f2()
     );
-    println!("binomial_prob_f1_gt_f2={:?}", out.binomial_prob_f1_gt_f2());
-    println!("binomial_ci={:?}", out.binomial_ci(ALPHA),);
+    println!("binomial_prob_f1_gt_f2={:?}", out.prop_f1_gt_f2());
+    println!("binomial_ci={:?}", out.binomial_f1_gt_f2_ws_ci(ALPHA),);
     println!(
         "binomial_eq_half_test_lt:{:?}",
-        out.binomial_eq_half_test(AltHyp::Lt, ALPHA)
+        out.exact_binomial_f1_gt_f2_eq_half_test(AltHyp::Lt, ALPHA)
     );
     println!(
         "binomial_eq_half_test_eq:{:?}",
-        out.binomial_eq_half_test(AltHyp::Ne, ALPHA)
+        out.exact_binomial_f1_gt_f2_eq_half_test(AltHyp::Ne, ALPHA)
     );
     println!(
         "binomial_eq_half_test_gt:{:?}",
-        out.binomial_eq_half_test(AltHyp::Gt, ALPHA)
+        out.exact_binomial_f1_gt_f2_eq_half_test(AltHyp::Gt, ALPHA)
     );
     println!();
     println!(
@@ -165,6 +152,19 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
         println!("NOISE_STATS=\"{noise_stats}\"");
         println!("nrepeats={nrepeats}");
         println!("run_name=\"{run_name}\"");
+        println!("*** other parameters ***");
+        let tau = 0.95;
+        let nsigmas = 2.;
+        println!(
+            "ALPHA={ALPHA}, exact_type_i_gt_critical_value({tau})={}, nsigmas_type_i_gt_critical_value({nsigmas})={}",
+            binomial_inv_cdf(nrepeats as u64, ALPHA, tau),
+            binomial_nsigmas_gt_critical_value(nrepeats as u64, ALPHA, nsigmas)
+        );
+        println!(
+            "BETA={BETA}, exact_type_ii_gt_critical_value({tau})={}, nsigmas_type_ii_gt_critical_value({nsigmas})={}",
+            binomial_inv_cdf(nrepeats as u64, BETA, tau),
+            binomial_nsigmas_gt_critical_value(nrepeats as u64, BETA, nsigmas)
+        );
     };
 
     let calibrated_fn_params = calibrated_fn_params(scale_params);
@@ -271,35 +271,45 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             }
         }
 
-        let type_i_and_ii_errors_1sigma =
-            results.excess_type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats, 1.);
-        if !type_i_and_ii_errors_1sigma.is_empty() {
+        let type_i_and_ii_errors_67 = results.excess_type_i_and_ii_errors(
+            ALPHA,
+            BETA,
+            &Claim::CRITICAL_NAMES,
+            nrepeats,
+            0.67,
+        );
+        if !type_i_and_ii_errors_67.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_1sigma: {:?}",
-                nest_btree_map(type_i_and_ii_errors_1sigma)
+                ">>> type_i_and_ii_errors_67: {:?}",
+                nest_btree_map(type_i_and_ii_errors_67)
             );
         }
 
-        let type_i_and_ii_errors_2sigma =
-            results.excess_type_i_and_ii_errors(ALPHA, BETA, &Claim::CRITICAL_NAMES, nrepeats, 2.);
-        if !type_i_and_ii_errors_2sigma.is_empty() {
+        let type_i_and_ii_errors_95 = results.excess_type_i_and_ii_errors(
+            ALPHA,
+            BETA,
+            &Claim::CRITICAL_NAMES,
+            nrepeats,
+            0.95,
+        );
+        if !type_i_and_ii_errors_95.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_2sigma: {:?}",
-                nest_btree_map(type_i_and_ii_errors_2sigma)
+                ">>> type_i_and_ii_errors_95: {:?}",
+                nest_btree_map(type_i_and_ii_errors_95)
             );
         }
 
-        let type_i_and_ii_errors_2sigma_beta_01 = results.excess_type_i_and_ii_errors(
+        let type_i_and_ii_errors_95_beta_01 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA_01,
             &Claim::CRITICAL_NAMES,
             nrepeats,
-            2.,
+            0.95,
         );
-        if !type_i_and_ii_errors_2sigma_beta_01.is_empty() {
+        if !type_i_and_ii_errors_95_beta_01.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_2sigma_beta_01: {:?}",
-                nest_btree_map(type_i_and_ii_errors_2sigma_beta_01)
+                ">>> type_i_and_ii_errors_95_beta_01: {:?}",
+                nest_btree_map(type_i_and_ii_errors_95_beta_01)
             );
         }
 

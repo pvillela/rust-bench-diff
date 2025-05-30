@@ -83,12 +83,6 @@ pub fn print_diff_out(out: &DiffOut) {
         out.welch_ln_test(AltHyp::Gt, ALPHA)
     );
     println!();
-    println!("student_ratio_ci={:?}", out.student_ratio_ci(ALPHA),);
-    println!(
-        "student_diff_ln_test_gt:{:?}",
-        out.student_diff_ln_test(AltHyp::Gt, ALPHA)
-    );
-    println!();
     println!(
         "mean_diff_f1_f2={}, relative_mean_diff_f1_f2={}",
         out.mean_diff_f1_f2(),

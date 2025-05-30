@@ -5,11 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.7] - 2025-XX-XX
+## [1.1.0] - 2025-XX-XX
 
 ### Changed
 
 - Removed broken link in library doc comments.
+- Refined calculation of Type I and II error thresholds used in the assessment of multiple repetitions of benchmark tests.
+- Deprecated `student` methods of `DiffOut` due to their inferior Type I error rates observed in further benchmark testing. Users should use the corresponding `welch` methods instead.
+- Minor updates to benchmarking scripts.
 
 ## [1.0.6] - 2025-05-21
 

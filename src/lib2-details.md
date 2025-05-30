@@ -20,15 +20,9 @@ Much of the statistical inference supported by this library is based on the assu
 
 **t-tests**
 
-The [`DiffOut`] struct has two sets of methods associated with t-tests:
-- The methods whose names include the string `welch` correspond to statistics associated with the Welch
-  two-sample t-test for the difference between the means of the natural logarithms of the latencies of `f1`
-  and `f2`.
-- The methods whose names include the string `student` correspond to statistics associated with the Student
-  one-sample t-test for equality to 0 of the mean of the differences of the natural logarithms of the paired
-  latencies of `f1` and `f2`.
-- In benchmark tests (with typical large sample sizes) the Welch and Student variants produced roughly the same results
-  in terms of Type I and Type II error rates, though the Student confidence intervals tended to be a little tighter.
+The [`DiffOut`] methods whose names include the string `welch` correspond to statistics associated with the Welch two-sample t-test for the difference between the means of the natural logarithms of the latencies of `f1` and `f2`. 
+
+*Note: There are also [`DiffOut`] methods whose names include the string `student`. Those methods correspond to statistics associated with the Student one-sample t-test for equality to 0 of the mean of the differences of the natural logarithms of the paired latencies of `f1` and `f2`. Those methods have been deprecated as the results of further benchmark testing showed that they have substantially higher Type I error rates than the corresponding `welch` statistics.*
 
 # Testing
 

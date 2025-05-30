@@ -51,10 +51,10 @@ fn print_diff_out(out: &DiffOut) {
 
     println!();
     println!("ratio_medians_f1_f2={}", out.ratio_medians_f1_f2(),);
-    println!("student_ratio_ci={:?}", out.student_ratio_ci(ALPHA),);
+    println!("student_ratio_ci={:?}", out.welch_ratio_ci(ALPHA),);
     println!(
         "student_diff_ln_test_gt:{:?}",
-        out.student_diff_ln_test(AltHyp::Gt, ALPHA)
+        out.welch_ln_test(AltHyp::Gt, ALPHA)
     );
     println!();
     println!("summary_f1={:?}", out.summary_f1());

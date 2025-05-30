@@ -89,6 +89,7 @@ impl Claim {
         }
     }
 
+    #[allow(deprecated)]
     pub fn student_ratio_test(accept_hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "student_ratio_test",
@@ -162,6 +163,7 @@ impl Claim {
         }
     }
 
+    #[allow(deprecated)]
     pub fn target_ratio_medians_f1_f2_in_student_ratio_ci(target: f64, alpha: f64) -> Claim {
         Claim {
             name: "target_ratio_medians_f1_f2_in_student_ratio_ci",

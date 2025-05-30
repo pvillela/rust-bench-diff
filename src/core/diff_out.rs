@@ -406,6 +406,7 @@ impl DiffOut {
         student_1samp_test(&moments, 0., alt_hyp, alpha).aok()
     }
 
+    #[deprecated = "Use `welch_ln_t` instead"]
     /// Student's one-sample t statistic for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_t(&self) -> f64 {
@@ -417,12 +418,14 @@ impl DiffOut {
         student_1samp_t(&moments, 0.).aok()
     }
 
+    #[deprecated = "Use `welch_ln_df` instead"]
     /// Degrees of freedom for Student's one-sample t-test for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_df(&self) -> f64 {
         self.nf() - 1.
     }
 
+    #[deprecated = "Use `welch_ln_ci` instead"]
     /// Student's one-sample confidence interval for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     /// with confidence level `(1 - alpha)`.
@@ -438,6 +441,8 @@ impl DiffOut {
         student_1samp_ci(&moments, alpha).aok()
     }
 
+    #[deprecated = "Use `welch_ratio_ci` instead"]
+    #[allow(deprecated)]
     /// Student's one-sample confidence interval for
     /// `median(latency(f1)) / median(latency(f2))`,
     /// with confidence level `(1 - alpha)`.
@@ -451,6 +456,8 @@ impl DiffOut {
         Ci(low, high)
     }
 
+    #[deprecated = "Use `welch_value_position_wrt_ratio_ci` instead"]
+    #[allow(deprecated)]
     /// Position of `value` with respect to
     /// Student's one-sample confidence interval for
     /// `median(latency(f1)) / median(latency(f2))`,
@@ -463,6 +470,7 @@ impl DiffOut {
         ci.position_of(value)
     }
 
+    #[deprecated = "Use `welch_ln_test` instead"]
     /// Student's one-sample test of the hypothesis that
     /// `median(latency(f1)) == median(latency(f2))`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.

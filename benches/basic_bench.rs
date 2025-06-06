@@ -11,8 +11,8 @@ use bench_diff::{
     bench_support::bench_basic_naive::{
         ANOMALY_TOLERANCE, Args, get_args, report_median_mean_anomalies,
     },
-    bench_utils::work_fns::{busy_work, calibrate_busy_work},
 };
+use bench_utils::{busy_work, calibrate_busy_work};
 
 fn main() {
     let args = get_args();

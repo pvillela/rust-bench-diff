@@ -1,19 +1,12 @@
 //! Module defining the key data structure produced by [`crate::bench_diff`].
 
-use crate::{
-    SummaryStats, Timing, new_timing,
-    stats_types::{AltHyp, Ci, HypTestResult, PositionWrtCi},
-    summary_stats,
-};
+use crate::stats_types::{AltHyp, Ci, HypTestResult, PositionWrtCi};
 use basic_stats::{
     aok::{AokBasicStats, AokFloat},
     core::{SampleMoments, sample_mean, sample_stdev},
-    normal::{
-        student_1samp_ci, student_1samp_t, student_1samp_test, welch_ci, welch_df, welch_t,
-        welch_test,
-    },
+    normal::{student_1samp_ci, student_1samp_t, student_1samp_test},
 };
-use hdrhistogram::Histogram;
+use bench_utils::{BenchOut, Comp, LatencyUnit, SummaryStats, summary_stats};
 
 #[cfg(feature = "_dev_support")]
 use basic_stats::{binomial, wilcoxon::RankSum};
@@ -25,52 +18,34 @@ use basic_stats::{binomial, wilcoxon::RankSum};
 /// benchmarked functions, individually and in relation to each other.
 ///
 /// All statistics involving differences refer to a value for `f1` minus the corresponding
-/// value for `f2`.
+/// value for `f2`. Similarly for ratios and other comparisons.
 pub struct DiffOut {
-    pub(super) hist_f1: Timing,
-    pub(super) hist_f2: Timing,
-    pub(super) hist_f1_lt_f2: Timing, //todo: replace with count, sum and sum of squares of ratios
+    pub(super) out_f1: BenchOut,
+    pub(super) out_f2: BenchOut,
+    pub(super) count_f1_lt_f2: u64,
     pub(super) count_f1_eq_f2: u64,
-    pub(super) hist_f1_gt_f2: Timing, //todo: replace with count, sum and sum of squares of ratios
-    pub(super) sum_f1: i64,
-    pub(super) sum_f2: i64,
-    pub(super) sum_ln_f1: f64,
-    pub(super) sum2_ln_f1: f64,
-    pub(super) sum_ln_f2: f64,
-    pub(super) sum2_ln_f2: f64,
+    pub(super) count_f1_gt_f2: u64,
     pub(super) sum2_diff_f1_f2: i64,
     pub(super) sum2_diff_ln_f1_f2: f64,
 }
 
 impl DiffOut {
     /// Creates a new empty instance.
-    pub(crate) fn new() -> Self {
-        let hist_f1 = new_timing(20 * 1000 * 1000, 5);
-        let hist_f2 = Histogram::<u64>::new_from(&hist_f1);
-        let hist_f1_lt_f2 = Histogram::<u64>::new_from(&hist_f1);
+    pub(crate) fn new(unit: LatencyUnit) -> Self {
+        let out_f1 = BenchOut::new(unit);
+        let out_f2 = BenchOut::new(unit);
+        let count_f1_lt_f2 = 0;
         let count_f1_eq_f2 = 0;
-        let hist_f1_gt_f2 = Histogram::<u64>::new_from(&hist_f1);
-        let sum_f1 = 0;
-        let sum_f2 = 0;
-        let sum_ln_f1 = 0.;
-        let sum2_ln_f1 = 0.;
-        let sum_ln_f2 = 0.;
-        let sum2_ln_f2 = 0.;
+        let count_f1_gt_f2 = 0;
         let sum2_diff_f1_f2 = 0;
         let sum2_diff_ln_f1_f2 = 0.;
 
         Self {
-            hist_f1,
-            hist_f2,
-            hist_f1_lt_f2,
+            out_f1,
+            out_f2,
+            count_f1_lt_f2,
             count_f1_eq_f2,
-            hist_f1_gt_f2,
-            sum_f1,
-            sum_f2,
-            sum_ln_f1,
-            sum2_ln_f1,
-            sum_ln_f2,
-            sum2_ln_f2,
+            count_f1_gt_f2,
             sum2_diff_f1_f2,
             sum2_diff_ln_f1_f2,
         }
@@ -81,7 +56,7 @@ impl DiffOut {
     /// It is the same value for `f1` and `f2`.
     #[inline(always)]
     pub fn n(&self) -> u64 {
-        self.hist_f1.len()
+        self.out_f1.n()
     }
 
     /// Number of observations (sample size) for a function, as a floating point number.
@@ -89,29 +64,29 @@ impl DiffOut {
     /// It is the same value for `f1` and `f2`.
     #[inline(always)]
     pub fn nf(&self) -> f64 {
-        self.hist_f1.len() as f64
+        self.out_f1.nf()
     }
 
     /// Summary descriptive statistics for `f1`.
     ///
     /// Includes sample size, mean, standard deviation, median, several percentiles, min, and max.
     pub fn summary_f1(&self) -> SummaryStats {
-        summary_stats(&self.hist_f1)
+        summary_stats(&self.out_f1)
     }
 
     /// Summary descriptive statistics for `f2`.
     ///
     /// Includes sample size, mean, standard deviation, median, several percentiles, min, and max.
     pub fn summary_f2(&self) -> SummaryStats {
-        summary_stats(&self.hist_f2)
+        summary_stats(&self.out_f2)
     }
 
     fn sum_diff_f1_f2(&self) -> f64 {
-        (self.sum_f1 - self.sum_f2) as f64
+        (self.out_f1.sum() - self.out_f2.sum()) as f64
     }
 
     fn sum_diff_ln_f1_f2(&self) -> f64 {
-        self.sum_ln_f1 - self.sum_ln_f2
+        (self.out_f1.sum_ln() - self.out_f2.sum_ln()) as f64
     }
 
     /// Mean of `f1`'s latencies.
@@ -152,7 +127,7 @@ impl DiffOut {
 
     /// Count of paired observations where `f1`'s latency is less than `f2`'s.
     pub fn count_f1_lt_f2(&self) -> u64 {
-        self.hist_f1_lt_f2.len()
+        self.count_f1_lt_f2
     }
 
     /// Count of paired observations where `f1`'s latency is equal to `f2`'s.
@@ -162,27 +137,27 @@ impl DiffOut {
 
     /// Count of paired observations where `f1`'s latency is greater than `f2`'s.
     pub fn count_f1_gt_f2(&self) -> u64 {
-        self.hist_f1_gt_f2.len()
+        self.count_f1_gt_f2
     }
 
     /// Mean of the natural logarithms of `f1`'s latencies.
     pub fn mean_ln_f1(&self) -> f64 {
-        sample_mean(self.n(), self.sum_ln_f1).aok()
+        self.out_f1.mean_ln()
     }
 
     /// Standard deviation of the natural logarithms `f1`'s latecies.
     pub fn stdev_ln_f1(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_ln_f1, self.sum2_ln_f1).aok()
+        self.out_f1.stdev_ln()
     }
 
     /// Mean of the natural logarithms of `f2`'s latencies.
     pub fn mean_ln_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_ln_f2).aok()
+        self.out_f2.mean_ln()
     }
 
     /// Standard deviation of the natural logarithms `f2`'s latecies.
     pub fn stdev_ln_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_ln_f2, self.sum2_ln_f2).aok()
+        self.out_f2.stdev_ln()
     }
 
     /// Mean of the differences between paired latencies of `f1` and `f2`.
@@ -278,17 +253,15 @@ impl DiffOut {
     /// Welch's t statistic for
     /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn welch_ln_t(&self) -> f64 {
-        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
-        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
-        welch_t(&moments1, &moments2).aok()
+        let comp = Comp::new(&self.out_f1, &self.out_f2);
+        comp.welch_ln_t()
     }
 
     /// Degrees of freedom for Welch's t-test for
     /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn welch_ln_df(&self) -> f64 {
-        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
-        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
-        welch_df(&moments1, &moments2).aok()
+        let comp = Comp::new(&self.out_f1, &self.out_f2);
+        comp.welch_ln_df()
     }
 
     /// Welch confidence interval for
@@ -300,9 +273,8 @@ impl DiffOut {
     ///
     /// This is also the confidence interval for the difference of medians of logarithms under the above assumption.
     pub fn welch_ln_ci(&self, alpha: f64) -> Ci {
-        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
-        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
-        welch_ci(&moments1, &moments2, alpha).aok()
+        let comp = Comp::new(&self.out_f1, &self.out_f2);
+        comp.welch_ln_ci(alpha)
     }
 
     /// Welch confidence interval for
@@ -337,9 +309,8 @@ impl DiffOut {
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn welch_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-        let moments1 = SampleMoments::new(self.hist_f1.len(), self.sum_ln_f1, self.sum2_ln_f1);
-        let moments2 = SampleMoments::new(self.hist_f2.len(), self.sum_ln_f2, self.sum2_ln_f2);
-        welch_test(&moments1, &moments2, alt_hyp, alpha).aok()
+        let comp = Comp::new(&self.out_f1, &self.out_f2);
+        comp.welch_ln_test(alt_hyp, alpha)
     }
 
     #[cfg(feature = "_dev_support")]
@@ -347,7 +318,7 @@ impl DiffOut {
     /// `mean(latency(f1) - latency(f2))`.
     pub fn student_diff_t(&self) -> f64 {
         let moments = SampleMoments::new(
-            self.hist_f1.len(),
+            self.out_f1.n(),
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
@@ -370,7 +341,7 @@ impl DiffOut {
     /// performance analysis theory or empirical data.
     pub fn student_diff_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
-            self.hist_f1.len(),
+            self.out_f1.n(),
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
@@ -399,7 +370,7 @@ impl DiffOut {
     /// performance analysis theory or empirical data.
     pub fn student_diff_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
-            self.hist_f1.len(),
+            self.out_f1.n(),
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
@@ -411,7 +382,7 @@ impl DiffOut {
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_t(&self) -> f64 {
         let moments = SampleMoments::new(
-            self.hist_f1.len(),
+            self.out_f1.n(),
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
@@ -434,7 +405,7 @@ impl DiffOut {
     /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn student_diff_ln_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
-            self.hist_f1.len(),
+            self.out_f1.n(),
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
@@ -479,7 +450,7 @@ impl DiffOut {
     /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn student_diff_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
-            self.hist_f1.len(),
+            self.out_f1.n(),
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
@@ -489,13 +460,13 @@ impl DiffOut {
     #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum struct.
     fn rank_sum(&self) -> RankSum {
-        let iter_f1 = self.hist_f1.iter_recorded().map(|x| {
+        let iter_f1 = self.out_f1.hist().iter_recorded().map(|x| {
             let value = x.value_iterated_to();
             let count = x.count_at_value();
             (value as f64, count)
         });
 
-        let iter_f2 = self.hist_f2.iter_recorded().map(|x| {
+        let iter_f2 = self.out_f2.hist().iter_recorded().map(|x| {
             let value = x.value_iterated_to();
             let count = x.count_at_value();
             (value as f64, count)

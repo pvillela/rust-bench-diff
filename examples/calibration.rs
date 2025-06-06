@@ -6,10 +6,7 @@
 //! cargo run -r --example calibration --features _bench
 //! ```
 
-use bench_diff::bench_utils::{
-    latency,
-    work_fns::{busy_work, calibrate_busy_work},
-};
+use bench_utils::{busy_work, calibrate_busy_work, latency};
 use std::time::Duration;
 
 fn main() {

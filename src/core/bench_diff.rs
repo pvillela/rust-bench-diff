@@ -1,8 +1,7 @@
 //! Main module implementing functions to compare the difference in latency between two closures.
 
-use crate::bench_utils::latency;
-
-use super::{DiffOut, Timing};
+use super::DiffOut;
+use bench_utils::{BenchOut, LatencyUnit, latency};
 use std::{
     cmp,
     io::{Write, stderr},
@@ -26,48 +25,6 @@ pub fn set_warmup_millis(millis: u64) {
 
 const WARMUP_INCREMENT_COUNT: usize = 20;
 
-/// Unit of time used to record latencies. Used as an argument in benchmarking functions.
-#[derive(Clone, Copy, Debug)]
-pub enum LatencyUnit {
-    Milli,
-    Micro,
-    Nano,
-}
-
-impl LatencyUnit {
-    /// Converts a `latency` [`Duration`] to a `u64` value according to the unit `self`.
-    #[inline(always)]
-    pub fn latency_as_u64(&self, latency: Duration) -> u64 {
-        match self {
-            Self::Nano => latency.as_nanos() as u64,
-            Self::Micro => latency.as_micros() as u64,
-            Self::Milli => latency.as_millis() as u64,
-        }
-    }
-
-    /// Converts a `u64` value to a [`Duration`] according to the unit `self`.
-    #[inline(always)]
-    pub fn latency_from_u64(&self, elapsed: u64) -> Duration {
-        match self {
-            Self::Nano => Duration::from_nanos(elapsed),
-            Self::Micro => Duration::from_micros(elapsed),
-            Self::Milli => Duration::from_millis(elapsed),
-        }
-    }
-
-    /// Converts a `latency` [`Duration`] to an `f64` value according to the unit `self`.
-    #[inline(always)]
-    pub fn latency_as_f64(&self, latency: Duration) -> f64 {
-        self.latency_as_u64(latency) as f64
-    }
-
-    /// Converts an `f64` value to a [`Duration`] according to the unit `self`.
-    #[inline(always)]
-    pub fn latency_from_f64(&self, elapsed: f64) -> Duration {
-        self.latency_from_u64(elapsed as u64)
-    }
-}
-
 /// Invokes `f1` then `f2` then `f2` then `f1` and returns two pairs of latencies. For each pair,
 /// the first component is an `f1` latency and the second component is an `f2` latency.
 #[inline(always)]
@@ -82,17 +39,11 @@ fn duo_exec(mut f1: impl FnMut(), mut f2: impl FnMut()) -> [(Duration, Duration)
 }
 
 pub(crate) struct DiffState<'a> {
-    hist_f1: &'a mut Timing,
-    hist_f2: &'a mut Timing,
-    hist_f1_lt_f2: &'a mut Timing,
+    out_f1: &'a mut BenchOut,
+    out_f2: &'a mut BenchOut,
+    count_f1_lt_f2: &'a mut u64,
     count_f1_eq_f2: &'a mut u64,
-    hist_f1_gt_f2: &'a mut Timing,
-    sum_f1: &'a mut i64,
-    sum_f2: &'a mut i64,
-    sum_ln_f1: &'a mut f64,
-    sum2_ln_f1: &'a mut f64,
-    sum_ln_f2: &'a mut f64,
-    sum2_ln_f2: &'a mut f64,
+    count_f1_gt_f2: &'a mut u64,
     sum2_diff_f1_f2: &'a mut i64,
     sum2_diff_ln_f1_f2: &'a mut f64,
 }
@@ -100,17 +51,11 @@ pub(crate) struct DiffState<'a> {
 impl<'a> DiffState<'a> {
     pub fn new(out: &'a mut DiffOut) -> Self {
         Self {
-            hist_f1: &mut out.hist_f1,
-            hist_f2: &mut out.hist_f2,
-            hist_f1_lt_f2: &mut out.hist_f1_lt_f2,
+            out_f1: &mut out.out_f1,
+            out_f2: &mut out.out_f2,
+            count_f1_lt_f2: &mut out.count_f1_lt_f2,
             count_f1_eq_f2: &mut out.count_f1_eq_f2,
-            hist_f1_gt_f2: &mut out.hist_f1_gt_f2,
-            sum_f1: &mut out.sum_f1,
-            sum_f2: &mut out.sum_f2,
-            sum_ln_f1: &mut out.sum_ln_f1,
-            sum2_ln_f1: &mut out.sum2_ln_f1,
-            sum_ln_f2: &mut out.sum_ln_f2,
-            sum2_ln_f2: &mut out.sum2_ln_f2,
+            count_f1_gt_f2: &mut out.count_f1_gt_f2,
             sum2_diff_f1_f2: &mut out.sum2_diff_f1_f2,
             sum2_diff_ln_f1_f2: &mut out.sum2_diff_ln_f1_f2,
         }
@@ -118,34 +63,22 @@ impl<'a> DiffState<'a> {
 
     pub fn reversed(&'a mut self) -> Self {
         Self {
-            hist_f1: self.hist_f2,
-            hist_f2: self.hist_f1,
-            hist_f1_lt_f2: self.hist_f1_gt_f2,
+            out_f1: self.out_f2,
+            out_f2: self.out_f1,
+            count_f1_lt_f2: self.count_f1_gt_f2,
             count_f1_eq_f2: self.count_f1_eq_f2,
-            hist_f1_gt_f2: self.hist_f1_lt_f2,
-            sum_f1: self.sum_f2,
-            sum_f2: self.sum_f1,
-            sum_ln_f1: self.sum_ln_f2,
-            sum2_ln_f1: self.sum2_ln_f2,
-            sum_ln_f2: self.sum_ln_f1,
-            sum2_ln_f2: self.sum2_ln_f1,
+            count_f1_gt_f2: self.count_f1_lt_f2,
             sum2_diff_f1_f2: self.sum2_diff_f1_f2,
             sum2_diff_ln_f1_f2: self.sum2_diff_ln_f1_f2,
         }
     }
 
     pub(crate) fn reset(&mut self) {
-        self.hist_f1.reset();
-        self.hist_f2.reset();
-        self.hist_f1_lt_f2.reset();
+        self.out_f1.reset();
+        self.out_f2.reset();
+        *self.count_f1_lt_f2 = 0;
         *self.count_f1_eq_f2 = 0;
-        self.hist_f1_gt_f2.reset();
-        *self.sum_f1 = 0;
-        *self.sum_f2 = 0;
-        *self.sum_ln_f1 = 0.;
-        *self.sum2_ln_f1 = 0.;
-        *self.sum_ln_f2 = 0.;
-        *self.sum2_ln_f2 = 0.;
+        *self.count_f1_gt_f2 = 0;
         *self.sum2_diff_f1_f2 = 0;
         *self.sum2_diff_ln_f1_f2 = 0.;
     }
@@ -153,38 +86,22 @@ impl<'a> DiffState<'a> {
     /// Updates the state with an elapsed time for each function.
     #[inline(always)]
     pub(crate) fn capture_data(&mut self, elapsed1: u64, elapsed2: u64) {
-        self.hist_f1
-            .record(elapsed1)
-            .expect("can't happen: histogram is auto-resizable");
-        self.hist_f2
-            .record(elapsed2)
-            .expect("can't happen: histogram is auto-resizable");
+        self.out_f1.capture_data(elapsed1);
+        self.out_f2.capture_data(elapsed2);
 
         let diff = elapsed1 as i64 - elapsed2 as i64;
 
         match diff.cmp(&0) {
-            cmp::Ordering::Less => self
-                .hist_f1_lt_f2
-                .record(diff as u64)
-                .expect("can't happen: histogram is auto-resizable"),
-            cmp::Ordering::Greater => self
-                .hist_f1_gt_f2
-                .record(-diff as u64)
-                .expect("can't happen: histogram is auto-resizable"),
+            cmp::Ordering::Less => *self.count_f1_lt_f2 += 1,
             cmp::Ordering::Equal => *self.count_f1_eq_f2 += 1,
+            cmp::Ordering::Greater => *self.count_f1_gt_f2 += 1,
         }
 
         assert!(elapsed1 > 0, "f1 latency must be > 0");
-        *self.sum_f1 += elapsed1 as i64;
         let ln_f1 = (elapsed1 as f64).ln();
-        *self.sum_ln_f1 += ln_f1;
-        *self.sum2_ln_f1 += ln_f1.powi(2);
 
         assert!(elapsed2 > 0, "f2 latency must be > 0");
-        *self.sum_f2 += elapsed2 as i64;
         let ln_f2 = (elapsed2 as f64).ln();
-        *self.sum_ln_f2 += ln_f2;
-        *self.sum2_ln_f2 += ln_f2.powi(2);
 
         let diff_f1_f2 = elapsed1 as i64 - elapsed2 as i64;
         *self.sum2_diff_f1_f2 += diff_f1_f2.pow(2);
@@ -287,7 +204,7 @@ pub fn bench_diff_x(
 ) -> DiffOut {
     let exec_count2 = exec_count / 2;
 
-    let mut out = DiffOut::new();
+    let mut out = DiffOut::new(unit);
 
     let mut state = DiffState::new(&mut out);
     state.warmup(unit, &mut f1, &mut f2, &mut warmup_status);
@@ -529,7 +446,7 @@ mod test {
         mut f2: impl FnMut() -> f64,
         exec_count: usize,
     ) -> DiffOut {
-        let mut out = DiffOut::new();
+        let mut out = DiffOut::new(LatencyUnit::Micro);
         let mut state = DiffState::new(&mut out);
 
         for _ in 1..=exec_count {

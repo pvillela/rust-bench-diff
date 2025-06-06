@@ -6,10 +6,9 @@
 //! ```
 
 use bench_diff::{
-    DiffOut, LatencyUnit, bench_diff_with_status,
-    bench_support::print_diff_out::comprehensive_print_diff_out,
-    bench_utils::work_fns::{busy_work, calibrate_busy_work},
+    DiffOut, bench_diff_with_status, bench_support::print_diff_out::comprehensive_print_diff_out,
 };
+use bench_utils::{LatencyUnit, busy_work, calibrate_busy_work};
 use std::time::Duration;
 
 fn f1(effort: u32) {

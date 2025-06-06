@@ -1,7 +1,5 @@
-use crate::{
-    LatencyUnit,
-    test_support::{default_hi_stdev_ln, default_lo_stdev_ln},
-};
+use crate::test_support::{default_hi_stdev_ln, default_lo_stdev_ln};
+use bench_utils::LatencyUnit;
 use std::sync::LazyLock;
 
 pub struct ScaleParams {

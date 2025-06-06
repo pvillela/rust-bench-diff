@@ -5,13 +5,10 @@
 //! cargo bench --bench naive_bench --features _bench
 //! ```
 
-use bench_diff::{
-    LatencyUnit,
-    bench_support::bench_basic_naive::{
-        ANOMALY_TOLERANCE, Args, bench_naive, get_args, report_median_mean_anomalies,
-    },
-    bench_utils::work_fns::{busy_work, calibrate_busy_work},
+use bench_diff::bench_support::bench_basic_naive::{
+    ANOMALY_TOLERANCE, Args, bench_naive, get_args, report_median_mean_anomalies,
 };
+use bench_utils::{LatencyUnit, busy_work, calibrate_busy_work};
 
 fn main() {
     let args = get_args();

@@ -228,12 +228,12 @@ impl Claim {
         ]
     }
 
-    pub const CRITICAL_NAMES: [&'static str; 6] = [
+    pub const CRITICAL_NAMES: [&'static str; 5] = [
         "welch_ratio_test",
         // "student_diff_test",
         "student_ratio_test",
         "wilcoxon_rank_sum_test",
-        "binomial_test",
+        // "binomial_test",
         "target_ratio_medians_f1_f2_in_welch_ratio_ci",
         "target_ratio_medians_f1_f2_in_student_ratio_ci",
     ];

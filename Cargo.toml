@@ -33,7 +33,7 @@ exclude = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-basic_stats = { version = "1.0", default-features = false, optional = true }
+basic_stats = { path = "../basic-stats", default-features = false, optional = true }
 bench_utils = { path = "../bench-utils", default-features = false, optional = true }
 hdrhistogram = "7.5"
 statrs = "0.18"
@@ -41,18 +41,29 @@ rand = { version = "0.9", features = ["std_rng"], optional = true }
 rand_distr = { version = "0.5", optional = true }
 
 [features]
-# `default` features should never be disabled for this library
-default = ["_stats_normal", "bench_utils/_collect"]
 
-# All features below are private
-_stats_normal = ["basic_stats/normal", "basic_stats/aok"]
-_stats_opt = ["basic_stats/binomial", "basic_stats/wilcoxon", "basic_stats/aok"]
+# Public
+default = [
+    "__stats_normal",
+    "bench_utils/_bench_diff",
+] # `default` feature should never be disabled for this library
+
+# Helper
+__null = ["dep:basic_stats", "dep:bench_utils"]
+__stats_normal = ["basic_stats/normal", "basic_stats/aok"]
+__stats_opt = [
+    "basic_stats/binomial",
+    "basic_stats/wilcoxon",
+    "basic_stats/aok",
+]
+
+# Internal
 _bench = [
     "_test_support",
     "bench_utils/busy_work",
 ] # intended only to be used by benches
 _dev_support = [
-    "_stats_opt",
+    "__stats_opt",
 ] # to hide functionality developed but not intended for clients
 _test_support = [
     "_dev_support",

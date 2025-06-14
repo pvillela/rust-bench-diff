@@ -24,7 +24,7 @@ pub(crate) mod test_support;
 
 /// Structs and enums for confidence intervals and hypothesis tests.
 pub mod stats_types {
-    pub use basic_stats::core::{AltHyp, Ci, Hyp, HypTestResult, PositionWrtCi};
+    pub use basic_stats::core::{AcceptedHyp, AltHyp, Ci, HypTestResult, PositionWrtCi};
 }
 
 #[deprecated(since = "1.0.4", note = "use mod `stats_types` instead")]

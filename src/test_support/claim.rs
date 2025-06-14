@@ -2,17 +2,33 @@ use super::binomial_inv_cdf;
 use crate::{
     DiffOut,
     dev_utils::ApproxEq,
-    stats_types::{AltHyp, Hyp, HypTestResult, PositionWrtCi},
+    stats_types::{AcceptedHyp, AltHyp, HypTestResult, PositionWrtCi},
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt::Debug,
 };
 
+pub type Hyp = Option<AltHyp>;
+
+fn alt_hyp(hyp: Option<AltHyp>) -> AltHyp {
+    match hyp {
+        Some(alt) => alt,
+        None => AltHyp::Ne,
+    }
+}
+
+fn accepted_hyp(hyp: Option<AltHyp>) -> AcceptedHyp {
+    match hyp {
+        Some(_) => AcceptedHyp::Alt,
+        None => AcceptedHyp::Null,
+    }
+}
+
 #[derive(Clone)]
 enum ClaimFn {
     Nullary(fn(&DiffOut) -> Option<String>),
-    Hyp(fn(&DiffOut, Hyp, f64) -> Option<String>, Hyp, f64),
+    AcceptedHyp(fn(&DiffOut, Hyp, f64) -> Option<String>, Hyp, f64),
     Arity1(fn(&DiffOut, f64) -> Option<String>, f64),
     Arity2(fn(&DiffOut, f64, f64) -> Option<String>, f64, f64),
 }
@@ -21,7 +37,7 @@ impl ClaimFn {
     fn invoke(&self, out: &DiffOut) -> Option<String> {
         match self {
             Self::Nullary(f) => f(out),
-            Self::Hyp(f, accept_hyp, alpha) => f(out, *accept_hyp, *alpha),
+            Self::AcceptedHyp(f, hyp, alpha) => f(out, *hyp, *alpha),
             Self::Arity1(f, arg) => f(out, *arg),
             Self::Arity2(f, arg1, arg2) => f(out, *arg1, *arg2),
         }
@@ -34,13 +50,14 @@ pub struct Claim {
     f: ClaimFn,
 }
 
-fn check_hyp_test_result(res: HypTestResult, accept_hyp: Hyp) -> Option<String> {
-    if res.accepted() == accept_hyp {
+fn check_hyp_test_result(res: HypTestResult, hyp: Hyp) -> Option<String> {
+    let exp_accepted = accepted_hyp(hyp);
+    if res.accepted() == exp_accepted {
         None
     } else {
         Some(format!(
             "expected to accept {:?} but accepted {:?}: p={:?}, alpha={:?}, alt_hyp:{:?}",
-            accept_hyp,
+            exp_accepted,
             res.accepted(),
             res.p(),
             res.alpha(),
@@ -49,56 +66,49 @@ fn check_hyp_test_result(res: HypTestResult, accept_hyp: Hyp) -> Option<String> 
     }
 }
 
-fn alt_hyp(hyp: Hyp) -> AltHyp {
-    match hyp {
-        Hyp::Alt(alt) => alt,
-        Hyp::Null => AltHyp::Ne,
-    }
-}
-
 impl Claim {
     pub fn invoke(&self, out: &DiffOut) -> Option<String> {
         self.f.invoke(out)
     }
 
-    pub fn welch_ratio_test(accept_hyp: Hyp, alpha: f64) -> Claim {
+    pub fn welch_ratio_test(hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "welch_ratio_test",
-            f: ClaimFn::Hyp(
-                |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.welch_ln_test(alt_hyp(accept_hyp), alpha);
-                    check_hyp_test_result(res, accept_hyp)
+            f: ClaimFn::AcceptedHyp(
+                |out: &DiffOut, hyp: Hyp, alpha: f64| {
+                    let res = out.welch_ln_test(alt_hyp(hyp), alpha);
+                    check_hyp_test_result(res, hyp)
                 },
-                accept_hyp,
+                hyp,
                 alpha,
             ),
         }
     }
 
-    pub fn student_diff_test(accept_hyp: Hyp, alpha: f64) -> Claim {
+    pub fn student_diff_test(hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "student_diff_test",
-            f: ClaimFn::Hyp(
-                |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.student_diff_test(alt_hyp(accept_hyp), alpha);
-                    check_hyp_test_result(res, accept_hyp)
+            f: ClaimFn::AcceptedHyp(
+                |out: &DiffOut, hyp: Hyp, alpha: f64| {
+                    let res = out.student_diff_test(alt_hyp(hyp), alpha);
+                    check_hyp_test_result(res, hyp)
                 },
-                accept_hyp,
+                hyp,
                 alpha,
             ),
         }
     }
 
     #[allow(deprecated)]
-    pub fn student_ratio_test(accept_hyp: Hyp, alpha: f64) -> Claim {
+    pub fn student_ratio_test(hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "student_ratio_test",
-            f: ClaimFn::Hyp(
-                |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.student_diff_ln_test(alt_hyp(accept_hyp), alpha);
-                    check_hyp_test_result(res, accept_hyp)
+            f: ClaimFn::AcceptedHyp(
+                |out: &DiffOut, hyp: Hyp, alpha: f64| {
+                    let res = out.student_diff_ln_test(alt_hyp(hyp), alpha);
+                    check_hyp_test_result(res, hyp)
                 },
-                accept_hyp,
+                hyp,
                 alpha,
             ),
         }
@@ -185,41 +195,41 @@ impl Claim {
         }
     }
 
-    pub fn wilcoxon_rank_sum_test(accept_hyp: Hyp, alpha: f64) -> Claim {
+    pub fn wilcoxon_rank_sum_test(hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "wilcoxon_rank_sum_test",
-            f: ClaimFn::Hyp(
-                |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.wilcoxon_rank_sum_test(alt_hyp(accept_hyp), alpha);
-                    check_hyp_test_result(res, accept_hyp)
+            f: ClaimFn::AcceptedHyp(
+                |out: &DiffOut, hyp: Hyp, alpha: f64| {
+                    let res = out.wilcoxon_rank_sum_test(alt_hyp(hyp), alpha);
+                    check_hyp_test_result(res, hyp)
                 },
-                accept_hyp,
+                hyp,
                 alpha,
             ),
         }
     }
 
-    pub fn binomial_test(accept_hyp: Hyp, alpha: f64) -> Claim {
+    pub fn binomial_test(hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "binomial_test",
-            f: ClaimFn::Hyp(
-                |out: &DiffOut, accept_hyp: Hyp, alpha: f64| {
-                    let res = out.exact_binomial_f1_gt_f2_eq_half_test(alt_hyp(accept_hyp), alpha);
-                    check_hyp_test_result(res, accept_hyp)
+            f: ClaimFn::AcceptedHyp(
+                |out: &DiffOut, hyp: Hyp, alpha: f64| {
+                    let res = out.exact_binomial_f1_gt_f2_eq_half_test(alt_hyp(hyp), alpha);
+                    check_hyp_test_result(res, hyp)
                 },
-                accept_hyp,
+                hyp,
                 alpha,
             ),
         }
     }
 
-    pub fn claims(accept_hyp: Hyp, target: f64, alpha: f64) -> Vec<Claim> {
+    pub fn claims(hyp: Hyp, target: f64, alpha: f64) -> Vec<Claim> {
         vec![
-            Claim::welch_ratio_test(accept_hyp, alpha),
-            Claim::student_diff_test(accept_hyp, alpha),
-            Claim::student_ratio_test(accept_hyp, alpha),
-            Claim::wilcoxon_rank_sum_test(accept_hyp, alpha),
-            Claim::binomial_test(accept_hyp, alpha),
+            Claim::welch_ratio_test(hyp, alpha),
+            Claim::student_diff_test(hyp, alpha),
+            Claim::student_ratio_test(hyp, alpha),
+            Claim::wilcoxon_rank_sum_test(hyp, alpha),
+            Claim::binomial_test(hyp, alpha),
             //
             Claim::ratio_medians_f1_f2_near_ratio_from_lns(),
             Claim::ratio_medians_f1_f2_near_target(target),

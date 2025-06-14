@@ -86,7 +86,7 @@ impl DiffOut {
     }
 
     fn sum_diff_ln_f1_f2(&self) -> f64 {
-        (self.out_f1.sum_ln() - self.out_f2.sum_ln()) as f64
+        self.out_f1.sum_ln() - self.out_f2.sum_ln()
     }
 
     /// Mean of `f1`'s latencies.

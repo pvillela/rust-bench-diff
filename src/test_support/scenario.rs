@@ -1,11 +1,8 @@
 //! Definition of [`Scenario`] and [`Claim`] types to support
 //! implementaton of main benchmarking logic to verify [`bench_diff`].
 
-use super::{Claim, ClaimResults, ALPHA};
-use crate::{
-    DiffOut,
-    stats_types::{AltHyp, Hyp},
-};
+use super::{ALPHA, Claim, ClaimResults};
+use crate::{DiffOut, stats_types::AltHyp};
 use std::sync::LazyLock;
 
 pub struct Scenario {
@@ -35,72 +32,72 @@ pub static SCENARIO_SPECS: LazyLock<[Scenario; 14]> = LazyLock::new(|| {
         Scenario::new(
             "base_median_no_var",
             "base_median_no_var",
-            Claim::claims(Hyp::Null, 1., ALPHA),
+            Claim::claims(None, 1., ALPHA),
         ),
         Scenario::new(
             "base_median_no_var",
             "hi_1pct_median_no_var",
-            Claim::claims(Hyp::Alt(AltHyp::Lt), 1. / 1.01, ALPHA),
+            Claim::claims(Some(AltHyp::Lt), 1. / 1.01, ALPHA),
         ),
         Scenario::new(
             "base_median_no_var",
             "hi_10pct_median_no_var",
-            Claim::claims(Hyp::Alt(AltHyp::Lt), 1. / 1.1, ALPHA),
+            Claim::claims(Some(AltHyp::Lt), 1. / 1.1, ALPHA),
         ),
         Scenario::new(
             "base_median_no_var",
             "hi_25pct_median_no_var",
-            Claim::claims(Hyp::Alt(AltHyp::Lt), 1. / 1.25, ALPHA),
+            Claim::claims(Some(AltHyp::Lt), 1. / 1.25, ALPHA),
         ),
         Scenario::new(
             "hi_1pct_median_no_var",
             "base_median_no_var",
-            Claim::claims(Hyp::Alt(AltHyp::Gt), 1.01, ALPHA),
+            Claim::claims(Some(AltHyp::Gt), 1.01, ALPHA),
         ),
         Scenario::new(
             "base_median_lo_var",
             "base_median_lo_var",
-            Claim::claims(Hyp::Null, 1., ALPHA),
+            Claim::claims(None, 1., ALPHA),
         ),
         Scenario::new(
             "base_median_lo_var",
             "base_median_hi_var",
-            Claim::claims(Hyp::Null, 1., ALPHA),
+            Claim::claims(None, 1., ALPHA),
         ),
         Scenario::new(
             "base_median_hi_var",
             "base_median_lo_var",
-            Claim::claims(Hyp::Null, 1., ALPHA),
+            Claim::claims(None, 1., ALPHA),
         ),
         Scenario::new(
             "base_median_lo_var",
             "hi_1pct_median_lo_var",
-            Claim::claims(Hyp::Alt(AltHyp::Lt), 1. / 1.01, ALPHA),
+            Claim::claims(Some(AltHyp::Lt), 1. / 1.01, ALPHA),
         ),
         Scenario::new(
             "base_median_lo_var",
             "hi_10pct_median_lo_var",
-            Claim::claims(Hyp::Alt(AltHyp::Lt), 1. / 1.1, ALPHA),
+            Claim::claims(Some(AltHyp::Lt), 1. / 1.1, ALPHA),
         ),
         Scenario::new(
             "base_median_lo_var",
             "hi_25pct_median_lo_var",
-            Claim::claims(Hyp::Alt(AltHyp::Lt), 1. / 1.25, ALPHA),
+            Claim::claims(Some(AltHyp::Lt), 1. / 1.25, ALPHA),
         ),
         Scenario::new(
             "base_median_lo_var",
             "hi_1pct_median_hi_var",
-            Claim::claims(Hyp::Alt(AltHyp::Lt), 1. / 1.01, ALPHA),
+            Claim::claims(Some(AltHyp::Lt), 1. / 1.01, ALPHA),
         ),
         Scenario::new(
             "base_median_lo_var",
             "hi_10pct_median_hi_var",
-            Claim::claims(Hyp::Alt(AltHyp::Lt), 1. / 1.1, ALPHA),
+            Claim::claims(Some(AltHyp::Lt), 1. / 1.1, ALPHA),
         ),
         Scenario::new(
             "base_median_lo_var",
             "hi_25pct_median_hi_var",
-            Claim::claims(Hyp::Alt(AltHyp::Lt), 1. / 1.25, ALPHA),
+            Claim::claims(Some(AltHyp::Lt), 1. / 1.25, ALPHA),
         ),
     ]
 });

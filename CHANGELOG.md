@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Refactored to use `bench_utils` library.
+- Renamed `DiffOut::welch_ln_test` to `welch_median_test` and kept the old name as deprecated for backward compatibility.
 
 ## [1.1.0] - 2025-05-30
 

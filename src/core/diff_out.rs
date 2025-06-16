@@ -308,9 +308,20 @@ impl DiffOut {
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
-    pub fn welch_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+    pub fn welch_median_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let comp = Comp::new(&self.out_f1, &self.out_f2);
-        comp.welch_ln_test(alt_hyp, alpha)
+        comp.welch_median_test(alt_hyp, alpha)
+    }
+
+    #[deprecated = "Use `welch_median_test` instead"]
+    /// Welch's test of the hypothesis that
+    /// `median(latency(f1)) == median(latency(f2))`,
+    /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
+    ///
+    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
+    pub fn welch_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        self.welch_median_test(alt_hyp, alpha)
     }
 
     #[cfg(feature = "_dev_support")]
@@ -441,7 +452,7 @@ impl DiffOut {
         ci.position_of(value)
     }
 
-    #[deprecated = "Use `welch_ln_test` instead"]
+    #[deprecated = "Use `welch_median_test` instead"]
     /// Student's one-sample test of the hypothesis that
     /// `median(latency(f1)) == median(latency(f2))`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.

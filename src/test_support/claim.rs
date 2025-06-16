@@ -76,7 +76,7 @@ impl Claim {
             name: "welch_ratio_test",
             f: ClaimFn::AcceptedHyp(
                 |out: &DiffOut, hyp: Hyp, alpha: f64| {
-                    let res = out.welch_ln_test(alt_hyp(hyp), alpha);
+                    let res = out.welch_median_test(alt_hyp(hyp), alpha);
                     check_hyp_test_result(res, hyp)
                 },
                 hyp,

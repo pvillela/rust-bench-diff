@@ -1,12 +1,15 @@
 //! Module defining the key data structure produced by [`crate::bench_diff`].
 
-use crate::stats_types::{AltHyp, Ci, HypTestResult, PositionWrtCi};
+use crate::{
+    get_bench_cfg,
+    stats_types::{AltHyp, Ci, HypTestResult, PositionWrtCi},
+};
 use basic_stats::{
     aok::{AokBasicStats, AokFloat},
     core::{SampleMoments, sample_mean, sample_stdev},
     normal::{student_1samp_ci, student_1samp_t, student_1samp_test},
 };
-use bench_utils::{BenchOut, Comp, LatencyUnit, SummaryStats, summary_stats};
+use bench_utils::{BenchOut, Comp, SummaryStats, summary_stats};
 
 #[cfg(feature = "_dev_support")]
 use basic_stats::{binomial, wilcoxon::RankSum};
@@ -31,9 +34,10 @@ pub struct DiffOut {
 
 impl DiffOut {
     /// Creates a new empty instance.
-    pub(crate) fn new(unit: LatencyUnit) -> Self {
-        let out_f1 = BenchOut::new(unit);
-        let out_f2 = BenchOut::new(unit);
+    pub(crate) fn new() -> Self {
+        let cfg = get_bench_cfg();
+        let out_f1 = BenchOut::new(&cfg);
+        let out_f2 = BenchOut::new(&cfg);
         let count_f1_lt_f2 = 0;
         let count_f1_eq_f2 = 0;
         let count_f1_gt_f2 = 0;

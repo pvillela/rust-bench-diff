@@ -5,12 +5,13 @@
 //! cargo bench --bench basic_bench --features _bench
 //! ```
 
-use bench_diff::{DiffOut, stats_types::AltHyp};
 use bench_diff::{
-    bench_diff_with_status,
+    DiffOut, bench_diff_with_status,
     bench_support::bench_basic_naive::{
         ANOMALY_TOLERANCE, Args, get_args, report_median_mean_anomalies,
     },
+    get_bench_cfg,
+    stats_types::AltHyp,
 };
 use bench_utils::{busy_work, calibrate_busy_work};
 
@@ -24,6 +25,8 @@ fn main() {
         base_median,
         exec_count,
     } = args;
+
+    get_bench_cfg().with_recording_unit(latency_unit).set();
 
     let base_effort = calibrate_busy_work(latency_unit.latency_from_f64(base_median));
 
@@ -40,7 +43,7 @@ fn main() {
         move || busy_work(effort)
     };
 
-    let out = bench_diff_with_status(latency_unit, f1, f2, exec_count, |_, _| {
+    let out = bench_diff_with_status(f1, f2, exec_count, |_| {
         println!("\nbench_diff: f1={name1}, f2={name2}");
         println!();
     });

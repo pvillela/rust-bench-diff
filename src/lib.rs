@@ -33,4 +33,4 @@ pub mod statistics {
     pub use super::stats_types::*;
 }
 
-pub use bench_utils::{LatencyUnit, SummaryStats};
+pub use bench_utils::{BenchCfg, BenchOut, LatencyUnit, SummaryStats};

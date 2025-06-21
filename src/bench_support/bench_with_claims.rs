@@ -4,6 +4,7 @@ use super::params_args::{Args, calibrated_fn_params, get_args, get_fn};
 use crate::{
     DiffOut, bench_diff, bench_diff_with_status,
     dev_utils::nest_btree_map,
+    get_bench_cfg,
     stats_types::AltHyp,
     test_support::{
         ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, binomial_inv_cdf,
@@ -140,6 +141,8 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
     nrepeats: usize,
     run_name: &str,
 ) {
+    get_bench_cfg().with_recording_unit(scale_params.unit).set();
+
     let print_args = || {
         println!("*** arguments ***");
         println!("SCALE_NAME=\"{}\"", scale_params.name);
@@ -207,12 +210,14 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
 
             let diff_out = if verbose {
                 let out = bench_diff_with_status(
-                    scale_params.unit,
                     &mut f1,
                     &mut f2,
                     scale_params.exec_count,
-                    |unit, exec_count| {
-                        println!("\n>>> bench_diff: unit={unit:?}, exec_count={exec_count}");
+                    |exec_count| {
+                        println!(
+                            "\n>>> bench_diff: unit={:?}, exec_count={exec_count}",
+                            get_bench_cfg().recording_unit()
+                        );
                         println!("{scenario_name}");
                         println!();
                     },
@@ -220,7 +225,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
                 print_diff_out(&out);
                 out
             } else {
-                bench_diff(scale_params.unit, &mut f1, &mut f2, scale_params.exec_count)
+                bench_diff(&mut f1, &mut f2, scale_params.exec_count)
             };
 
             scenario.check_claims(&mut results, &diff_out, verbose);

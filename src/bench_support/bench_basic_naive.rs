@@ -1,6 +1,6 @@
 //! Functions to support the "naive" comparison benchmarking approach, where each function is benchmarked separately.
 
-use crate::{DiffOut, DiffState};
+use crate::{DiffOut, DiffState, get_bench_cfg};
 use bench_utils::{LatencyUnit, latency};
 use std::{
     env::{self, VarError},
@@ -46,6 +46,8 @@ fn warm_up(
 }
 
 pub fn bench_naive(unit: LatencyUnit, mut f: impl FnMut(), exec_count: usize) -> DiffOut {
+    get_bench_cfg().with_recording_unit(unit).set();
+
     let mut warm_up_status = {
         let mut status_len: usize = 0;
 
@@ -85,7 +87,7 @@ pub fn bench_naive(unit: LatencyUnit, mut f: impl FnMut(), exec_count: usize) ->
         }
     };
 
-    let mut out = DiffOut::new(unit);
+    let mut out = DiffOut::new();
     let mut state = DiffState::new(&mut out);
     warm_up(&mut state, unit, &mut f, &mut warm_up_status);
     state.reset();

@@ -8,7 +8,7 @@
 use bench_diff::{
     DiffOut, bench_diff_with_status, bench_support::print_diff_out::comprehensive_print_diff_out,
 };
-use bench_utils::{LatencyUnit, busy_work, calibrate_busy_work};
+use bench_utils::{busy_work, calibrate_busy_work};
 use std::time::Duration;
 
 fn f1(effort: u32) {
@@ -26,11 +26,10 @@ fn main() {
     println!("*** 1st benchmark ***");
     {
         let out: DiffOut = bench_diff_with_status(
-            LatencyUnit::Nano,
             || f1(effort),
             || f2(effort),
             1000,
-            |_, _| {
+            |_| {
                 println!("Comparing latency of f1 vs. f2.");
                 println!();
             },
@@ -41,11 +40,10 @@ fn main() {
     println!("*** 2nd benchmark ***");
     {
         let out: DiffOut = bench_diff_with_status(
-            LatencyUnit::Nano,
             || f1(effort),
             || f1(effort),
             1000,
-            |_, _| {
+            |_| {
                 println!("Comparing latency of f1 vs. f1.");
                 println!();
             },

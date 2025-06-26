@@ -5,14 +5,19 @@ use crate::{
     stats_types::{AltHyp, Ci, HypTestResult, PositionWrtCi},
 };
 use basic_stats::{
-    aok::{AokBasicStats, AokFloat},
-    core::{SampleMoments, sample_mean, sample_stdev},
-    normal::{student_1samp_ci, student_1samp_t, student_1samp_test},
+    aok::AokFloat,
+    core::{sample_mean, sample_stdev},
 };
 use bench_utils::{BenchOut, Comp, SummaryStats, summary_stats};
 
 #[cfg(feature = "_dev_support")]
-use basic_stats::{binomial, wilcoxon::RankSum};
+use basic_stats::{
+    aok::AokBasicStats,
+    binomial,
+    core::SampleMoments,
+    normal::{student_1samp_ci, student_1samp_t, student_1samp_test},
+    wilcoxon::RankSum,
+};
 
 /// Contains the data resulting from a benchmark comparing two closures `f1` and `f2`.
 ///
@@ -254,18 +259,32 @@ impl DiffOut {
         self.exact_binomial_f1_gt_f2_test(0.5, alt_hyp, alpha)
     }
 
-    /// Welch's t statistic for
-    /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm).
-    pub fn welch_ln_t(&self) -> f64 {
-        let comp = Comp::new(&self.out_f1, &self.out_f2);
-        comp.welch_ln_t()
+    fn comp(&self) -> Comp<'_> {
+        Comp::new(&self.out_f1, &self.out_f2)
     }
 
-    /// Degrees of freedom for Welch's t-test for
+    /// Welch's t statistic for the hypothesis that
+    /// `mean(ln(latency(f1))) - mean(ln(latency(f2))) == ln_d0` (where `ln` is the natural logarithm), or equivalently,
+    /// `median(latency(f1)) / median(latency(f1)) == exp(ln_d0)`.
+    ///
+    /// Under the assumption that latencies are approximately log-normal, `mean(ln(latency(f))) == ln(median(latency(f)))`.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
+    ///
+    /// Arguments:
+    /// - `ln_d0`: hypothesized value of `mean(ln(latency(f1))) - mean(ln(latency(f2)))`, or equivalently,
+    ///   `ln(median(latency(f1)) / median(latency(f2)))`.
+    pub fn welch_ln_t(&self, ln_d0: f64) -> f64 {
+        self.comp().welch_ln_t(ln_d0)
+    }
+
+    /// Degrees of freedom for Welch's t statistic for
     /// `mean(ln(latency(f1))) - mean(ln(latency(f2)))` (where `ln` is the natural logarithm).
+    ///
+    /// Under the assumption that latencies are approximately log-normal, `mean(ln(latency(f))) == ln(median(latency(f)))`.
+    /// This assumption is widely supported by performance analysis theory and empirical data.
+    /// Thus, this statistics equivalently pertains to `ln(median(latency(f1)) / median(latency(f2)))`.
     pub fn welch_ln_df(&self) -> f64 {
-        let comp = Comp::new(&self.out_f1, &self.out_f2);
-        comp.welch_ln_df()
+        self.comp().welch_ln_df()
     }
 
     /// Welch confidence interval for
@@ -277,8 +296,7 @@ impl DiffOut {
     ///
     /// This is also the confidence interval for the difference of medians of logarithms under the above assumption.
     pub fn welch_ln_ci(&self, alpha: f64) -> Ci {
-        let comp = Comp::new(&self.out_f1, &self.out_f2);
-        comp.welch_ln_ci(alpha)
+        self.comp().welch_ln_ci(alpha)
     }
 
     /// Welch confidence interval for
@@ -288,10 +306,7 @@ impl DiffOut {
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn welch_ratio_ci(&self, alpha: f64) -> Ci {
-        let Ci(log_low, log_high) = self.welch_ln_ci(alpha);
-        let low = log_low.exp();
-        let high = log_high.exp();
-        Ci(low, high)
+        self.comp().welch_ratio_ci(alpha)
     }
 
     /// Position of `value` with respect to the
@@ -302,30 +317,23 @@ impl DiffOut {
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
     pub fn welch_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
-        let ci = self.welch_ratio_ci(alpha);
-        ci.position_of(value)
+        self.comp().welch_value_position_wrt_ratio_ci(value, alpha)
     }
 
-    /// Welch's test of the hypothesis that
-    /// `median(latency(f1)) == median(latency(f2))`,
-    /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
+    /// Welch's two-sample t-test of the hypothesis that
+    /// `mean(ln(latency(f1))) - mean(ln(latency(f2))) == ln_d0` (where `ln` is the natural logarithm), or equivalently,
+    /// `median(latency(f1)) / median(latency(f1)) == exp(ln_d0)`.
     ///
-    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
+    /// Under the assumption that latencies are approximately log-normal, `mean(ln(latency(f))) == ln(median(latency(f)))`.
     /// This assumption is widely supported by performance analysis theory and empirical data.
-    pub fn welch_median_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-        let comp = Comp::new(&self.out_f1, &self.out_f2);
-        comp.welch_median_test(alt_hyp, alpha)
-    }
-
-    #[deprecated = "Use `welch_median_test` instead"]
-    /// Welch's test of the hypothesis that
-    /// `median(latency(f1)) == median(latency(f2))`,
-    /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
     ///
-    /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
-    /// This assumption is widely supported by performance analysis theory and empirical data.
-    pub fn welch_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-        self.welch_median_test(alt_hyp, alpha)
+    /// Arguments:
+    /// - `ln_d0`: hypothesized value of `mean(ln(latency(f1))) - mean(ln(latency(f2)))`, or equivalently,
+    ///   `ln(median(latency(f1)) / median(latency(f2)))`.
+    /// - `alt_hyp`: alternative hypothesis.
+    /// - `alpha`: confidence level is `1 - alpha`.
+    pub fn welch_ln_test(&self, ln_d0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+        self.comp().welch_ln_test(ln_d0, alt_hyp, alpha)
     }
 
     #[cfg(feature = "_dev_support")]
@@ -392,7 +400,7 @@ impl DiffOut {
         student_1samp_test(&moments, 0., alt_hyp, alpha).aok()
     }
 
-    #[deprecated = "Use `welch_ln_t` instead"]
+    #[cfg(feature = "_dev_support")]
     /// Student's one-sample t statistic for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_t(&self) -> f64 {
@@ -404,14 +412,14 @@ impl DiffOut {
         student_1samp_t(&moments, 0.).aok()
     }
 
-    #[deprecated = "Use `welch_ln_df` instead"]
+    #[cfg(feature = "_dev_support")]
     /// Degrees of freedom for Student's one-sample t-test for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_df(&self) -> f64 {
         self.nf() - 1.
     }
 
-    #[deprecated = "Use `welch_ln_ci` instead"]
+    #[cfg(feature = "_dev_support")]
     /// Student's one-sample confidence interval for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     /// with confidence level `(1 - alpha)`.
@@ -427,8 +435,7 @@ impl DiffOut {
         student_1samp_ci(&moments, alpha).aok()
     }
 
-    #[deprecated = "Use `welch_ratio_ci` instead"]
-    #[allow(deprecated)]
+    #[cfg(feature = "_dev_support")]
     /// Student's one-sample confidence interval for
     /// `median(latency(f1)) / median(latency(f2))`,
     /// with confidence level `(1 - alpha)`.
@@ -442,8 +449,7 @@ impl DiffOut {
         Ci(low, high)
     }
 
-    #[deprecated = "Use `welch_value_position_wrt_ratio_ci` instead"]
-    #[allow(deprecated)]
+    #[cfg(feature = "_dev_support")]
     /// Position of `value` with respect to
     /// Student's one-sample confidence interval for
     /// `median(latency(f1)) / median(latency(f2))`,
@@ -456,7 +462,7 @@ impl DiffOut {
         ci.position_of(value)
     }
 
-    #[deprecated = "Use `welch_median_test` instead"]
+    #[cfg(feature = "_dev_support")]
     /// Student's one-sample test of the hypothesis that
     /// `median(latency(f1)) == median(latency(f2))`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.

@@ -27,10 +27,4 @@ pub mod stats_types {
     pub use basic_stats::core::{AcceptedHyp, AltHyp, Ci, HypTestResult, PositionWrtCi};
 }
 
-#[deprecated(since = "1.0.4", note = "use mod `stats_types` instead")]
-/// Structs and enums for confidence intervals and hypothesis tests.
-pub mod statistics {
-    pub use super::stats_types::*;
-}
-
 pub use bench_utils::{BenchCfg, BenchOut, LatencyUnit, SummaryStats};

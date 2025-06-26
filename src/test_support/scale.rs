@@ -7,7 +7,9 @@ pub struct ScaleParams {
     pub unit: LatencyUnit,
     pub exec_count: usize,
     pub base_median: f64,
+    #[allow(unused)]
     pub lo_stdev_ln: f64,
+    #[allow(unused)]
     pub hi_stdev_ln: f64,
 }
 

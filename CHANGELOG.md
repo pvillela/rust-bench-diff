@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2025-06-XX
+## [2.0.0] - 2025-07-XX
 
 ### Added
 
@@ -13,8 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Added argument to Welch statistics to enable testing that the difference of means equals a specific value which doesn't have to be zero. To migrate from the previous version, use `0.0` as the value for the new argument.
 - Refactored to use `bench_utils` library.
-- Renamed `DiffOut::welch_ln_test` to `welch_median_test` and kept the old name as deprecated for backward compatibility.
+
+### Removed
+
+- Previously deprecated items.
+
 
 ## [1.1.0] - 2025-05-30
 

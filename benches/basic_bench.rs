@@ -83,7 +83,7 @@ pub fn print_diff_out(out: &DiffOut) {
     println!("welch_ratio_ci={:?}", out.welch_ratio_ci(ALPHA),);
     println!(
         "welch_ln_test_gt:{:?}",
-        out.welch_median_test(AltHyp::Gt, ALPHA)
+        out.welch_ln_test(0., AltHyp::Gt, ALPHA)
     );
     println!();
     println!(

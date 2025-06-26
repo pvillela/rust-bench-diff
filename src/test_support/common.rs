@@ -2,6 +2,7 @@ use statrs::distribution::{Binomial, DiscreteCDF};
 
 pub const ALPHA: f64 = 0.05;
 pub const BETA: f64 = 0.05;
+#[allow(unused)]
 pub const BETA_01: f64 = 0.01;
 
 pub const HI_1PCT_FACTOR: f64 = 1.01;
@@ -24,6 +25,7 @@ pub fn binomial_inv_cdf(n: u64, p0: f64, theta: f64) -> u64 {
     binomial.inverse_cdf(theta)
 }
 
+#[allow(unused)]
 /// Returns the value that is `nsigmas` standard deviations higher than the median of `Binomial(n, p0)`.
 pub fn binomial_nsigmas_gt_critical_value(n: u64, p0: f64, nsigmas: f64) -> u64 {
     let mean = n as f64 * p0;

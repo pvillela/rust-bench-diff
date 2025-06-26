@@ -76,7 +76,7 @@ impl Claim {
             name: "welch_ratio_test",
             f: ClaimFn::AcceptedHyp(
                 |out: &DiffOut, hyp: Hyp, alpha: f64| {
-                    let res = out.welch_median_test(alt_hyp(hyp), alpha);
+                    let res = out.welch_ln_test(0., alt_hyp(hyp), alpha);
                     check_hyp_test_result(res, hyp)
                 },
                 hyp,
@@ -99,7 +99,6 @@ impl Claim {
         }
     }
 
-    #[allow(deprecated)]
     pub fn student_ratio_test(hyp: Hyp, alpha: f64) -> Claim {
         Claim {
             name: "student_ratio_test",
@@ -173,7 +172,6 @@ impl Claim {
         }
     }
 
-    #[allow(deprecated)]
     pub fn target_ratio_medians_f1_f2_in_student_ratio_ci(target: f64, alpha: f64) -> Claim {
         Claim {
             name: "target_ratio_medians_f1_f2_in_student_ratio_ci",

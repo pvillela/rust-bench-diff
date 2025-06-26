@@ -33,15 +33,15 @@ fn print_diff_out(out: &DiffOut) {
     println!("welch_ratio_ci={:?}", out.welch_ratio_ci(ALPHA),);
     println!(
         "welch_ln_test_lt:{:?}",
-        out.welch_median_test(AltHyp::Lt, ALPHA)
+        out.welch_ln_test(0., AltHyp::Lt, ALPHA)
     );
     println!(
         "welch_ln_test_eq:{:?}",
-        out.welch_median_test(AltHyp::Ne, ALPHA)
+        out.welch_ln_test(0., AltHyp::Ne, ALPHA)
     );
     println!(
         "welch_ln_test_gt:{:?}",
-        out.welch_median_test(AltHyp::Gt, ALPHA)
+        out.welch_ln_test(0., AltHyp::Gt, ALPHA)
     );
     println!();
     println!("mean_diff_f1_f2={}", out.mean_diff_f1_f2());

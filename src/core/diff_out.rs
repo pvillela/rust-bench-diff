@@ -1,14 +1,14 @@
 //! Module defining the key data structure produced by [`crate::bench_diff`].
 
 use crate::{
-    get_bench_cfg,
+    BenchOut, get_bench_cfg,
     stats_types::{AltHyp, Ci, HypTestResult, PositionWrtCi},
 };
 use basic_stats::{
     aok::AokFloat,
     core::{sample_mean, sample_stdev},
 };
-use bench_utils::{BenchOut, Comp, SummaryStats, summary_stats};
+use bench_utils::{Comp, SummaryStats, summary_stats};
 
 #[cfg(feature = "_dev_support")]
 use basic_stats::{
@@ -58,6 +58,16 @@ impl DiffOut {
             sum2_diff_f1_f2,
             sum2_diff_ln_f1_f2,
         }
+    }
+
+    /// Aggregate `f1` latency information.
+    pub fn out_f1(&self) -> &BenchOut {
+        &self.out_f1
+    }
+
+    /// Aggregate `f2` latency information.
+    pub fn out_f2(&self) -> &BenchOut {
+        &self.out_f2
     }
 
     /// Number of observations (sample size) for a function, as an integer.

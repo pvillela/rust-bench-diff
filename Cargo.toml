@@ -58,10 +58,7 @@ __stats_opt = [
 ]
 
 # Internal
-_bench = [
-    "_test_support",
-    "bench_utils/busy_work",
-] # intended only to be used by benches
+_bench = ["_test_support"] # intended only to be used by benches
 _dev_support = [
     "__stats_opt",
 ] # to hide functionality developed but not intended for clients

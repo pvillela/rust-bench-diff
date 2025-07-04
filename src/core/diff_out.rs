@@ -8,7 +8,7 @@ use basic_stats::{
     aok::AokFloat,
     core::{sample_mean, sample_stdev},
 };
-use bench_utils::{Comp, SummaryStats, summary_stats};
+use bench_utils::{Comp, LatencyUnit, SummaryStats, summary_stats};
 
 #[cfg(feature = "_dev_support")]
 use basic_stats::{
@@ -68,6 +68,16 @@ impl DiffOut {
     /// Aggregate `f2` latency information.
     pub fn out_f2(&self) -> &BenchOut {
         &self.out_f2
+    }
+
+    /// Latency unit used in data collection.
+    pub fn recording_unit(&self) -> LatencyUnit {
+        self.out_f1.recording_unit()
+    }
+
+    /// Latency unit used for reporting benchmark results.
+    pub fn reporting_unit(&self) -> LatencyUnit {
+        self.out_f1.reporting_unit()
     }
 
     /// Number of observations (sample size) for a function, as an integer.

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `DiffOut` methods `unit`, `out_f1`, and `out_f2`.
+- `DiffOut` methods `recording_unit`, `reporting_unit`,`out_f1`, and `out_f2`.
 
 ### Changed
 

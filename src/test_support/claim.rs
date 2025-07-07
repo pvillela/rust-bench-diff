@@ -3,10 +3,11 @@ use crate::{
     DiffOut,
     dev_utils::ApproxEq,
     stats_types::{AcceptedHyp, AltHyp, HypTestResult, PositionWrtCi},
+    test_support::FnSpec,
 };
 use std::{
+    cmp::Ordering,
     collections::{BTreeMap, BTreeSet},
-    fmt::Debug,
 };
 
 pub type Hyp = Option<AltHyp>;
@@ -25,31 +26,6 @@ fn accepted_hyp(hyp: Option<AltHyp>) -> AcceptedHyp {
     }
 }
 
-#[derive(Clone)]
-enum ClaimFn {
-    Nullary(fn(&DiffOut) -> Option<String>),
-    AcceptedHyp(fn(&DiffOut, Hyp, f64) -> Option<String>, Hyp, f64),
-    Arity1(fn(&DiffOut, f64) -> Option<String>, f64),
-    Arity2(fn(&DiffOut, f64, f64) -> Option<String>, f64, f64),
-}
-
-impl ClaimFn {
-    fn invoke(&self, out: &DiffOut) -> Option<String> {
-        match self {
-            Self::Nullary(f) => f(out),
-            Self::AcceptedHyp(f, hyp, alpha) => f(out, *hyp, *alpha),
-            Self::Arity1(f, arg) => f(out, *arg),
-            Self::Arity2(f, arg1, arg2) => f(out, *arg1, *arg2),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct Claim {
-    name: &'static str,
-    f: ClaimFn,
-}
-
 fn check_hyp_test_result(res: HypTestResult, hyp: Hyp) -> Option<String> {
     let exp_accepted = accepted_hyp(hyp);
     if res.accepted() == exp_accepted {
@@ -66,199 +42,214 @@ fn check_hyp_test_result(res: HypTestResult, hyp: Hyp) -> Option<String> {
     }
 }
 
-impl Claim {
-    pub fn invoke(&self, out: &DiffOut) -> Option<String> {
-        self.f.invoke(out)
-    }
+struct FnSpecPair {
+    spec_f1: FnSpec,
+    spec_f2: FnSpec,
+}
 
-    pub fn welch_ratio_test(hyp: Hyp, alpha: f64) -> Claim {
-        Claim {
-            name: "welch_ratio_test",
-            f: ClaimFn::AcceptedHyp(
-                |out: &DiffOut, hyp: Hyp, alpha: f64| {
-                    let res = out.welch_ln_test(0., alt_hyp(hyp), alpha);
-                    check_hyp_test_result(res, hyp)
-                },
-                hyp,
-                alpha,
-            ),
+impl FnSpecPair {
+    #[inline(always)]
+    fn hyp(&self) -> Hyp {
+        match self
+            .spec_f1
+            .base_median_factor
+            .partial_cmp(&self.spec_f2.base_median_factor)
+        {
+            Some(Ordering::Less) => Some(AltHyp::Lt),
+            Some(Ordering::Equal) => None,
+            Some(Ordering::Greater) => Some(AltHyp::Gt),
+            None => panic!("invalid spec_f1 or spec_f2"),
         }
     }
 
-    pub fn student_diff_test(hyp: Hyp, alpha: f64) -> Claim {
-        Claim {
-            name: "student_diff_test",
-            f: ClaimFn::AcceptedHyp(
-                |out: &DiffOut, hyp: Hyp, alpha: f64| {
-                    let res = out.student_diff_test(alt_hyp(hyp), alpha);
-                    check_hyp_test_result(res, hyp)
-                },
-                hyp,
-                alpha,
-            ),
+    #[inline(always)]
+    fn target(&self) -> f64 {
+        self.spec_f1.base_median_factor / self.spec_f2.base_median_factor
+    }
+
+    fn welch_ratio_test(&self, out: &DiffOut, alpha: f64) -> ClaimResult {
+        let claim_name = "welch_ratio_test";
+        let hyp = self.hyp();
+        let result = {
+            let res = out.welch_ln_test(0., alt_hyp(hyp), alpha);
+            check_hyp_test_result(res, hyp)
+        };
+        ClaimResult {
+            spec_f1: self.spec_f1,
+            spec_f2: self.spec_f2,
+            claim_name: claim_name.into(),
+            result,
         }
     }
 
-    pub fn student_ratio_test(hyp: Hyp, alpha: f64) -> Claim {
-        Claim {
-            name: "student_ratio_test",
-            f: ClaimFn::AcceptedHyp(
-                |out: &DiffOut, hyp: Hyp, alpha: f64| {
-                    let res = out.student_diff_ln_test(alt_hyp(hyp), alpha);
-                    check_hyp_test_result(res, hyp)
-                },
-                hyp,
-                alpha,
-            ),
+    fn student_diff_test(&self, out: &DiffOut, alpha: f64) -> ClaimResult {
+        let claim_name = "student_diff_test";
+        let hyp = self.hyp();
+        let result = {
+            let res = out.student_diff_test(alt_hyp(hyp), alpha);
+            check_hyp_test_result(res, hyp)
+        };
+        ClaimResult {
+            spec_f1: self.spec_f1,
+            spec_f2: self.spec_f2,
+            claim_name: claim_name.into(),
+            result,
         }
     }
 
-    pub fn ratio_medians_f1_f2_near_ratio_from_lns() -> Claim {
-        Claim {
-            name: "ratio_medians_f1_f2_near_ratio_from_lns",
-            f: ClaimFn::Nullary(|out: &DiffOut| {
-                let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
-                let ratio_medians_f1_f2_from_lns = out.ratio_medians_f1_f2_from_lns();
-
-                if ratio_medians_f1_f2.approx_eq(ratio_medians_f1_f2_from_lns, 0.005) {
-                    None
-                } else {
-                    Some(format!(
-                        "ratio_medians_f1_f2={ratio_medians_f1_f2}, ratio_medians_f1_f2_from_lns={ratio_medians_f1_f2_from_lns}"
-                    ))
-                }
-            }),
+    fn student_ratio_test(&self, out: &DiffOut, alpha: f64) -> ClaimResult {
+        let claim_name = "student_ratio_test";
+        let hyp = self.hyp();
+        let result = {
+            let res = out.student_diff_ln_test(alt_hyp(hyp), alpha);
+            check_hyp_test_result(res, hyp)
+        };
+        ClaimResult {
+            spec_f1: self.spec_f1,
+            spec_f2: self.spec_f2,
+            claim_name: claim_name.into(),
+            result,
         }
     }
 
-    pub fn ratio_medians_f1_f2_near_target(target: f64) -> Claim {
-        Claim {
-            name: "ratio_medians_f1_f2_near_target",
-            f: ClaimFn::Arity1(
-                |out: &DiffOut, value: f64| {
-                    let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
+    fn ratio_medians_f1_f2_near_target(&self, out: &DiffOut) -> ClaimResult {
+        let claim_name = "ratio_medians_f1_f2_near_target";
+        let target = self.target();
+        let result = {
+            let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
 
-                    if ratio_medians_f1_f2.approx_eq(value, 0.005) {
-                        None
-                    } else {
-                        Some(format!(
-                            "ratio_medians_f1_f2={ratio_medians_f1_f2}, target={value}"
-                        ))
-                    }
-                },
-                target,
-            ),
+            if ratio_medians_f1_f2.approx_eq(target, 0.005) {
+                None
+            } else {
+                Some(format!(
+                    "ratio_medians_f1_f2={ratio_medians_f1_f2}, target={target}"
+                ))
+            }
+        };
+        ClaimResult {
+            spec_f1: self.spec_f1,
+            spec_f2: self.spec_f2,
+            claim_name: claim_name.into(),
+            result,
         }
     }
 
-    pub fn target_ratio_medians_f1_f2_in_welch_ratio_ci(target: f64, alpha: f64) -> Claim {
-        Claim {
-            name: "target_ratio_medians_f1_f2_in_welch_ratio_ci",
-            f: ClaimFn::Arity2(
-                |out: &DiffOut, value: f64, alpha: f64| {
-                    let ci = out.welch_ratio_ci(alpha);
+    fn ratio_medians_f1_f2_near_ratio_from_lns(&self, out: &DiffOut) -> ClaimResult {
+        let claim_name = "ratio_medians_f1_f2_near_ratio_from_lns";
+        let result = {
+            let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
+            let ratio_medians_f1_f2_from_lns = out.ratio_medians_f1_f2_from_lns();
 
-                    if ci.position_of(value) == PositionWrtCi::In {
-                        None
-                    } else {
-                        Some(format!(
-                            "ratio_medians_f1_f2={value}, welch_ratio_ci={ci:?}"
-                        ))
-                    }
-                },
-                target,
-                alpha,
-            ),
+            if ratio_medians_f1_f2.approx_eq(ratio_medians_f1_f2_from_lns, 0.005) {
+                None
+            } else {
+                Some(format!(
+                    "ratio_medians_f1_f2={ratio_medians_f1_f2}, ratio_medians_f1_f2_from_lns={ratio_medians_f1_f2_from_lns}"
+                ))
+            }
+        };
+        ClaimResult {
+            spec_f1: self.spec_f1,
+            spec_f2: self.spec_f2,
+            claim_name: claim_name.into(),
+            result,
         }
     }
 
-    pub fn target_ratio_medians_f1_f2_in_student_ratio_ci(target: f64, alpha: f64) -> Claim {
-        Claim {
-            name: "target_ratio_medians_f1_f2_in_student_ratio_ci",
-            f: ClaimFn::Arity2(
-                |out: &DiffOut, value: f64, alpha: f64| {
-                    let ci = out.student_ratio_ci(alpha);
+    fn target_ratio_medians_f1_f2_in_welch_ratio_ci(
+        &self,
+        out: &DiffOut,
+        alpha: f64,
+    ) -> ClaimResult {
+        let claim_name = "target_ratio_medians_f1_f2_in_welch_ratio_ci";
+        let target = self.target();
+        let result = {
+            let ci = out.welch_ratio_ci(alpha);
 
-                    if ci.position_of(value) == PositionWrtCi::In {
-                        None
-                    } else {
-                        Some(format!(
-                            "ratio_medians_f1_f2={value}, student_ratio_ci={ci:?}"
-                        ))
-                    }
-                },
-                target,
-                alpha,
-            ),
+            if ci.position_of(target) == PositionWrtCi::In {
+                None
+            } else {
+                Some(format!(
+                    "ratio_medians_f1_f2={target}, welch_ratio_ci={ci:?}"
+                ))
+            }
+        };
+        ClaimResult {
+            spec_f1: self.spec_f1,
+            spec_f2: self.spec_f2,
+            claim_name: claim_name.into(),
+            result,
         }
     }
 
-    pub fn wilcoxon_rank_sum_test(hyp: Hyp, alpha: f64) -> Claim {
-        Claim {
-            name: "wilcoxon_rank_sum_test",
-            f: ClaimFn::AcceptedHyp(
-                |out: &DiffOut, hyp: Hyp, alpha: f64| {
-                    let res = out.wilcoxon_rank_sum_test(alt_hyp(hyp), alpha);
-                    check_hyp_test_result(res, hyp)
-                },
-                hyp,
-                alpha,
-            ),
+    fn target_ratio_medians_f1_f2_in_student_ratio_ci(
+        &self,
+        out: &DiffOut,
+        alpha: f64,
+    ) -> ClaimResult {
+        let claim_name = "target_ratio_medians_f1_f2_in_student_ratio_ci";
+        let target = self.target();
+        let result = {
+            let ci = out.student_ratio_ci(alpha);
+
+            if ci.position_of(target) == PositionWrtCi::In {
+                None
+            } else {
+                Some(format!(
+                    "ratio_medians_f1_f2={target}, student_ratio_ci={ci:?}"
+                ))
+            }
+        };
+        ClaimResult {
+            spec_f1: self.spec_f1,
+            spec_f2: self.spec_f2,
+            claim_name: claim_name.into(),
+            result,
         }
     }
 
-    pub fn binomial_test(hyp: Hyp, alpha: f64) -> Claim {
-        Claim {
-            name: "binomial_test",
-            f: ClaimFn::AcceptedHyp(
-                |out: &DiffOut, hyp: Hyp, alpha: f64| {
-                    let res = out.exact_binomial_f1_gt_f2_eq_half_test(alt_hyp(hyp), alpha);
-                    check_hyp_test_result(res, hyp)
-                },
-                hyp,
-                alpha,
-            ),
+    fn wilcoxon_rank_sum_test(&self, out: &DiffOut, alpha: f64) -> ClaimResult {
+        let claim_name = "wilcoxon_rank_sum_test";
+        let hyp = self.hyp();
+        let result = {
+            let res = out.wilcoxon_rank_sum_test(alt_hyp(hyp), alpha);
+            check_hyp_test_result(res, hyp)
+        };
+        ClaimResult {
+            spec_f1: self.spec_f1,
+            spec_f2: self.spec_f2,
+            claim_name: claim_name.into(),
+            result,
         }
     }
 
-    pub fn claims(hyp: Hyp, target: f64, alpha: f64) -> Vec<Claim> {
-        vec![
-            Claim::welch_ratio_test(hyp, alpha),
-            Claim::student_diff_test(hyp, alpha),
-            Claim::student_ratio_test(hyp, alpha),
-            Claim::wilcoxon_rank_sum_test(hyp, alpha),
-            Claim::binomial_test(hyp, alpha),
-            //
-            Claim::ratio_medians_f1_f2_near_ratio_from_lns(),
-            Claim::ratio_medians_f1_f2_near_target(target),
-            Claim::target_ratio_medians_f1_f2_in_welch_ratio_ci(target, alpha),
-            Claim::target_ratio_medians_f1_f2_in_student_ratio_ci(target, alpha),
-        ]
+    fn binomial_test(&self, out: &DiffOut, alpha: f64) -> ClaimResult {
+        let claim_name = "binomial_test";
+        let hyp = self.hyp();
+        let result = {
+            let res = out.exact_binomial_f1_gt_f2_eq_half_test(alt_hyp(hyp), alpha);
+            check_hyp_test_result(res, hyp)
+        };
+        ClaimResult {
+            spec_f1: self.spec_f1,
+            spec_f2: self.spec_f2,
+            claim_name: claim_name.into(),
+            result,
+        }
     }
-
-    pub const CRITICAL_NAMES: [&'static str; 4] = [
-        "welch_ratio_test",
-        // "student_diff_test",
-        "student_ratio_test",
-        // "wilcoxon_rank_sum_test",
-        // "binomial_test",
-        "target_ratio_medians_f1_f2_in_welch_ratio_ci",
-        "target_ratio_medians_f1_f2_in_student_ratio_ci",
-    ];
 }
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct ClaimResult {
-    name1: &'static str,
-    name2: &'static str,
-    claim_name: &'static str,
+    spec_f1: FnSpec,
+    spec_f2: FnSpec,
+    claim_name: String,
     result: Option<String>,
 }
 
 pub struct ClaimResults {
     failures: Vec<ClaimResult>,
-    summary: BTreeMap<((&'static str, &'static str), &'static str), u32>,
+    summary: BTreeMap<((FnSpec, FnSpec), String), u32>,
 }
 
 impl ClaimResults {
@@ -269,33 +260,69 @@ impl ClaimResults {
         }
     }
 
-    pub fn push_claim(
-        &mut self,
-        name1: &'static str,
-        name2: &'static str,
-        claim: &Claim,
-        diff_out: &DiffOut,
-        verbose: bool,
-    ) {
+    fn push_claim_result(&mut self, claim_result: ClaimResult, verbose: bool) {
+        let ClaimResult {
+            spec_f1,
+            spec_f2,
+            claim_name,
+            result,
+        } = claim_result;
+
+        let cond_name = if verbose {
+            Some(claim_name.clone())
+        } else {
+            None
+        };
+
         let value = self
             .summary
-            .entry(((name1, name2), claim.name))
+            .entry(((spec_f1, spec_f2), claim_name))
             .or_insert(0);
-        let result = claim.invoke(diff_out);
+
         if result.is_some() {
             *value += 1;
-            if verbose {
+            if let Some(claim_name) = cond_name {
                 self.failures.push(ClaimResult {
-                    name1,
-                    name2,
-                    claim_name: claim.name,
+                    spec_f1,
+                    spec_f2,
+                    claim_name,
                     result,
                 });
             }
         };
     }
 
-    pub fn summary(&self) -> &BTreeMap<((&'static str, &'static str), &'static str), u32> {
+    pub fn check_claims(
+        &mut self,
+        spec_f1: FnSpec,
+        spec_f2: FnSpec,
+        alpha: f64,
+        out: &DiffOut,
+        verbose: bool,
+    ) {
+        let spec_pair = FnSpecPair { spec_f1, spec_f2 };
+
+        self.push_claim_result(spec_pair.welch_ratio_test(out, alpha), verbose);
+        self.push_claim_result(spec_pair.student_diff_test(out, alpha), verbose);
+        self.push_claim_result(spec_pair.student_ratio_test(out, alpha), verbose);
+        self.push_claim_result(spec_pair.ratio_medians_f1_f2_near_target(out), verbose);
+        self.push_claim_result(
+            spec_pair.ratio_medians_f1_f2_near_ratio_from_lns(out),
+            verbose,
+        );
+        self.push_claim_result(
+            spec_pair.target_ratio_medians_f1_f2_in_welch_ratio_ci(out, alpha),
+            verbose,
+        );
+        self.push_claim_result(
+            spec_pair.target_ratio_medians_f1_f2_in_student_ratio_ci(out, alpha),
+            verbose,
+        );
+        self.push_claim_result(spec_pair.wilcoxon_rank_sum_test(out, alpha), verbose);
+        self.push_claim_result(spec_pair.binomial_test(out, alpha), verbose);
+    }
+
+    pub fn summary(&self) -> &BTreeMap<((FnSpec, FnSpec), String), u32> {
         &self.summary
     }
 
@@ -303,19 +330,19 @@ impl ClaimResults {
         &self.failures
     }
 
-    pub fn failure_summary(&self) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
+    pub fn failure_summary(&self) -> BTreeMap<((FnSpec, FnSpec), String), u32> {
         self.summary
             .iter()
             .filter(|(_, v)| **v > 0)
-            .map(|(k, v)| (*k, *v))
+            .map(|(k, v)| (k.clone(), *v))
             .collect()
     }
 
-    pub fn success_summary(&self) -> BTreeSet<((&'static str, &'static str), &'static str)> {
+    pub fn success_summary(&self) -> BTreeSet<((FnSpec, FnSpec), String)> {
         self.summary
             .iter()
             .filter(|(_, v)| **v == 0)
-            .map(|(k, _)| *k)
+            .map(|(k, _)| k.clone())
             .collect()
     }
 
@@ -344,40 +371,44 @@ impl ClaimResults {
         claim_names: &[&'static str],
         nrepeats: usize,
         tau: f64,
-    ) -> BTreeMap<((&'static str, &'static str), &'static str), u32> {
+    ) -> BTreeMap<((FnSpec, FnSpec), String), u32> {
         let max_alpha_count = binomial_inv_cdf(nrepeats as u64, alpha, tau);
         let max_beta_count = binomial_inv_cdf(nrepeats as u64, beta, tau);
 
-        let predicate = |name1: &'static str,
-                         name2: &'static str,
-                         claim_name: &'static str,
-                         count: u64|
-         -> bool {
-            match (name1, name2, claim_name, count) {
-                _ if name1[..5] == name2[..5]
+        let predicate =
+            |spec_f1: &FnSpec, spec_f2: &FnSpec, claim_name: &str, count: u64| -> bool {
+                let eq_base_median = spec_f1.base_median_factor == spec_f2.base_median_factor;
+
+                if eq_base_median && claim_names.contains(&claim_name) && count > max_alpha_count {
+                    true
+                } else if !eq_base_median
                     && claim_names.contains(&claim_name)
-                    && count > max_alpha_count =>
+                    && count > max_beta_count
                 {
                     true
+                } else {
+                    false
                 }
-
-                _ if name1[..5] != name2[..5]
-                    && claim_names.contains(&claim_name)
-                    && count > max_beta_count =>
-                {
-                    true
-                }
-
-                _ => false,
-            }
-        };
+            };
 
         self.summary
             .iter()
-            .filter(|(((name1, name2), claim_name), count)| {
-                predicate(name1, name2, claim_name, **count as u64)
+            .filter(|(((spec_f1, spec_f2), claim_name), count)| {
+                predicate(spec_f1, spec_f2, claim_name, **count as u64)
             })
-            .map(|(k, v)| (*k, *v))
+            .map(|(k, v)| (k.clone(), *v))
             .collect::<BTreeMap<_, _>>()
     }
+
+    pub const CRITICAL_CLAIM_NAMES: [&'static str; 4] = [
+        "welch_ratio_test",
+        // "student_diff_test",
+        "student_ratio_test",
+        // "ratio_medians_f1_f2_near_target",
+        // "ratio_medians_f1_f2_near_ratio_from_lns",
+        "target_ratio_medians_f1_f2_in_welch_ratio_ci",
+        "target_ratio_medians_f1_f2_in_student_ratio_ci",
+        // "wilcoxon_rank_sum_test",
+        // "binomial_test",
+    ];
 }

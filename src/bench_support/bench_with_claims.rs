@@ -1,18 +1,17 @@
 //! Implementaton of main logic used by benchmark tests to verify [`bench_diff`].
 
-use super::params_args::{Args, calibrated_fn_params, get_args, get_fn};
+use super::params_args::{BenchArgs, get_args};
 use crate::{
     DiffOut, bench_diff, bench_diff_with_status,
     dev_utils::nest_btree_map,
     get_bench_cfg,
     stats_types::AltHyp,
     test_support::{
-        ALPHA, BETA, BETA_01, Claim, ClaimResults, ScaleParams, binomial_inv_cdf,
-        binomial_nsigmas_gt_critical_value, get_scale_params, get_scenario,
+        ALPHA, BETA, BETA_01, ClaimResults, FnSpec, MyFnMut, ScaleParams, binomial_inv_cdf,
+        binomial_nsigmas_gt_critical_value, get_scale_params,
     },
 };
-use basic_stats::{aok::AokFloat, core::SampleMoments};
-use std::{collections::BTreeMap, fmt::Debug, ops::Deref};
+use bench_utils::calibrate_busy_work;
 
 fn print_diff_out(out: &DiffOut) {
     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
@@ -107,24 +106,16 @@ fn print_diff_out(out: &DiffOut) {
 /// environment variables and command line arguments.
 /// Defaults are provided for environment variables and command line arguments not defined.
 pub fn bench_with_claims_and_args() {
-    let Args {
+    let BenchArgs {
         scale_name,
-        fn_name_pairs,
+        fn_spec_pairs,
         verbose,
-        noise_stats,
         nrepeats,
         run_name,
     } = get_args();
     let scale_params = get_scale_params(&scale_name);
 
-    bench_with_claims(
-        scale_params,
-        &fn_name_pairs,
-        verbose,
-        noise_stats,
-        nrepeats,
-        &run_name,
-    );
+    bench_with_claims(scale_params, &fn_spec_pairs, verbose, nrepeats, &run_name);
 }
 
 /// Runs benchmarks with statistical tests and other claims for target functions parameterized by `fn_params`,
@@ -133,26 +124,32 @@ pub fn bench_with_claims_and_args() {
 ///
 ///  `verbose` determines the verbosity of output, `print_args` is a closure that prints the
 /// configuration arguments for the benchmarks and `run_name` is a string that designates the run in the print-out.
-pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
+pub fn bench_with_claims(
     scale_params: &ScaleParams,
-    fn_name_pairs: &[(T, T)],
+    fn_spec_pairs: &[(FnSpec, FnSpec)],
     verbose: bool,
-    noise_stats: bool,
     nrepeats: usize,
     run_name: &str,
 ) {
-    get_bench_cfg().with_recording_unit(scale_params.unit).set();
+    let ScaleParams {
+        name,
+        recording_unit,
+        reporting_unit,
+        exec_count,
+        base_latency,
+    } = scale_params;
+
+    get_bench_cfg().with_recording_unit(*recording_unit).set();
 
     let print_args = || {
         println!("*** arguments ***");
-        println!("SCALE_NAME=\"{}\"", scale_params.name);
+        println!("SCALE_NAME=\"{}\"", name);
         println!(
             "unit={:?}, exec_count={}, base_median={}",
-            scale_params.unit, scale_params.exec_count, scale_params.base_median
+            scale_params.recording_unit, scale_params.exec_count, scale_params.base_latency
         );
-        println!("FN_NAME_PAIRS=\"{fn_name_pairs:?}\"");
+        println!("FN_NAME_PAIRS=\"{fn_spec_pairs:?}\"");
         println!("VERBOSE=\"{verbose}\"");
-        println!("NOISE_STATS=\"{noise_stats}\"");
         println!("nrepeats={nrepeats}");
         println!("run_name=\"{run_name}\"");
         println!("*** other parameters ***");
@@ -170,37 +167,29 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
         );
     };
 
-    let calibrated_fn_params = calibrated_fn_params(scale_params);
+    let base_effort = calibrate_busy_work(reporting_unit.latency_from_f64(*base_latency));
 
     println!();
     print_args();
     println!();
 
-    let total_iterations = nrepeats * fn_name_pairs.len();
+    let total_iterations = nrepeats * fn_spec_pairs.len();
     let mut cumulative_iter = 0;
 
-    for (name1, name2) in fn_name_pairs {
-        let scenario_name = format!("f1={}, f2={}", name1.deref(), name2.deref());
-        let scenario = get_scenario(name1, name2);
+    for (spec_f1, spec_f2) in fn_spec_pairs {
+        let scenario_name = format!("f1={}, f2={}", spec_f1, spec_f2);
 
         let mut f1 = {
-            let mut my_fn = get_fn(name1)(&calibrated_fn_params);
+            let mut my_fn = MyFnMut::new(base_effort, *spec_f1);
             move || my_fn.invoke()
         };
 
         let mut f2 = {
-            let mut my_fn = get_fn(name2)(&calibrated_fn_params);
+            let mut my_fn = MyFnMut::new(base_effort, *spec_f2);
             move || my_fn.invoke()
         };
 
         let mut results = ClaimResults::new();
-
-        let mut ratio_medians_from_lns_noises =
-            BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
-        let mut diff_ratio_medians_noises =
-            BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
-        let mut diff_ln_stdev_noises =
-            BTreeMap::<(&'static str, &'static str), SampleMoments>::new();
 
         for i in 1..=nrepeats {
             cumulative_iter += 1;
@@ -209,44 +198,21 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
             );
 
             let diff_out = if verbose {
-                let out = bench_diff_with_status(
-                    &mut f1,
-                    &mut f2,
-                    scale_params.exec_count,
-                    |exec_count| {
-                        println!(
-                            "\n>>> bench_diff: unit={:?}, exec_count={exec_count}",
-                            get_bench_cfg().recording_unit()
-                        );
-                        println!("{scenario_name}");
-                        println!();
-                    },
-                );
+                let out = bench_diff_with_status(&mut f1, &mut f2, *exec_count, |exec_count| {
+                    println!(
+                        "\n>>> bench_diff: unit={:?}, exec_count={exec_count}",
+                        get_bench_cfg().recording_unit()
+                    );
+                    println!("{scenario_name}");
+                    println!();
+                });
                 print_diff_out(&out);
                 out
             } else {
                 bench_diff(&mut f1, &mut f2, scale_params.exec_count)
             };
 
-            scenario.check_claims(&mut results, &diff_out, verbose);
-
-            if noise_stats {
-                let ratio_medians_from_lns_noise = ratio_medians_from_lns_noises
-                    .entry((name1, name2))
-                    .or_default();
-
-                ratio_medians_from_lns_noise.collect_value(diff_out.mean_diff_ln_f1_f2().exp());
-
-                let diff_ratio_medians_noise =
-                    diff_ratio_medians_noises.entry((name1, name2)).or_default();
-
-                diff_ratio_medians_noise.collect_value(
-                    diff_out.ratio_medians_f1_f2() - diff_out.ratio_medians_f1_f2_from_lns(),
-                );
-
-                let diff_ln_stdev_noise = diff_ln_stdev_noises.entry((name1, name2)).or_default();
-                diff_ln_stdev_noise.collect_value(diff_out.stdev_diff_ln_f1_f2());
-            }
+            results.check_claims(*spec_f1, *spec_f2, ALPHA, &diff_out, verbose);
         }
 
         if verbose {
@@ -279,7 +245,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
         let type_i_and_ii_errors_67 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA,
-            &Claim::CRITICAL_NAMES,
+            &ClaimResults::CRITICAL_CLAIM_NAMES,
             nrepeats,
             0.67,
         );
@@ -293,7 +259,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
         let type_i_and_ii_errors_95 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA,
-            &Claim::CRITICAL_NAMES,
+            &ClaimResults::CRITICAL_CLAIM_NAMES,
             nrepeats,
             0.95,
         );
@@ -307,7 +273,7 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
         let type_i_and_ii_errors_95_beta_01 = results.excess_type_i_and_ii_errors(
             ALPHA,
             BETA_01,
-            &Claim::CRITICAL_NAMES,
+            &ClaimResults::CRITICAL_CLAIM_NAMES,
             nrepeats,
             0.95,
         );
@@ -316,62 +282,6 @@ pub fn bench_with_claims<T: Deref<Target = str> + Debug>(
                 ">>> type_i_and_ii_errors_95_beta_01: {:?}",
                 nest_btree_map(type_i_and_ii_errors_95_beta_01)
             );
-        }
-
-        if noise_stats {
-            println!();
-            println!("*** noise statistics ***");
-            for (name1, name2) in fn_name_pairs {
-                println!();
-                println!("scenario: fn1={}, fn2={}", name1.deref(), name2.deref());
-                println!(
-                    "ratio_medians_from_lns_noise_mean={}, ratio_medians_from_lns_noise_stdev={}",
-                    ratio_medians_from_lns_noises
-                        .get(&(name1, name2))
-                        .unwrap()
-                        .mean()
-                        .aok(),
-                    ratio_medians_from_lns_noises
-                        .get(&(name1, name2))
-                        .unwrap()
-                        .stdev()
-                        .aok()
-                );
-                println!(
-                    "diff_ratio_medians_noise_mean={}, diff_ratio_medians_noise_stdev={}, diff_ratio_medians_noise_min={}, diff_ratio_medians_noise_max={}",
-                    diff_ratio_medians_noises
-                        .get(&(name1, name2))
-                        .unwrap()
-                        .mean()
-                        .aok(),
-                    diff_ratio_medians_noises
-                        .get(&(name1, name2))
-                        .unwrap()
-                        .stdev()
-                        .aok(),
-                    diff_ratio_medians_noises
-                        .get(&(name1, name2))
-                        .unwrap()
-                        .min(),
-                    diff_ratio_medians_noises
-                        .get(&(name1, name2))
-                        .unwrap()
-                        .max()
-                );
-                println!(
-                    "diff_ln_stdev_noise_mean={}, diff_ln_stdev_noise_stdev={}",
-                    diff_ln_stdev_noises
-                        .get(&(name1, name2))
-                        .unwrap()
-                        .mean()
-                        .aok(),
-                    diff_ln_stdev_noises
-                        .get(&(name1, name2))
-                        .unwrap()
-                        .stdev()
-                        .aok()
-                );
-            }
         }
     }
 }

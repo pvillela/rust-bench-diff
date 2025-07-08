@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added argument to Welch statistics to enable testing that the difference of means equals a specific value which doesn't have to be zero. To migrate from the previous version, use `0.0` as the value for the new argument.
 - Refactored to use `bench_utils` library.
+- Rationalized benchmarks and their supporting code, especially the comparison the comparison of `bench_diff` with the naive separate benchmarking of two functions.
 
 ### Removed
 

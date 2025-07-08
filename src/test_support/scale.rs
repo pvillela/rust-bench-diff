@@ -1,6 +1,7 @@
 use bench_utils::LatencyUnit;
 use std::sync::LazyLock;
 
+#[derive(Debug)]
 pub struct ScaleParams {
     pub name: String,
     pub recording_unit: LatencyUnit,

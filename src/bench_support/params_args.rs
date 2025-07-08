@@ -4,8 +4,26 @@
 use crate::test_support::FnSpec;
 use std::env;
 
+#[derive(Debug, Clone, Copy)]
+pub enum BenchMode {
+    Diff,
+    Comp,
+}
+
+impl BenchMode {
+    pub fn parse(s: &str) -> Self {
+        match s {
+            "diff" => Self::Diff,
+            "comp" => Self::Comp,
+            _ => panic!("bench_mode string must be \"diff\" or \"comp\", but was \"{s}\""),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct BenchArgs {
     pub scale_name: String,
+    pub bench_mode: BenchMode,
     pub fn_spec_pairs: Vec<(FnSpec, FnSpec)>,
     pub verbose: bool,
     pub nrepeats: usize,
@@ -34,6 +52,8 @@ pub fn get_args() -> BenchArgs {
     let (nrepeats, run_name) = cmd_line_args().unwrap_or((1, "".to_string()));
 
     let scale_name = env::var("SCALE_NAME").unwrap_or("micros_scale".into());
+
+    let bench_mode = BenchMode::parse(&env::var("BENCH_MODE").unwrap_or("diff".into()));
 
     let fn_spec_pairs: Vec<(FnSpec, FnSpec)> = {
         let fn_name_pairs_res = env::var("FN_NAME_PAIRS");
@@ -64,6 +84,7 @@ pub fn get_args() -> BenchArgs {
 
     BenchArgs {
         scale_name,
+        bench_mode,
         fn_spec_pairs,
         verbose,
         nrepeats,

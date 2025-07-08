@@ -66,6 +66,7 @@ _test_support = [
     "_dev_support",
     "dep:rand",
     "dep:rand_distr",
+    "bench_utils/_bench_run",
 ] # intended only for tests and benches
 
 [[bench]]

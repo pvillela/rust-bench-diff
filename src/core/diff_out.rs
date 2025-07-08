@@ -279,7 +279,7 @@ impl DiffOut {
         self.exact_binomial_f1_gt_f2_test(0.5, alt_hyp, alpha)
     }
 
-    fn comp(&self) -> Comp<'_> {
+    pub(crate) fn comp(&self) -> Comp<'_> {
         Comp::new(&self.out_f1, &self.out_f2)
     }
 

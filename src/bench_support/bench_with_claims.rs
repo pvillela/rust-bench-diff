@@ -3,15 +3,16 @@
 use super::params_args::{BenchArgs, get_args};
 use crate::{
     DiffOut, bench_diff, bench_diff_with_status,
+    bench_support::params_args::BenchMode,
     dev_utils::nest_btree_map,
     get_bench_cfg,
     stats_types::AltHyp,
     test_support::{
-        ALPHA, BETA, BETA_01, ClaimResults, FnSpec, MyFnMut, ScaleParams, binomial_inv_cdf,
+        ALPHA, BETA, BETA_01, ClaimResults, MyFnMut, ScaleParams, binomial_inv_cdf,
         binomial_nsigmas_gt_critical_value, get_scale_params,
     },
 };
-use bench_utils::calibrate_busy_work;
+use bench_utils::{Comp, bench_run, bench_run_with_status, calibrate_busy_work};
 
 fn print_diff_out(out: &DiffOut) {
     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
@@ -102,20 +103,54 @@ fn print_diff_out(out: &DiffOut) {
     println!();
 }
 
+fn print_comp_out(comp: &Comp) {
+    let ratio_medians_f1_f2 = comp.ratio_medians_f1_f2();
+    let ratio_medians_f1_f2_from_lns = comp.mean_diff_ln_f1_f2().exp();
+
+    println!();
+    println!("summary_f1={:?}", comp.out_f1().summary());
+    println!();
+    println!("summary_f2={:?}", comp.out_f2().summary());
+    println!();
+    println!(
+        "ratio_medians_f1_f2={}, ratio_medians_f1_f2_from_lns={}, diff={}",
+        ratio_medians_f1_f2,
+        ratio_medians_f1_f2_from_lns,
+        ratio_medians_f1_f2 - ratio_medians_f1_f2_from_lns
+    );
+    println!();
+    println!("welch_ratio_ci={:?}", comp.welch_ratio_ci(ALPHA),);
+    println!(
+        "welch_ln_test_lt:{:?}",
+        comp.welch_ln_test(0., AltHyp::Lt, ALPHA)
+    );
+    println!(
+        "welch_ln_test_eq:{:?}",
+        comp.welch_ln_test(0., AltHyp::Ne, ALPHA)
+    );
+    println!(
+        "welch_ln_test_gt:{:?}",
+        comp.welch_ln_test(0., AltHyp::Gt, ALPHA)
+    );
+    println!();
+    println!("mean_diff_f1_f2={}", comp.mean_diff_f1_f2());
+    println!(
+        "relative_mean_diff_f1_f2={}",
+        comp.mean_diff_f1_f2() / (comp.out_f1().mean() + comp.out_f2().mean()) * 2.
+    );
+    println!("diff_medians_f1_f2={}", comp.diff_medians_f1_f2());
+    println!(
+        "relative_diff_medians_f1_f2={}",
+        comp.diff_medians_f1_f2() / (comp.out_f1().median() + comp.out_f2().median()) * 2.
+    );
+    println!();
+}
+
 /// Runs benchmarks with statistical t-tests for target functions and comparison scenarios defined by
 /// environment variables and command line arguments.
 /// Defaults are provided for environment variables and command line arguments not defined.
 pub fn bench_with_claims_and_args() {
-    let BenchArgs {
-        scale_name,
-        fn_spec_pairs,
-        verbose,
-        nrepeats,
-        run_name,
-    } = get_args();
-    let scale_params = get_scale_params(&scale_name);
-
-    bench_with_claims(scale_params, &fn_spec_pairs, verbose, nrepeats, &run_name);
+    bench_with_claims(get_args());
 }
 
 /// Runs benchmarks with statistical tests and other claims for target functions parameterized by `fn_params`,
@@ -124,15 +159,20 @@ pub fn bench_with_claims_and_args() {
 ///
 ///  `verbose` determines the verbosity of output, `print_args` is a closure that prints the
 /// configuration arguments for the benchmarks and `run_name` is a string that designates the run in the print-out.
-pub fn bench_with_claims(
-    scale_params: &ScaleParams,
-    fn_spec_pairs: &[(FnSpec, FnSpec)],
-    verbose: bool,
-    nrepeats: usize,
-    run_name: &str,
-) {
+pub fn bench_with_claims(args: BenchArgs) {
+    let BenchArgs {
+        ref scale_name,
+        bench_mode,
+        ref fn_spec_pairs,
+        verbose,
+        nrepeats,
+        ref run_name,
+    } = args;
+
+    let scale_params = get_scale_params(&scale_name);
+
     let ScaleParams {
-        name,
+        name: _,
         recording_unit,
         reporting_unit,
         exec_count,
@@ -142,16 +182,8 @@ pub fn bench_with_claims(
     get_bench_cfg().with_recording_unit(*recording_unit).set();
 
     let print_args = || {
-        println!("*** arguments ***");
-        println!("SCALE_NAME=\"{}\"", name);
-        println!(
-            "unit={:?}, exec_count={}, base_median={}",
-            scale_params.recording_unit, scale_params.exec_count, scale_params.base_latency
-        );
-        println!("FN_NAME_PAIRS=\"{fn_spec_pairs:?}\"");
-        println!("VERBOSE=\"{verbose}\"");
-        println!("nrepeats={nrepeats}");
-        println!("run_name=\"{run_name}\"");
+        println!("*** args = {args:?}");
+        println!("*** scale_params = {scale_params:?}");
         println!("*** other parameters ***");
         let tau = 0.95;
         let nsigmas = 2.;
@@ -197,22 +229,54 @@ pub fn bench_with_claims(
                 "*** run_name=\"{run_name}\", scenario=\"{scenario_name}\", scenario_iteration={i}, ({cumulative_iter} of {total_iterations}) ***"
             );
 
-            let diff_out = if verbose {
-                let out = bench_diff_with_status(&mut f1, &mut f2, *exec_count, |exec_count| {
-                    println!(
-                        "\n>>> bench_diff: unit={:?}, exec_count={exec_count}",
-                        get_bench_cfg().recording_unit()
-                    );
-                    println!("{scenario_name}");
-                    println!();
-                });
-                print_diff_out(&out);
-                out
-            } else {
-                bench_diff(&mut f1, &mut f2, scale_params.exec_count)
-            };
+            match bench_mode {
+                BenchMode::Diff => {
+                    let diff_out = if verbose {
+                        let out = bench_diff_with_status(
+                            &mut f1,
+                            &mut f2,
+                            *exec_count,
+                            |exec_count| {
+                                println!("{scenario_name}");
+                                println!(
+                                    "\n>>> bench_diff for ({spec_f1}, {spec_f2}): exec_count={exec_count}",
+                                );
+                                println!();
+                            },
+                        );
+                        print_diff_out(&out);
+                        out
+                    } else {
+                        bench_diff(&mut f1, &mut f2, scale_params.exec_count)
+                    };
 
-            results.check_claims(*spec_f1, *spec_f2, ALPHA, &diff_out, verbose);
+                    results.check_claims_diff(*spec_f1, *spec_f2, ALPHA, &diff_out, verbose);
+                }
+
+                BenchMode::Comp => {
+                    let (out1, out2) = if verbose {
+                        let out1 = bench_run_with_status(&mut f1, *exec_count, |exec_count| {
+                            println!("{scenario_name}");
+                            println!("\n>>> bench_run for {spec_f1}: exec_count={exec_count}",);
+                            println!();
+                        });
+                        let out2 = bench_run_with_status(&mut f2, *exec_count, |exec_count| {
+                            println!("{scenario_name}");
+                            println!("\n>>> bench_run for {spec_f2}: exec_count={exec_count}",);
+                            println!();
+                        });
+                        (out1, out2)
+                    } else {
+                        let out1 = bench_run(&mut f1, scale_params.exec_count);
+                        let out2 = bench_run(&mut f2, scale_params.exec_count);
+                        (out1, out2)
+                    };
+
+                    let comp = Comp::new(&out1, &out2);
+                    print_comp_out(&comp);
+                    results.check_claims_comp(*spec_f1, *spec_f2, ALPHA, &comp, verbose);
+                }
+            }
         }
 
         if verbose {

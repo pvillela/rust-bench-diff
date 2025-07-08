@@ -5,12 +5,13 @@ use crate::{
     stats_types::{AcceptedHyp, AltHyp, HypTestResult, PositionWrtCi},
     test_support::FnSpec,
 };
+use bench_utils::Comp;
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet},
 };
 
-pub type Hyp = Option<AltHyp>;
+type Hyp = Option<AltHyp>;
 
 fn alt_hyp(hyp: Option<AltHyp>) -> AltHyp {
     match hyp {
@@ -61,12 +62,7 @@ pub struct ClaimResult {
 }
 
 impl ClaimResult {
-    fn welch_ratio_test(
-        spec_f1: FnSpec,
-        spec_f2: FnSpec,
-        out: &DiffOut,
-        alpha: f64,
-    ) -> ClaimResult {
+    fn welch_ratio_test(spec_f1: FnSpec, spec_f2: FnSpec, out: &Comp, alpha: f64) -> ClaimResult {
         let claim_name = "welch_ratio_test";
         let ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
         let hyp = cmp_hyp(ratio);
@@ -127,7 +123,7 @@ impl ClaimResult {
     fn ratio_medians_f1_f2_near_target(
         spec_f1: FnSpec,
         spec_f2: FnSpec,
-        out: &DiffOut,
+        out: &Comp,
     ) -> ClaimResult {
         let claim_name = "ratio_medians_f1_f2_near_target";
         let ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
@@ -179,7 +175,7 @@ impl ClaimResult {
     fn target_ratio_medians_f1_f2_in_welch_ratio_ci(
         spec_f1: FnSpec,
         spec_f2: FnSpec,
-        out: &DiffOut,
+        out: &Comp,
         alpha: f64,
     ) -> ClaimResult {
         let claim_name = "target_ratio_medians_f1_f2_in_welch_ratio_ci";
@@ -313,7 +309,29 @@ impl ClaimResults {
         };
     }
 
-    pub fn check_claims(
+    pub fn check_claims_comp(
+        &mut self,
+        spec_f1: FnSpec,
+        spec_f2: FnSpec,
+        alpha: f64,
+        out: &Comp,
+        verbose: bool,
+    ) {
+        self.push_claim_result(
+            ClaimResult::welch_ratio_test(spec_f1, spec_f2, out, alpha),
+            verbose,
+        );
+        self.push_claim_result(
+            ClaimResult::ratio_medians_f1_f2_near_target(spec_f1, spec_f2, out),
+            verbose,
+        );
+        self.push_claim_result(
+            ClaimResult::target_ratio_medians_f1_f2_in_welch_ratio_ci(spec_f1, spec_f2, out, alpha),
+            verbose,
+        );
+    }
+
+    pub fn check_claims_diff(
         &mut self,
         spec_f1: FnSpec,
         spec_f2: FnSpec,
@@ -321,8 +339,9 @@ impl ClaimResults {
         out: &DiffOut,
         verbose: bool,
     ) {
+        let comp = out.comp();
         self.push_claim_result(
-            ClaimResult::welch_ratio_test(spec_f1, spec_f2, out, alpha),
+            ClaimResult::welch_ratio_test(spec_f1, spec_f2, &comp, alpha),
             verbose,
         );
         self.push_claim_result(
@@ -334,7 +353,7 @@ impl ClaimResults {
             verbose,
         );
         self.push_claim_result(
-            ClaimResult::ratio_medians_f1_f2_near_target(spec_f1, spec_f2, out),
+            ClaimResult::ratio_medians_f1_f2_near_target(spec_f1, spec_f2, &comp),
             verbose,
         );
         self.push_claim_result(
@@ -342,7 +361,9 @@ impl ClaimResults {
             verbose,
         );
         self.push_claim_result(
-            ClaimResult::target_ratio_medians_f1_f2_in_welch_ratio_ci(spec_f1, spec_f2, out, alpha),
+            ClaimResult::target_ratio_medians_f1_f2_in_welch_ratio_ci(
+                spec_f1, spec_f2, &comp, alpha,
+            ),
             verbose,
         );
         self.push_claim_result(

@@ -1,5 +1,5 @@
 use bench_utils::LatencyUnit;
-use std::sync::LazyLock;
+use std::{sync::LazyLock, time::Duration};
 
 #[derive(Debug)]
 pub struct ScaleParams {
@@ -7,7 +7,7 @@ pub struct ScaleParams {
     pub recording_unit: LatencyUnit,
     pub reporting_unit: LatencyUnit,
     pub exec_count: usize,
-    pub base_latency: f64,
+    pub base_latency: Duration,
 }
 
 static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
@@ -16,7 +16,7 @@ static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
         // Revised params.
         //
         {
-            let base_latency = 400.;
+            let base_latency = Duration::from_nanos(400);
             ScaleParams {
                 name: "nanos_scale".into(),
                 recording_unit: LatencyUnit::Nano,
@@ -26,7 +26,7 @@ static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
             }
         },
         {
-            let base_latency = 100_000.;
+            let base_latency = Duration::from_micros(100);
             ScaleParams {
                 name: "micros_scale".into(),
                 recording_unit: LatencyUnit::Nano,
@@ -36,7 +36,7 @@ static SCALE_PARAMS: LazyLock<Vec<ScaleParams>> = LazyLock::new(|| {
             }
         },
         {
-            let base_latency = 20_000.; // was 10_000
+            let base_latency = Duration::from_millis(20); // was 10_000 micros
             ScaleParams {
                 name: "millis_scale".into(),
                 recording_unit: LatencyUnit::Micro,

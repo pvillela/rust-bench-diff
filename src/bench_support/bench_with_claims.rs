@@ -179,7 +179,10 @@ pub fn bench_with_claims(args: BenchArgs) {
         base_latency,
     } = scale_params;
 
-    get_bench_cfg().with_recording_unit(*recording_unit).set();
+    get_bench_cfg()
+        .with_recording_unit(*recording_unit)
+        .with_reporting_unit(*reporting_unit)
+        .set();
 
     let print_args = || {
         println!("*** args = {args:?}");
@@ -199,7 +202,7 @@ pub fn bench_with_claims(args: BenchArgs) {
         );
     };
 
-    let base_effort = calibrate_busy_work(reporting_unit.latency_from_f64(*base_latency));
+    let base_effort = calibrate_busy_work(*base_latency);
 
     println!();
     print_args();

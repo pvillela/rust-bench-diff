@@ -65,9 +65,10 @@ pub fn get_args() -> BenchArgs {
                 .split("|")
                 .map(|x| {
                     let pair_v = x.split(",").collect::<Vec<_>>();
-                    let err_msg = "*** properly formatted function name pair must contain one `,`: "
-                        .to_string() + x;
-                    assert!(pair_v.len() == 2, "{err_msg}");
+                    assert!(
+                        pair_v.len() == 2,
+                        "properly formatted function name pair must contain one `,` but was \"{x}\""
+                    );
                     (FnSpec::parse(pair_v[0]), FnSpec::parse(pair_v[1]))
                 })
                 .collect::<Vec<_>>(),

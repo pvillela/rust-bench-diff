@@ -195,6 +195,16 @@ pub fn bench_with_claims(args: BenchArgs) {
             binomial_inv_cdf(nrepeats as u64, ALPHA, tau),
             binomial_nsigmas_gt_critical_value(nrepeats as u64, ALPHA, nsigmas)
         );
+        {
+            // `binomial_inv_cdf` panics for `nrepeats <= 7` and `tau` = 0.67.
+            let tau = 0.67;
+            let nsigmas = 1.;
+            println!(
+                "ALPHA={ALPHA}, exact_type_i_gt_critical_value({tau})={}, nsigmas_type_i_gt_critical_value({nsigmas})={}",
+                binomial_inv_cdf(nrepeats as u64, ALPHA, tau),
+                binomial_nsigmas_gt_critical_value(nrepeats as u64, ALPHA, nsigmas)
+            );
+        }
         println!(
             "BETA={BETA}, exact_type_ii_gt_critical_value({tau})={}, nsigmas_type_ii_gt_critical_value({nsigmas})={}",
             binomial_inv_cdf(nrepeats as u64, BETA, tau),

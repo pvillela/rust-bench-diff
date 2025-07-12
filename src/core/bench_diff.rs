@@ -172,7 +172,8 @@ impl<'a> DiffState<'a> {
 /// Arguments:
 /// - `f1` - first target for comparison.
 /// - `f2` - second target for comparison.
-/// - `exec_count` - number of executions (sample size) for each function.
+/// - `exec_count` - number of executions (sample size) for each function. If it is not a multiple of 4, the
+///   closest multiple of 4 less than it will be used.
 /// - `warmup_status` - is invoked every so often during warm-up and can be used to output the warm-up status,
 ///   e.g., how much warm-up time has elapsed and the target warm-up time. The first argument is the warm-up
 ///   execution iteration, the second is the elapsed warm-up time, and the third is the target warm-up time.
@@ -226,7 +227,8 @@ pub fn bench_diff_x(
 /// Arguments:
 /// - `f1` - first target for comparison.
 /// - `f2` - second target for comparison.
-/// - `exec_count` - number of executions (sample size) for each function.
+/// - `exec_count` - number of executions (sample size) for each function. If it is not a multiple of 4, the
+///   closest multiple of 4 less than it will be used.
 pub fn bench_diff(f1: impl FnMut(), f2: impl FnMut(), exec_count: usize) -> DiffOut {
     bench_diff_x(f1, f2, exec_count, |_, _, _| {}, || (), |_| ())
 }
@@ -244,7 +246,8 @@ pub fn bench_diff(f1: impl FnMut(), f2: impl FnMut(), exec_count: usize) -> Diff
 /// Arguments:
 /// - `f1` - first target for comparison.
 /// - `f2` - second target for comparison.
-/// - `exec_count` - number of executions (sample size) for each function.
+/// - `exec_count` - number of executions (sample size) for each function. If it is not a multiple of 4, the
+///   closest multiple of 4 less than it will be used.
 /// - `header` - is invoked once at the start of this function's execution; it can be used, for example,
 ///   to output information about the functions being compared to `stdout` and/or `stderr`. The
 ///   argument is the `exec_count`.

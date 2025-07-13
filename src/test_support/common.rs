@@ -1,4 +1,6 @@
+use basic_stats::core::StatsError;
 use statrs::distribution::{Binomial, DiscreteCDF};
+use std::panic::catch_unwind;
 
 pub const ALPHA: f64 = 0.05;
 pub const BETA: f64 = 0.05;
@@ -9,11 +11,22 @@ pub const BETA_01: f64 = 0.01;
 ///
 /// This is the exact inverse CDF of the binomial distribution.
 ///
-/// # Panics
-/// - When `n` or `tau` are sufficently small (e.g., `n <= 7 && tau <= 0.67`), due to implementation in [`statrs`] crate.
-pub fn binomial_inv_cdf(n: u64, p0: f64, tau: f64) -> u64 {
-    let binomial = Binomial::new(p0, n).expect("invalid arguments to binomial distribution");
-    binomial.inverse_cdf(tau)
+/// # Errors
+///
+/// Returns an error in any of these conditions:
+/// - `n == 0`
+/// - `p0` is not in the open interval (0, 1).
+/// - The combination of `n`, `p0`, and `tau` is too small (e.g., `n <= 7 && p0 == 0.05 && tau <= 0.67`),
+///   due to implementation in [`statrs`] crate.
+pub fn binomial_inv_cdf(n: u64, p0: f64, tau: f64) -> Result<u64, StatsError> {
+    let binomial = Binomial::new(p0, n)
+        .map_err(|_| StatsError::new("`n == 0` or `p0` is not in the open interval (0, 1)"))?;
+
+    catch_unwind(|| binomial.inverse_cdf(tau)).or_else(|_| {
+        Err(StatsError::new(
+            "combination of `n`, `p0`, and `tau` is too small",
+        ))
+    })
 }
 
 #[allow(unused)]

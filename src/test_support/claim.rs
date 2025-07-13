@@ -432,8 +432,8 @@ impl ClaimResults {
         nrepeats: usize,
         tau: f64,
     ) -> BTreeMap<((FnSpec, FnSpec), String), u32> {
-        let max_alpha_count = binomial_inv_cdf(nrepeats as u64, alpha, tau);
-        let max_beta_count = binomial_inv_cdf(nrepeats as u64, beta, tau);
+        let max_alpha_count = binomial_inv_cdf(nrepeats as u64, alpha, tau).unwrap();
+        let max_beta_count = binomial_inv_cdf(nrepeats as u64, beta, tau).unwrap();
 
         let predicate =
             |spec_f1: &FnSpec, spec_f2: &FnSpec, claim_name: &str, count: u64| -> bool {

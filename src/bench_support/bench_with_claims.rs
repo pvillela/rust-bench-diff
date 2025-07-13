@@ -192,22 +192,26 @@ pub fn bench_with_claims(args: BenchArgs) {
         let nsigmas = 2.;
         println!(
             "ALPHA={ALPHA}, exact_type_i_gt_critical_value({tau})={}, nsigmas_type_i_gt_critical_value({nsigmas})={}",
-            binomial_inv_cdf(nrepeats as u64, ALPHA, tau),
+            binomial_inv_cdf(nrepeats as u64, ALPHA, tau).unwrap(),
             binomial_nsigmas_gt_critical_value(nrepeats as u64, ALPHA, nsigmas)
         );
         {
-            // `binomial_inv_cdf` panics for `nrepeats <= 7` and `tau` = 0.67.
+            // `binomial_inv_cdf` errors for `nrepeats <= 7` and `tau` = 0.67.
             let tau = 0.67;
             let nsigmas = 1.;
-            println!(
-                "ALPHA={ALPHA}, exact_type_i_gt_critical_value({tau})={}, nsigmas_type_i_gt_critical_value({nsigmas})={}",
+            print!(
+                "ALPHA={ALPHA}, tau={tau}, binomial_inv_cdf={:?}, ",
                 binomial_inv_cdf(nrepeats as u64, ALPHA, tau),
+            );
+            println!(
+                "exact_type_i_gt_critical_value({tau})={}, nsigmas_type_i_gt_critical_value({nsigmas})={}",
+                binomial_inv_cdf(nrepeats as u64, ALPHA, tau).unwrap(),
                 binomial_nsigmas_gt_critical_value(nrepeats as u64, ALPHA, nsigmas)
             );
         }
         println!(
             "BETA={BETA}, exact_type_ii_gt_critical_value({tau})={}, nsigmas_type_ii_gt_critical_value({nsigmas})={}",
-            binomial_inv_cdf(nrepeats as u64, BETA, tau),
+            binomial_inv_cdf(nrepeats as u64, BETA, tau).unwrap(),
             binomial_nsigmas_gt_critical_value(nrepeats as u64, BETA, nsigmas)
         );
     };

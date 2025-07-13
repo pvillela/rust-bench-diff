@@ -23,9 +23,10 @@ pub fn binomial_inv_cdf(n: u64, p0: f64, tau: f64) -> Result<u64, StatsError> {
         .map_err(|_| StatsError::new("`n == 0` or `p0` is not in the open interval (0, 1)"))?;
 
     catch_unwind(|| binomial.inverse_cdf(tau)).or_else(|_| {
-        Err(StatsError::new(
-            "combination of `n`, `p0`, and `tau` is too small",
-        ))
+        eprintln!("caught and handled dependency panic");
+        Err(StatsError::new(format!(
+            "binomial_inv_cdf: combination of n={n}, p0={p0}, and tau={tau} is too small"
+        )))
     })
 }
 

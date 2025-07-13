@@ -188,32 +188,62 @@ pub fn bench_with_claims(args: BenchArgs) {
         println!("*** args = {args:?}");
         println!("*** scale_params = {scale_params:?}");
         println!("*** other parameters ***");
+
         let tau = 0.95;
         let nsigmas = 2.;
-        println!(
-            "ALPHA={ALPHA}, exact_type_i_gt_critical_value({tau})={}, nsigmas_type_i_gt_critical_value({nsigmas})={}",
-            binomial_inv_cdf(nrepeats as u64, ALPHA, tau).unwrap(),
-            binomial_nsigmas_gt_critical_value(nrepeats as u64, ALPHA, nsigmas)
-        );
+
         {
-            // `binomial_inv_cdf` errors for `nrepeats <= 7` and `tau` = 0.67.
-            let tau = 0.67;
-            let nsigmas = 1.;
+            let alpha = ALPHA;
+            {
+                print!(
+                    "alpha={alpha}, tau={tau}, binomial_inv_cdf={:?}, ",
+                    binomial_inv_cdf(nrepeats as u64, alpha, tau),
+                );
+                println!(
+                    "exact_type_i_gt_critical_value({tau})={}, nsigmas_type_i_gt_critical_value({nsigmas})={}",
+                    binomial_inv_cdf(nrepeats as u64, alpha, tau).unwrap(),
+                    binomial_nsigmas_gt_critical_value(nrepeats as u64, alpha, nsigmas)
+                );
+            }
+            {
+                // `binomial_inv_cdf` errors-out for `nrepeats <= 7` and `tau` = 0.67.
+                let tau = 0.67;
+                let nsigmas = 1.;
+                print!(
+                    "alpha={alpha}, tau={tau}, binomial_inv_cdf={:?}, ",
+                    binomial_inv_cdf(nrepeats as u64, alpha, tau),
+                );
+                println!(
+                    "exact_type_i_gt_critical_value({tau})={}, nsigmas_type_i_gt_critical_value({nsigmas})={}",
+                    binomial_inv_cdf(nrepeats as u64, alpha, tau).unwrap(),
+                    binomial_nsigmas_gt_critical_value(nrepeats as u64, alpha, nsigmas)
+                );
+            }
+        }
+        {
+            let beta = BETA;
             print!(
-                "ALPHA={ALPHA}, tau={tau}, binomial_inv_cdf={:?}, ",
-                binomial_inv_cdf(nrepeats as u64, ALPHA, tau),
+                "beta={beta}, tau={tau}, binomial_inv_cdf={:?}, ",
+                binomial_inv_cdf(nrepeats as u64, beta, tau),
             );
             println!(
-                "exact_type_i_gt_critical_value({tau})={}, nsigmas_type_i_gt_critical_value({nsigmas})={}",
-                binomial_inv_cdf(nrepeats as u64, ALPHA, tau).unwrap(),
-                binomial_nsigmas_gt_critical_value(nrepeats as u64, ALPHA, nsigmas)
+                "exact_type_ii_gt_critical_value({tau})={}, nsigmas_type_ii_gt_critical_value({nsigmas})={}",
+                binomial_inv_cdf(nrepeats as u64, beta, tau).unwrap(),
+                binomial_nsigmas_gt_critical_value(nrepeats as u64, beta, nsigmas)
             );
         }
-        println!(
-            "BETA={BETA}, exact_type_ii_gt_critical_value({tau})={}, nsigmas_type_ii_gt_critical_value({nsigmas})={}",
-            binomial_inv_cdf(nrepeats as u64, BETA, tau).unwrap(),
-            binomial_nsigmas_gt_critical_value(nrepeats as u64, BETA, nsigmas)
-        );
+        {
+            let beta = BETA_01;
+            print!(
+                "beta={beta}, tau={tau}, binomial_inv_cdf={:?}, ",
+                binomial_inv_cdf(nrepeats as u64, beta, tau),
+            );
+            println!(
+                "exact_type_ii_gt_critical_value({tau})={}, nsigmas_type_ii_gt_critical_value({nsigmas})={}",
+                binomial_inv_cdf(nrepeats as u64, beta, tau).unwrap(),
+                binomial_nsigmas_gt_critical_value(nrepeats as u64, beta, nsigmas)
+            );
+        }
     };
 
     let base_effort = calibrate_busy_work(*base_latency);
@@ -282,6 +312,8 @@ pub fn bench_with_claims(args: BenchArgs) {
                             println!("\n>>> bench_run for {spec_f2}: exec_count={exec_count}",);
                             println!();
                         });
+                        let comp = Comp::new(&out1, &out2);
+                        print_comp_out(&comp);
                         (out1, out2)
                     } else {
                         let out1 = bench_run(&mut f1, scale_params.exec_count);
@@ -290,7 +322,6 @@ pub fn bench_with_claims(args: BenchArgs) {
                     };
 
                     let comp = Comp::new(&out1, &out2);
-                    print_comp_out(&comp);
                     results.check_claims_comp(*spec_f1, *spec_f2, ALPHA, &comp, verbose);
                 }
             }
@@ -308,60 +339,70 @@ pub fn bench_with_claims(args: BenchArgs) {
             println!();
             println!("*** failure_summary ***");
             for ((name_pair, claim_name), count) in results.failure_summary() {
-                println!("{name_pair:?} | {claim_name} ==> count={count}");
+                println!("{name_pair:?} : {claim_name} ==> count={count}");
             }
 
             println!();
             println!("*** success_summary ***");
             for (name_pair, claim_name) in results.success_summary() {
-                println!("{name_pair:?} | {claim_name}");
+                println!("{name_pair:?} : {claim_name}");
             }
         } else {
             println!("*** claim_summary ***");
             for ((name_pair, claim_name), count) in results.summary() {
-                println!("{name_pair:?} | {claim_name} ==> count={count}");
+                println!("{name_pair:?} : {claim_name} ==> count={count}");
             }
         }
 
-        let type_i_and_ii_errors_67 = results.excess_type_i_and_ii_errors(
+        let type_i_errors_alpha05_tau67 = results.excess_type_i_errors(
             ALPHA,
-            BETA,
             &ClaimResults::CRITICAL_CLAIM_NAMES,
             nrepeats,
             0.67,
         );
-        if !type_i_and_ii_errors_67.is_empty() {
+        if !type_i_errors_alpha05_tau67.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_67: {:?}",
-                nest_btree_map(type_i_and_ii_errors_67)
+                ">>> type_i_errors_alpha05_tau67: {:?}",
+                nest_btree_map(type_i_errors_alpha05_tau67)
             );
         }
 
-        let type_i_and_ii_errors_95 = results.excess_type_i_and_ii_errors(
+        let type_i_errors_alpha05_tau95 = results.excess_type_i_errors(
             ALPHA,
-            BETA,
             &ClaimResults::CRITICAL_CLAIM_NAMES,
             nrepeats,
             0.95,
         );
-        if !type_i_and_ii_errors_95.is_empty() {
+        if !type_i_errors_alpha05_tau95.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_95: {:?}",
-                nest_btree_map(type_i_and_ii_errors_95)
+                ">>> type_i_errors_alpha05_tau95: {:?}",
+                nest_btree_map(type_i_errors_alpha05_tau95)
             );
         }
 
-        let type_i_and_ii_errors_95_beta_01 = results.excess_type_i_and_ii_errors(
-            ALPHA,
+        let type_ii_errors_beta01_tau95 = results.excess_type_ii_errors(
             BETA_01,
             &ClaimResults::CRITICAL_CLAIM_NAMES,
             nrepeats,
             0.95,
         );
-        if !type_i_and_ii_errors_95_beta_01.is_empty() {
+        if !type_ii_errors_beta01_tau95.is_empty() {
             println!(
-                ">>> type_i_and_ii_errors_95_beta_01: {:?}",
-                nest_btree_map(type_i_and_ii_errors_95_beta_01)
+                ">>> type_ii_errors_beta01_tau95: {:?}",
+                nest_btree_map(type_ii_errors_beta01_tau95)
+            );
+        }
+
+        let type_ii_errors_beta05_tau95 = results.excess_type_ii_errors(
+            BETA,
+            &ClaimResults::CRITICAL_CLAIM_NAMES,
+            nrepeats,
+            0.95,
+        );
+        if !type_ii_errors_beta05_tau95.is_empty() {
+            println!(
+                ">>> type_ii_errors_beta05_tau95: {:?}",
+                nest_btree_map(type_ii_errors_beta05_tau95)
             );
         }
     }

@@ -406,8 +406,8 @@ impl ClaimResults {
             .collect()
     }
 
-    /// Counts of claims that exceed their Type I or Type II errors, with tolerance `τ`. The higher the value of `τ`,
-    /// the more tolerant we are about the accptable number of errors in `nrepeat` trials.
+    /// Counts of claims that exceed their Type I errors, with tolerance `τ`. The higher the value of `τ`,
+    /// the more tolerant we are about the acceptable number of errors in `nrepeat` trials.
     ///
     /// Calculation for alpha when median(latency(f1)) == median(latency(f2)).
     /// - Hyp0: Prob(latency(f1) > latency(f2) == 0.5), for example. It could be any null hypothesis that should be accepted.
@@ -415,6 +415,39 @@ impl ClaimResults {
     /// - Thus, given the Type I error hypothesis above, let critical_value = binomial_inv_cdf(nrepeats, α, τ):
     ///   - Prob(number of Hyp0 rejections in nrepeat trials <= critical_value) >= τ.
     ///   - Equivalently, Prob(number of Hyp0 rejections in nrepeat trials > critical_value) < 1-τ.
+    ///
+    /// Returns a map from claim keys to the excessive number of errors associated with the key.
+    pub fn excess_type_i_errors(
+        &self,
+        alpha: f64,
+        claim_names: &[&'static str],
+        nrepeats: usize,
+        tau: f64,
+    ) -> BTreeMap<((FnSpec, FnSpec), String), u32> {
+        let max_alpha_count = binomial_inv_cdf(nrepeats as u64, alpha, tau).unwrap();
+
+        let predicate =
+            |spec_f1: &FnSpec, spec_f2: &FnSpec, claim_name: &str, count: u64| -> bool {
+                let eq_base_median = spec_f1.base_median_factor == spec_f2.base_median_factor;
+
+                if eq_base_median && claim_names.contains(&claim_name) && count > max_alpha_count {
+                    true
+                } else {
+                    false
+                }
+            };
+
+        self.summary
+            .iter()
+            .filter(|(((spec_f1, spec_f2), claim_name), count)| {
+                predicate(spec_f1, spec_f2, claim_name, **count as u64)
+            })
+            .map(|(k, v)| (k.clone(), *v))
+            .collect::<BTreeMap<_, _>>()
+    }
+
+    /// Counts of claims that exceed their Type I or Type II errors, with tolerance `τ`. The higher the value of `τ`,
+    /// the more tolerant we are about the acceptable number of errors in `nrepeat` trials.
     ///
     /// Calculation for beta when median(latency(f1)) < median(latency(f2)).
     /// - Hyp0: Prob(latency(f1) > latency(f2) == 0.5), for example. It could be any null hypothesis that should be rejected.
@@ -424,27 +457,20 @@ impl ClaimResults {
     ///   - Equivalently, Prob(number of Hyp0 acceptances in nrepeat trials > critical_value) < 1-τ.
     ///
     /// Returns a map from claim keys to the excessive number of errors associated with the key.
-    pub fn excess_type_i_and_ii_errors(
+    pub fn excess_type_ii_errors(
         &self,
-        alpha: f64,
         beta: f64,
         claim_names: &[&'static str],
         nrepeats: usize,
         tau: f64,
     ) -> BTreeMap<((FnSpec, FnSpec), String), u32> {
-        let max_alpha_count = binomial_inv_cdf(nrepeats as u64, alpha, tau).unwrap();
         let max_beta_count = binomial_inv_cdf(nrepeats as u64, beta, tau).unwrap();
 
         let predicate =
             |spec_f1: &FnSpec, spec_f2: &FnSpec, claim_name: &str, count: u64| -> bool {
                 let eq_base_median = spec_f1.base_median_factor == spec_f2.base_median_factor;
 
-                if eq_base_median && claim_names.contains(&claim_name) && count > max_alpha_count {
-                    true
-                } else if !eq_base_median
-                    && claim_names.contains(&claim_name)
-                    && count > max_beta_count
-                {
+                if !eq_base_median && claim_names.contains(&claim_name) && count > max_beta_count {
                     true
                 } else {
                     false

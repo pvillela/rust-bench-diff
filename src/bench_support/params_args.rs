@@ -64,10 +64,10 @@ pub fn get_args() -> BenchArgs {
                 .collect::<String>()
                 .split("|")
                 .map(|x| {
-                    let pair_v = x.split(",").collect::<Vec<_>>();
+                    let pair_v = x.split("/").collect::<Vec<_>>();
                     assert!(
                         pair_v.len() == 2,
-                        "properly formatted function name pair must contain one `,` but was \"{x}\""
+                        "properly formatted function name pair must contain one `/` but was \"{x}\""
                     );
                     (FnSpec::parse(pair_v[0]), FnSpec::parse(pair_v[1]))
                 })

@@ -16,12 +16,13 @@ export RUSTFLAGS="-Awarnings"
 
 output_target="/dev/stdout" # Default to stdout
 
-if [[ !(-v VERBOSE) || "$VERBOSE" == "false" ]]; then
-    timestamp = ${date +"%Y%m%d_%H%M"}
-    output_target="out/${BENCH_MODE}-${SCALE_NAME}-${timestamp}.txt"
+if [[ -z "$VERBOSE" || "${VERBOSE,,}" == "false" ]]; then
+    timestamp=$(date +"%Y%m%d_%H%M")
+    bench_mode=${BENCH_MODE-"diff"}
+    output_target="out/${bench_mode}-${SCALE_NAME}-${timestamp}.txt"
 fi
 
-echo "Started at: `date +"%H:%M:%S"`"
+echo "Started at: `date +"%H:%M:%S"`, output_target=$output_target"
 
 cargo bench --bench main_bench --features _bench --target-dir target/bench-target -- $1 $2 > $output_target
 

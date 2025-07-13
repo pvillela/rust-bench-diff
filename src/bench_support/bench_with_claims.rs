@@ -284,9 +284,8 @@ pub fn bench_with_claims(args: BenchArgs) {
                             &mut f2,
                             *exec_count,
                             |exec_count| {
-                                println!("{scenario_name}");
                                 println!(
-                                    "\n>>> bench_diff for ({spec_f1}, {spec_f2}): exec_count={exec_count}",
+                                    "=== bench_diff for: {scenario_name}; exec_count={exec_count} ==="
                                 );
                                 println!();
                             },
@@ -302,16 +301,14 @@ pub fn bench_with_claims(args: BenchArgs) {
 
                 BenchMode::Comp => {
                     let (out1, out2) = if verbose {
+                        println!("=== comp for: {scenario_name} ===");
                         let out1 = bench_run_with_status(&mut f1, *exec_count, |exec_count| {
-                            println!("{scenario_name}");
-                            println!("\n>>> bench_run for {spec_f1}: exec_count={exec_count}",);
-                            println!();
+                            println!("bench_run for f1={spec_f1}; exec_count={exec_count}",);
                         });
                         let out2 = bench_run_with_status(&mut f2, *exec_count, |exec_count| {
-                            println!("{scenario_name}");
-                            println!("\n>>> bench_run for {spec_f2}: exec_count={exec_count}",);
-                            println!();
+                            println!("bench_run for f2={spec_f2}; exec_count={exec_count}",);
                         });
+                        println!();
                         let comp = Comp::new(&out1, &out2);
                         print_comp_out(&comp);
                         (out1, out2)
@@ -348,6 +345,7 @@ pub fn bench_with_claims(args: BenchArgs) {
                 println!("{name_pair:?} : {claim_name}");
             }
         } else {
+            println!();
             println!("*** claim_summary ***");
             for ((name_pair, claim_name), count) in results.summary() {
                 println!("{name_pair:?} : {claim_name} ==> count={count}");

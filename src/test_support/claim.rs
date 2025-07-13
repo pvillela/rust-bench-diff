@@ -446,7 +446,7 @@ impl ClaimResults {
             .collect::<BTreeMap<_, _>>()
     }
 
-    /// Counts of claims that exceed their Type I or Type II errors, with tolerance `τ`. The higher the value of `τ`,
+    /// Counts of claims that exceed their Type II errors, with tolerance `τ`. The higher the value of `τ`,
     /// the more tolerant we are about the acceptable number of errors in `nrepeat` trials.
     ///
     /// Calculation for beta when median(latency(f1)) < median(latency(f2)).

@@ -359,13 +359,13 @@ impl DiffOut {
     #[cfg(feature = "_dev_support")]
     /// Student's one-sample t statistic for
     /// `mean(latency(f1) - latency(f2))`.
-    pub fn student_diff_t(&self) -> f64 {
+    pub fn student_diff_t(&self, d0: f64) -> f64 {
         let moments = SampleMoments::new(
             self.out_f1.n(),
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
-        student_1samp_t(&moments, 0.).aok()
+        student_1samp_t(&moments, d0).aok()
     }
 
     #[cfg(feature = "_dev_support")]
@@ -411,25 +411,25 @@ impl DiffOut {
     ///
     /// Assumes that `latency(f1) - latency(f2)` is normally distributed. This assumption is *not* supported by
     /// performance analysis theory or empirical data.
-    pub fn student_diff_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+    pub fn student_diff_test(&self, d0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.out_f1.n(),
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
-        student_1samp_test(&moments, 0., alt_hyp, alpha).aok()
+        student_1samp_test(&moments, d0, alt_hyp, alpha).aok()
     }
 
     #[cfg(feature = "_dev_support")]
     /// Student's one-sample t statistic for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
-    pub fn student_diff_ln_t(&self) -> f64 {
+    pub fn student_diff_ln_t(&self, ln_d0: f64) -> f64 {
         let moments = SampleMoments::new(
             self.out_f1.n(),
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
-        student_1samp_t(&moments, 0.).aok()
+        student_1samp_t(&moments, ln_d0).aok()
     }
 
     #[cfg(feature = "_dev_support")]
@@ -489,13 +489,13 @@ impl DiffOut {
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
-    pub fn student_diff_ln_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
+    pub fn student_diff_ln_test(&self, ln_d0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.out_f1.n(),
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
-        student_1samp_test(&moments, 0., alt_hyp, alpha).aok()
+        student_1samp_test(&moments, ln_d0, alt_hyp, alpha).aok()
     }
 
     #[cfg(feature = "_dev_support")]

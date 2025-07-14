@@ -56,15 +56,15 @@ fn print_diff_out(out: &DiffOut) {
     );
     println!(
         "student_diff_test_lt:{:?}",
-        out.student_diff_test(AltHyp::Lt, ALPHA)
+        out.student_diff_test(0., AltHyp::Lt, ALPHA)
     );
     println!(
         "student_diff_test_eq:{:?}",
-        out.student_diff_test(AltHyp::Ne, ALPHA)
+        out.student_diff_test(0., AltHyp::Ne, ALPHA)
     );
     println!(
         "student_diff_test_gt:{:?}",
-        out.student_diff_test(AltHyp::Gt, ALPHA)
+        out.student_diff_test(0., AltHyp::Gt, ALPHA)
     );
     println!();
     println!(
@@ -352,12 +352,7 @@ pub fn bench_with_claims(args: BenchArgs) {
             }
         }
 
-        let type_i_errors_alpha05_tau67 = results.excess_type_i_errors(
-            ALPHA,
-            &ClaimResults::CRITICAL_CLAIM_NAMES,
-            nrepeats,
-            0.67,
-        );
+        let type_i_errors_alpha05_tau67 = results.excess_type_i_errors(ALPHA, nrepeats, 0.67);
         if !type_i_errors_alpha05_tau67.is_empty() {
             println!(
                 ">>> type_i_errors_alpha05_tau67: {:?}",
@@ -365,12 +360,7 @@ pub fn bench_with_claims(args: BenchArgs) {
             );
         }
 
-        let type_i_errors_alpha05_tau95 = results.excess_type_i_errors(
-            ALPHA,
-            &ClaimResults::CRITICAL_CLAIM_NAMES,
-            nrepeats,
-            0.95,
-        );
+        let type_i_errors_alpha05_tau95 = results.excess_type_i_errors(ALPHA, nrepeats, 0.95);
         if !type_i_errors_alpha05_tau95.is_empty() {
             println!(
                 ">>> type_i_errors_alpha05_tau95: {:?}",
@@ -378,12 +368,7 @@ pub fn bench_with_claims(args: BenchArgs) {
             );
         }
 
-        let type_ii_errors_beta01_tau95 = results.excess_type_ii_errors(
-            BETA_01,
-            &ClaimResults::CRITICAL_CLAIM_NAMES,
-            nrepeats,
-            0.95,
-        );
+        let type_ii_errors_beta01_tau95 = results.excess_type_ii_errors(BETA_01, nrepeats, 0.95);
         if !type_ii_errors_beta01_tau95.is_empty() {
             println!(
                 ">>> type_ii_errors_beta01_tau95: {:?}",
@@ -391,16 +376,19 @@ pub fn bench_with_claims(args: BenchArgs) {
             );
         }
 
-        let type_ii_errors_beta05_tau95 = results.excess_type_ii_errors(
-            BETA,
-            &ClaimResults::CRITICAL_CLAIM_NAMES,
-            nrepeats,
-            0.95,
-        );
+        let type_ii_errors_beta05_tau95 = results.excess_type_ii_errors(BETA, nrepeats, 0.95);
         if !type_ii_errors_beta05_tau95.is_empty() {
             println!(
                 ">>> type_ii_errors_beta05_tau95: {:?}",
                 nest_btree_map(type_ii_errors_beta05_tau95)
+            );
+        }
+
+        let reversed_ratio_medians = results.reversed_ratio_medians();
+        if !reversed_ratio_medians.is_empty() {
+            println!(
+                ">>> reversed_ratio_medians: {:?}",
+                nest_btree_map(reversed_ratio_medians)
             );
         }
     }

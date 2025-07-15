@@ -18,7 +18,6 @@ fn print_diff_out(out: &DiffOut) {
     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
     let ratio_medians_f1_f2_from_lns = out.mean_diff_ln_f1_f2().exp();
 
-    println!();
     println!("summary_f1={:?}", out.summary_f1());
     println!();
     println!("summary_f2={:?}", out.summary_f2());
@@ -278,6 +277,7 @@ pub fn bench_with_claims(args: BenchArgs) {
             match bench_mode {
                 BenchMode::Diff => {
                     let diff_out = if verbose {
+                        println!();
                         let out = bench_diff_with_status(
                             &mut f1,
                             &mut f2,

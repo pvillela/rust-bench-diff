@@ -7,6 +7,8 @@
 # FN_NAME_PAIRS=<panic>
 # VERBOSE="false"
 
+# TO_FILE="true"
+
 # Command line arguments and their defaults:
 #
 # $1 = 1  # nrepeats
@@ -16,16 +18,16 @@ export RUSTFLAGS="-Awarnings"
 
 output_target="/dev/stdout" # Default to stdout
 
-if [[ -z "$VERBOSE" || "${VERBOSE,,}" == "false" ]]; then
+if [[ -z "$TO_FILE" || "${TO_FILE,,}" == "true" ]]; then
     timestamp=$(date +"%Y%m%d_%H%M")
     bench_mode=${BENCH_MODE-"diff"}
     output_target="out/${bench_mode}-${SCALE_NAME}-${timestamp}.txt"
 fi
 
-echo "Started at: `date +"%H:%M:%S"`, output_target=$output_target"
+echo "Started at: `date +"%H:%M:%S"`, output_target=$output_target" > $output_target
 
-cargo bench --bench main_bench --features _bench --target-dir target/bench-target -- $1 $2 > $output_target
+cargo bench --bench main_bench --features _bench --target-dir target/bench-target -- $1 $2 >> $output_target
 
-echo ""
-echo "Finished at: `date +"%H:%M:%S"`"
+echo "" >> $output_target
+echo "Finished at: `date +"%H:%M:%S"`" >> $output_target
 

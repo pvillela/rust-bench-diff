@@ -30,7 +30,7 @@ fn print_diff_out(out: &DiffOut) {
         ratio_medians_f1_f2 - ratio_medians_f1_f2_from_lns
     );
     println!();
-    println!("welch_ratio_ci={:?}", out.welch_ratio_ci(ALPHA),);
+    println!("welch_ratio_ci={:?}", out.welch_ratio_ci(ALPHA));
     println!(
         "welch_ln_test_lt:{:?}",
         out.welch_ln_test(0., AltHyp::Lt, ALPHA)
@@ -74,7 +74,7 @@ fn print_diff_out(out: &DiffOut) {
         out.count_f1_gt_f2()
     );
     println!("binomial_prob_f1_gt_f2={:?}", out.prop_f1_gt_f2());
-    println!("binomial_ci={:?}", out.binomial_f1_gt_f2_ws_ci(ALPHA),);
+    println!("binomial_ci={:?}", out.binomial_f1_gt_f2_ws_ci(ALPHA));
     println!(
         "binomial_eq_half_test_lt:{:?}",
         out.exact_binomial_f1_gt_f2_eq_half_test(AltHyp::Lt, ALPHA)
@@ -107,7 +107,6 @@ fn print_comp_out(comp: &Comp) {
     let ratio_medians_f1_f2 = comp.ratio_medians_f1_f2();
     let ratio_medians_f1_f2_from_lns = comp.mean_diff_ln_f1_f2().exp();
 
-    println!();
     println!("summary_f1={:?}", comp.out_f1().summary());
     println!();
     println!("summary_f2={:?}", comp.out_f2().summary());
@@ -119,7 +118,7 @@ fn print_comp_out(comp: &Comp) {
         ratio_medians_f1_f2 - ratio_medians_f1_f2_from_lns
     );
     println!();
-    println!("welch_ratio_ci={:?}", comp.welch_ratio_ci(ALPHA),);
+    println!("welch_ratio_ci={:?}", comp.welch_ratio_ci(ALPHA));
     println!(
         "welch_ln_test_lt:{:?}",
         comp.welch_ln_test(0., AltHyp::Lt, ALPHA)
@@ -301,12 +300,13 @@ pub fn bench_with_claims(args: BenchArgs) {
 
                 BenchMode::Comp => {
                     let (out1, out2) = if verbose {
+                        println!();
                         println!("=== comp for: {scenario_name} ===");
                         let out1 = bench_run_with_status(&mut f1, *exec_count, |exec_count| {
-                            println!("bench_run for f1={spec_f1}; exec_count={exec_count}",);
+                            println!("bench_run for f1={spec_f1}; exec_count={exec_count}");
                         });
                         let out2 = bench_run_with_status(&mut f2, *exec_count, |exec_count| {
-                            println!("bench_run for f2={spec_f2}; exec_count={exec_count}",);
+                            println!("bench_run for f2={spec_f2}; exec_count={exec_count}");
                         });
                         println!();
                         let comp = Comp::new(&out1, &out2);
@@ -344,52 +344,67 @@ pub fn bench_with_claims(args: BenchArgs) {
             for (name_pair, claim_name) in results.success_summary() {
                 println!("{name_pair:?} : {claim_name}");
             }
-        } else {
             println!();
+        } else {
             println!("*** claim_summary ***");
             for ((name_pair, claim_name), count) in results.summary() {
                 println!("{name_pair:?} : {claim_name} ==> count={count}");
             }
+            println!();
         }
 
-        let type_i_errors_alpha05_tau67 = results.excess_type_i_errors(ALPHA, nrepeats, 0.67);
-        if !type_i_errors_alpha05_tau67.is_empty() {
-            println!(
-                ">>> type_i_errors_alpha05_tau67: {:?}",
-                nest_btree_map(type_i_errors_alpha05_tau67)
-            );
-        }
+        {
+            let mut add_println = false;
 
-        let type_i_errors_alpha05_tau95 = results.excess_type_i_errors(ALPHA, nrepeats, 0.95);
-        if !type_i_errors_alpha05_tau95.is_empty() {
-            println!(
-                ">>> type_i_errors_alpha05_tau95: {:?}",
-                nest_btree_map(type_i_errors_alpha05_tau95)
-            );
-        }
+            let type_i_errors_alpha05_tau67 = results.excess_type_i_errors(ALPHA, nrepeats, 0.67);
+            if !type_i_errors_alpha05_tau67.is_empty() {
+                add_println = true;
+                println!(
+                    ">>> type_i_errors_alpha05_tau67: {:?}",
+                    nest_btree_map(type_i_errors_alpha05_tau67)
+                );
+            }
 
-        let type_ii_errors_beta01_tau95 = results.excess_type_ii_errors(BETA_01, nrepeats, 0.95);
-        if !type_ii_errors_beta01_tau95.is_empty() {
-            println!(
-                ">>> type_ii_errors_beta01_tau95: {:?}",
-                nest_btree_map(type_ii_errors_beta01_tau95)
-            );
-        }
+            let type_i_errors_alpha05_tau95 = results.excess_type_i_errors(ALPHA, nrepeats, 0.95);
+            if !type_i_errors_alpha05_tau95.is_empty() {
+                add_println = true;
+                println!(
+                    ">>> type_i_errors_alpha05_tau95: {:?}",
+                    nest_btree_map(type_i_errors_alpha05_tau95)
+                );
+            }
 
-        let type_ii_errors_beta05_tau95 = results.excess_type_ii_errors(BETA, nrepeats, 0.95);
-        if !type_ii_errors_beta05_tau95.is_empty() {
-            println!(
-                ">>> type_ii_errors_beta05_tau95: {:?}",
-                nest_btree_map(type_ii_errors_beta05_tau95)
-            );
-        }
+            let type_ii_errors_beta01_tau95 =
+                results.excess_type_ii_errors(BETA_01, nrepeats, 0.95);
+            if !type_ii_errors_beta01_tau95.is_empty() {
+                add_println = true;
+                println!(
+                    ">>> type_ii_errors_beta01_tau95: {:?}",
+                    nest_btree_map(type_ii_errors_beta01_tau95)
+                );
+            }
 
-        let reversed_ratio_medians = results.reversed_ratio_medians();
-        if !reversed_ratio_medians.is_empty() {
-            println!(
-                ">>> reversed_ratio_medians: {:?}",
-                nest_btree_map(reversed_ratio_medians)
-            );
+            let type_ii_errors_beta05_tau95 = results.excess_type_ii_errors(BETA, nrepeats, 0.95);
+            if !type_ii_errors_beta05_tau95.is_empty() {
+                add_println = true;
+                println!(
+                    ">>> type_ii_errors_beta05_tau95: {:?}",
+                    nest_btree_map(type_ii_errors_beta05_tau95)
+                );
+            }
+
+            let reversed_ratio_medians = results.reversed_ratio_medians();
+            if !reversed_ratio_medians.is_empty() {
+                add_println = true;
+                println!(
+                    ">>> reversed_ratio_medians: {:?}",
+                    nest_btree_map(reversed_ratio_medians)
+                );
+            }
+
+            if add_println {
+                println!();
+            }
         }
     }
 }

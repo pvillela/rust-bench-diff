@@ -21,7 +21,11 @@ output_target="/dev/stdout" # Default to stdout
 if [[ -z "$TO_FILE" || "${TO_FILE,,}" == "true" ]]; then
     timestamp=$(date +"%Y%m%d_%H%M")
     bench_mode=${BENCH_MODE-"diff"}
-    output_target="out/${bench_mode}-${SCALE_NAME}-${timestamp}.txt"
+    verb=""
+    if [[ "${VERBOSE,,}" == "true" ]]; then
+        verb="-verb"
+    fi
+    output_target="out/${bench_mode}-${SCALE_NAME}-${timestamp}${verb}.txt"
 fi
 
 echo "Started at: `date +"%H:%M:%S"`, output_target=$output_target" > $output_target

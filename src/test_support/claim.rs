@@ -62,10 +62,18 @@ pub struct ClaimId {
 }
 
 impl ClaimId {
-    pub fn new(claim_type: &'static str, qualifier: Option<String>) -> Self {
+    pub fn new(claim_type: &'static str, ref_ratio: Option<f64>) -> Self {
         Self {
             claim_type,
-            qualifier,
+            qualifier: ref_ratio.map(|v| v.to_string()),
+        }
+    }
+
+    pub fn has_ref_ratio(&self, ref_ratio: f64) -> Option<bool> {
+        if let Some(v) = &self.qualifier {
+            Some(v == &ref_ratio.to_string())
+        } else {
+            None
         }
     }
 }
@@ -103,7 +111,7 @@ impl ClaimResult {
         alpha: f64,
     ) -> ClaimResult {
         let claim_type = Self::validated_claim_type("welch_ratio_test");
-        let claim_id = ClaimId::new(claim_type, Some(ref_ratio.to_string()));
+        let claim_id = ClaimId::new(claim_type, Some(ref_ratio));
         let ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
         let hyp = cmp_hyp(ratio, ref_ratio);
         let result = {
@@ -149,7 +157,7 @@ impl ClaimResult {
         alpha: f64,
     ) -> ClaimResult {
         let claim_type = Self::validated_claim_type("student_ratio_test");
-        let claim_id = ClaimId::new(claim_type, Some(ref_ratio.to_string()));
+        let claim_id = ClaimId::new(claim_type, Some(ref_ratio));
 
         let ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
         let hyp = cmp_hyp(ratio, ref_ratio);
@@ -593,15 +601,12 @@ impl ClaimResults {
 
         let predicate =
             |spec_f1: &FnSpec, spec_f2: &FnSpec, claim_id: &ClaimId, count: u64| -> bool {
+                let target_ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
                 let claim_type = claim_id.claim_type;
-                if !ClaimResult::is_critical_claim_type(claim_type) || !claim_type.contains("_test")
+                if ClaimResult::is_critical_claim_type(claim_type)
+                    && claim_id.has_ref_ratio(target_ratio) == Some(true)
+                    && count > max_alpha_count
                 {
-                    return false;
-                }
-
-                let eq_base_median = spec_f1.base_median_factor == spec_f2.base_median_factor;
-
-                if eq_base_median && count > max_alpha_count {
                     true
                 } else {
                     false
@@ -632,15 +637,12 @@ impl ClaimResults {
 
         let predicate =
             |spec_f1: &FnSpec, spec_f2: &FnSpec, claim_id: &ClaimId, count: u64| -> bool {
+                let target_ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
                 let claim_type = claim_id.claim_type;
-                if !ClaimResult::is_critical_claim_type(claim_type) || !claim_type.contains("_test")
+                if ClaimResult::is_critical_claim_type(claim_type)
+                    && claim_id.has_ref_ratio(target_ratio) == Some(false)
+                    && count > max_beta_count
                 {
-                    return false;
-                }
-
-                let eq_base_median = spec_f1.base_median_factor == spec_f2.base_median_factor;
-
-                if !eq_base_median && count > max_beta_count {
                     true
                 } else {
                     false
@@ -657,13 +659,14 @@ impl ClaimResults {
         let predicate =
             |_spec_f1: &FnSpec, _spec_f2: &FnSpec, claim_id: &ClaimId, count: u64| -> bool {
                 let claim_type = claim_id.claim_type;
-                if !ClaimResult::is_critical_claim_type(claim_type)
-                    || claim_type != "reversed_ratio_medians"
+                if ClaimResult::is_critical_claim_type(claim_type)
+                    && claim_type == "reversed_ratio_medians"
+                    && count > 0
                 {
-                    return false;
+                    true
+                } else {
+                    false
                 }
-
-                if count > 0 { true } else { false }
             };
 
         self.filter(predicate)

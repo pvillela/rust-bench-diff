@@ -62,16 +62,16 @@ pub struct ClaimId {
 }
 
 impl ClaimId {
-    pub fn new(claim_type: &'static str, ref_ratio: Option<f64>) -> Self {
+    pub fn new(claim_type: &'static str, qualifier: Option<f64>) -> Self {
         Self {
             claim_type,
-            qualifier: ref_ratio.map(|v| v.to_string()),
+            qualifier: qualifier.map(|v| v.to_string()),
         }
     }
 
-    pub fn has_ref_ratio(&self, ref_ratio: f64) -> Option<bool> {
+    pub fn has_f64_qualifier(&self, f64_qualifier: f64) -> Option<bool> {
         if let Some(v) = &self.qualifier {
-            Some(v == &ref_ratio.to_string())
+            Some(v == &f64_qualifier.to_string())
         } else {
             None
         }
@@ -305,6 +305,32 @@ impl ClaimResult {
         }
     }
 
+    fn anomalous_ratio_medians(
+        spec_f1: FnSpec,
+        spec_f2: FnSpec,
+        max_rel_diff: f64,
+        comp: &Comp,
+    ) -> ClaimResult {
+        let claim_type = Self::validated_claim_type("anomalous_ratio_medians");
+        let claim_id = ClaimId::new(claim_type, Some(max_rel_diff));
+        let target_ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
+        let measured_ratio = comp.ratio_medians_f1_f2();
+        let rel_diff_ratio = (measured_ratio - target_ratio) / target_ratio;
+        let result = if rel_diff_ratio.abs() < max_rel_diff {
+            None
+        } else {
+            Some(format!(
+                "target_ratio={target_ratio}, measured_ratio={measured_ratio}, rel_diff_ratio={rel_diff_ratio}"
+            ))
+        };
+        ClaimResult {
+            spec_f1,
+            spec_f2,
+            claim_id,
+            result,
+        }
+    }
+
     fn wilcoxon_rank_sum_test(
         spec_f1: FnSpec,
         spec_f2: FnSpec,
@@ -345,7 +371,7 @@ impl ClaimResult {
     }
 
     /// Claim types with indication of whether they are critical.
-    const CLAIM_TYPES_WITH_CRITICALITY: [(&'static str, bool); 10] = [
+    const CLAIM_TYPES_WITH_CRITICALITY: [(&'static str, bool); 11] = [
         ("welch_ratio_test", true),
         ("student_diff_test", false),
         ("student_ratio_test", true),
@@ -356,6 +382,7 @@ impl ClaimResult {
         ("wilcoxon_rank_sum_test", false),
         ("binomial_test", false),
         ("reversed_ratio_medians", true),
+        ("anomalous_ratio_medians", true),
     ];
 
     fn is_valid_claim_type(claim_type: &str) -> bool {
@@ -502,6 +529,18 @@ impl ClaimResults {
             ClaimResult::reversed_ratio_medians(spec_f1, spec_f2, comp),
             verbose,
         );
+        self.push_claim_result(
+            ClaimResult::anomalous_ratio_medians(spec_f1, spec_f2, 0.1, comp),
+            verbose,
+        );
+        self.push_claim_result(
+            ClaimResult::anomalous_ratio_medians(spec_f1, spec_f2, 0.25, comp),
+            verbose,
+        );
+        self.push_claim_result(
+            ClaimResult::anomalous_ratio_medians(spec_f1, spec_f2, 0.4, comp),
+            verbose,
+        );
     }
 
     pub fn check_claims_diff(
@@ -604,7 +643,7 @@ impl ClaimResults {
                 let target_ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
                 let claim_type = claim_id.claim_type;
                 if ClaimResult::is_critical_claim_type(claim_type)
-                    && claim_id.has_ref_ratio(target_ratio) == Some(true)
+                    && claim_id.has_f64_qualifier(target_ratio) == Some(true)
                     && count > max_alpha_count
                 {
                     true
@@ -640,7 +679,7 @@ impl ClaimResults {
                 let target_ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
                 let claim_type = claim_id.claim_type;
                 if ClaimResult::is_critical_claim_type(claim_type)
-                    && claim_id.has_ref_ratio(target_ratio) == Some(false)
+                    && claim_id.has_f64_qualifier(target_ratio) == Some(false)
                     && count > max_beta_count
                 {
                     true
@@ -661,6 +700,23 @@ impl ClaimResults {
                 let claim_type = claim_id.claim_type;
                 if ClaimResult::is_critical_claim_type(claim_type)
                     && claim_type == "reversed_ratio_medians"
+                    && count > 0
+                {
+                    true
+                } else {
+                    false
+                }
+            };
+
+        self.filter(predicate)
+    }
+
+    pub fn anomalous_ratio_medians(&self) -> BTreeMap<((FnSpec, FnSpec), ClaimId), u32> {
+        let predicate =
+            |_spec_f1: &FnSpec, _spec_f2: &FnSpec, claim_id: &ClaimId, count: u64| -> bool {
+                let claim_type = claim_id.claim_type;
+                if ClaimResult::is_critical_claim_type(claim_type)
+                    && claim_type == "anomalous_ratio_medians"
                     && count > 0
                 {
                     true

@@ -402,6 +402,15 @@ pub fn bench_with_claims(args: BenchArgs) {
                 );
             }
 
+            let anomalous_ratio_medians = results.anomalous_ratio_medians();
+            if !anomalous_ratio_medians.is_empty() {
+                add_println = true;
+                println!(
+                    ">>> anomalous_ratio_medians: {:?}",
+                    nest_btree_map(anomalous_ratio_medians)
+                );
+            }
+
             if add_println {
                 println!();
             }

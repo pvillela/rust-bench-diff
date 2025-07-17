@@ -1,10 +1,9 @@
 //! Implementaton of main logic used by benchmark tests to verify [`bench_diff`].
 
-use super::params_args::{BenchArgs, get_args};
+use super::{BenchArgs, BenchMode, get_args, measured_ratio_summary};
 use crate::{
     DiffOut, bench_diff, bench_diff_with_status,
-    bench_support::params_args::BenchMode,
-    dev_utils::nest_btree_map,
+    dev_utils::{nest_btree_map, quicksort},
     get_bench_cfg,
     stats_types::AltHyp,
     test_support::{
@@ -255,6 +254,7 @@ pub fn bench_with_claims(args: BenchArgs) {
 
     for (spec_f1, spec_f2) in fn_spec_pairs {
         let scenario_name = format!("f1={}, f2={}", spec_f1, spec_f2);
+        let mut measured_ratios = Vec::<f64>::with_capacity(nrepeats);
 
         let mut f1 = {
             let mut my_fn = MyFnMut::new(base_effort, *spec_f1);
@@ -295,6 +295,8 @@ pub fn bench_with_claims(args: BenchArgs) {
                         bench_diff(&mut f1, &mut f2, scale_params.exec_count)
                     };
 
+                    measured_ratios.push(diff_out.ratio_medians_f1_f2());
+
                     results.check_claims_diff(*spec_f1, *spec_f2, ALPHA, &diff_out, verbose);
                 }
 
@@ -319,6 +321,8 @@ pub fn bench_with_claims(args: BenchArgs) {
                     };
 
                     let comp = Comp::new(&out1, &out2);
+                    measured_ratios.push(comp.ratio_medians_f1_f2());
+
                     results.check_claims_comp(*spec_f1, *spec_f2, ALPHA, &comp, verbose);
                 }
             }
@@ -353,6 +357,17 @@ pub fn bench_with_claims(args: BenchArgs) {
             println!();
         }
 
+        {
+            quicksort(&mut measured_ratios);
+            println!(
+                "*** measured_ratios_summary={:?}",
+                measured_ratio_summary(
+                    &measured_ratios,
+                    spec_f1.base_median_factor / spec_f2.base_median_factor
+                )
+            );
+            println!();
+        }
         {
             let mut add_println = false;
 

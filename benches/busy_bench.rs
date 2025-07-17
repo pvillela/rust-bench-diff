@@ -5,9 +5,7 @@
 //! cargo bench --bench busy_bench --features _bench
 //! ```
 
-use bench_diff::{
-    DiffOut, bench_diff_with_status, bench_support::print_diff_out::comprehensive_print_diff_out,
-};
+use bench_diff::{DiffOut, bench_diff_with_status, bench_support::comprehensive_print_diff_out};
 use bench_utils::{busy_work, calibrate_busy_work};
 use std::time::Duration;
 

@@ -124,8 +124,10 @@ impl<'a> DiffState<'a> {
     ) {
         assert!(status_freq > 0, "status_freq must be > 0");
 
+        let exec_count2 = exec_count / 2;
         let recording_unit = get_bench_cfg().recording_unit();
-        for i in 1..=exec_count / 2 {
+
+        for i in 1..=exec_count2 {
             let pairs = duo_exec(&mut f1, &mut f2);
 
             for (latency1, latency2) in pairs {
@@ -133,7 +135,7 @@ impl<'a> DiffState<'a> {
                 let elapsed2 = recording_unit.latency_as_u64(latency2);
                 self.capture_data(elapsed1, elapsed2);
 
-                if i % status_freq == 0 || i == exec_count {
+                if i % status_freq == 0 || i == exec_count2 {
                     if let Some(exec_status) = exec_status {
                         // `i * 2` to account for duos
                         exec_status(init_status_count + i * 2);
@@ -281,7 +283,8 @@ pub fn bench_diff_with_status(
     let warmup_execs = cfg.warmup_execs(|| {
         f1();
         f2();
-    });
+    }) / 2
+        * 2; // ensure it is even
 
     let warmup_status = {
         let mut status_len: usize = 0;
@@ -305,7 +308,7 @@ pub fn bench_diff_with_status(
 
         move |i| {
             if status_len == 0 {
-                eprint!(" Executing bench_run: ");
+                eprint!(" Executing bench_diff: ");
                 stderr().flush().expect("unexpected I/O error");
             }
             eprint!("{}", "\u{8}".repeat(status_len));

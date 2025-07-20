@@ -15,6 +15,8 @@ static BENCH_CFG: Mutex<BenchCfg> = Mutex::new(BenchCfg::new(
     LatencyUnit::Nano,
     LatencyUnit::Micro,
     3,
+    3,
+    1000,
     &BENCH_CFG,
 ));
 

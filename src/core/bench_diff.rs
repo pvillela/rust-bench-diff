@@ -1,13 +1,13 @@
 //! Main module implementing functions to compare the difference in latency between two closures.
 
 use super::DiffOut;
-use bench_utils::{BenchCfg, BenchOut, LatencyUnit, latency};
+use bench_utils::{BenchCfg, BenchOut, BenchStatus, LatencyUnit, latency};
 use std::{
     cmp,
     io::{Write, stderr},
     ops::Deref,
     sync::Mutex,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 static BENCH_CFG: Mutex<BenchCfg> = Mutex::new(BenchCfg::new(
@@ -24,8 +24,6 @@ pub fn get_bench_cfg() -> BenchCfg {
     let guard = BENCH_CFG.lock().unwrap();
     guard.deref().clone()
 }
-
-const WARMUP_INCREMENT_COUNT: usize = 20;
 
 /// Invokes `f1` then `f2` then `f2` then `f1` and returns two pairs of latencies. For each pair,
 /// the first component is an `f1` latency and the second component is an `f2` latency.
@@ -120,11 +118,11 @@ impl<'a> DiffState<'a> {
         mut f1: impl FnMut(),
         mut f2: impl FnMut(),
         exec_count: usize,
-        pre_exec: impl FnOnce(),
-        mut exec_status: impl FnMut(usize),
+        status_freq: usize,
+        exec_status: &mut Option<impl FnMut(usize)>,
         init_status_count: usize,
     ) {
-        pre_exec();
+        assert!(status_freq > 0, "status_freq must be > 0");
 
         let recording_unit = get_bench_cfg().recording_unit();
         for i in 1..=exec_count / 2 {
@@ -134,30 +132,13 @@ impl<'a> DiffState<'a> {
                 let elapsed1 = recording_unit.latency_as_u64(latency1);
                 let elapsed2 = recording_unit.latency_as_u64(latency2);
                 self.capture_data(elapsed1, elapsed2);
-            }
 
-            // `i * 2` to account for duos
-            exec_status(init_status_count + i * 2);
-        }
-    }
-
-    /// Warms-up the benchmark by invoking [`Self::execute`] repeatedly, each time with an `exec_count` value of
-    /// [`WARMUP_INCREMENT_COUNT`], until the globally set number of warm-up millisecods [`WARMUP_MILLIS`] is
-    /// reached or exceeded. `warmup_status` is invoked at the end of each invocation of [`Self::execute`].
-    fn warmup(
-        &mut self,
-        mut f1: impl FnMut(),
-        mut f2: impl FnMut(),
-        mut warmup_status: impl FnMut(usize, u64, u64),
-    ) {
-        let warmup_millis = get_bench_cfg().warmup_millis();
-        let start = Instant::now();
-        for i in 1.. {
-            self.execute(&mut f1, &mut f2, WARMUP_INCREMENT_COUNT, || {}, |_| {}, 0);
-            let elapsed = Instant::now().duration_since(start);
-            warmup_status(i, elapsed.as_millis() as u64, warmup_millis);
-            if elapsed.ge(&Duration::from_millis(warmup_millis)) {
-                break;
+                if i % status_freq == 0 || i == exec_count {
+                    if let Some(exec_status) = exec_status {
+                        // `i * 2` to account for duos
+                        exec_status(init_status_count + i * 2);
+                    }
+                }
             }
         }
     }
@@ -189,27 +170,51 @@ impl<'a> DiffState<'a> {
 pub fn bench_diff_x(
     mut f1: impl FnMut(),
     mut f2: impl FnMut(),
+    warmup_execs: usize,
     exec_count: usize,
-    mut warmup_status: impl FnMut(usize, u64, u64),
-    pre_exec: impl FnOnce(),
-    mut exec_status: impl FnMut(usize),
+    bench_status: Option<BenchStatus<impl FnMut(usize), impl FnMut(usize)>>,
 ) -> DiffOut {
     let exec_count2 = exec_count / 2;
 
     let mut out = DiffOut::new();
 
     let mut state = DiffState::new(&mut out);
-    state.warmup(&mut f1, &mut f2, &mut warmup_status);
+    let cfg = get_bench_cfg();
+    let status_freq = cfg.status_freq(|| {
+        f1();
+        f2();
+    });
+    let (mut warmup_status, mut exec_status) = match bench_status {
+        Some(s) => (Some(s.warmup_status), Some(s.exec_status)),
+        None => (None, None),
+    };
+
+    // Warm-up.
+    state.execute(
+        &mut f1,
+        &mut f2,
+        warmup_execs,
+        status_freq,
+        &mut warmup_status,
+        0,
+    );
     state.reset();
 
-    state.execute(&mut f1, &mut f2, exec_count2, pre_exec, &mut exec_status, 0);
+    state.execute(
+        &mut f1,
+        &mut f2,
+        exec_count2,
+        status_freq,
+        &mut exec_status,
+        0,
+    );
 
     let mut state_rev = state.reversed();
     state_rev.execute(
         &mut f2,
         &mut f1,
         exec_count2,
-        || (),
+        status_freq,
         &mut exec_status,
         exec_count2,
     );
@@ -231,8 +236,19 @@ pub fn bench_diff_x(
 /// - `f2` - second target for comparison.
 /// - `exec_count` - number of executions (sample size) for each function. If it is not a multiple of 4, the
 ///   closest multiple of 4 less than it will be used.
-pub fn bench_diff(f1: impl FnMut(), f2: impl FnMut(), exec_count: usize) -> DiffOut {
-    bench_diff_x(f1, f2, exec_count, |_, _, _| {}, || (), |_| ())
+pub fn bench_diff(mut f1: impl FnMut(), mut f2: impl FnMut(), exec_count: usize) -> DiffOut {
+    let warmup_execs = get_bench_cfg().warmup_execs(|| {
+        f1();
+        f2();
+    });
+
+    bench_diff_x(
+        f1,
+        f2,
+        warmup_execs,
+        exec_count,
+        None::<BenchStatus<fn(usize), fn(usize)>>,
+    )
 }
 
 /// Compares latencies for two closures `f1` and `f2` and outputs information about the benchmark and its
@@ -254,49 +270,56 @@ pub fn bench_diff(f1: impl FnMut(), f2: impl FnMut(), exec_count: usize) -> Diff
 ///   to output information about the functions being compared to `stdout` and/or `stderr`. The
 ///   argument is the `exec_count`.
 pub fn bench_diff_with_status(
-    f1: impl FnMut(),
-    f2: impl FnMut(),
+    mut f1: impl FnMut(),
+    mut f2: impl FnMut(),
     exec_count: usize,
     header: impl FnOnce(usize),
 ) -> DiffOut {
     header(exec_count);
 
+    let cfg = get_bench_cfg();
+    let warmup_execs = cfg.warmup_execs(|| {
+        f1();
+        f2();
+    });
+
     let warmup_status = {
         let mut status_len: usize = 0;
+        let warmup_millis = cfg.warmup_millis();
 
-        move |_: usize, elapsed_millis: u64, warmup_millis: u64| {
+        move |i: usize| {
             if status_len == 0 {
-                eprint!("Warming up ... ");
+                eprint!("Warming up for approximately {warmup_millis} millis: ");
                 stderr().flush().expect("unexpected I/O error");
             }
             eprint!("{}", "\u{8}".repeat(status_len));
-            let status = format!("{elapsed_millis} millis of {warmup_millis}.");
-            if elapsed_millis.lt(&warmup_millis) {
-                status_len = status.len();
-            } else {
-                status_len = 0; // reset status in case of multiple warm-up phases
-            };
-            eprint!("{status}");
-            stderr().flush().expect("unexpected I/O error");
-        }
-    };
-
-    let pre_exec = || {
-        eprint!(" Executing bench_diff ... ");
-        stderr().flush().expect("unexpected I/O error");
-    };
-
-    let exec_status = {
-        let mut status_len: usize = 0;
-
-        move |i| {
-            eprint!("{}", "\u{8}".repeat(status_len));
-            let status = format!("{i} of {exec_count}.");
+            let status = format!("{i} of {warmup_execs}.");
             status_len = status.len();
             eprint!("{status}");
             stderr().flush().expect("unexpected I/O error");
         }
     };
 
-    bench_diff_x(f1, f2, exec_count, warmup_status, pre_exec, exec_status)
+    let exec_status = {
+        let mut status_len: usize = 0;
+
+        move |i| {
+            if status_len == 0 {
+                eprint!(" Executing bench_run: ");
+                stderr().flush().expect("unexpected I/O error");
+            }
+            eprint!("{}", "\u{8}".repeat(status_len));
+            let status = format!("{i} of {exec_count}. ");
+            status_len = status.len();
+            eprint!("{status}");
+            stderr().flush().expect("unexpected I/O error");
+        }
+    };
+
+    let bench_status = BenchStatus {
+        warmup_status,
+        exec_status,
+    };
+
+    bench_diff_x(f1, f2, warmup_execs, exec_count, Some(bench_status))
 }

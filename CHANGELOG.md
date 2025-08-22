@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added argument to Welch statistics to enable testing that the difference of means equals a specific value which doesn't have to be zero. To migrate from the previous version, use `0.0` as the value for the new argument.
 - Refactored to use `bench_utils` library.
-- Rationalized benchmarks and their supporting code, especially the comparison the comparison of `bench_diff` with the naive separate benchmarking of two functions.
+- Rationalized benchmarks and their supporting code, especially the comparison of `bench_diff` with the separate benchmarking of two functions.
 
 ### Removed
 
@@ -28,8 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed broken link in library doc comments.
 - Refined calculation of Type I and II error thresholds used in the assessment of multiple repetitions of benchmark tests.
-- Deprecated `student` methods of `DiffOut` due to their inferior Type I error rates observed in further benchmark testing. Users should use the corresponding `welch` methods instead.
 - Minor updates to benchmarking scripts.
+
+### Deprecated
+
+- `student` methods of `DiffOut` due to their inferior Type I error rates observed in further benchmark testing. Users should use the corresponding `welch` methods instead.
 
 ## [1.0.6] - 2025-05-21
 

@@ -1,3 +1,7 @@
+# Migrating from v1.1.0
+
+The Welch statistics have an additional argument to enable testing that the difference of means equals a specific value which doesn't have to be zero. To migrate from the previous version, use `0.0` as the value for the new argument.
+
 # Implementation Approach
 
 This library addresses the ordering effect and random noise challenges as follows. Given two functions `f1` and `f2`:

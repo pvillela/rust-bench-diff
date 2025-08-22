@@ -324,5 +324,7 @@ pub fn bench_diff_with_status(
         exec_status,
     };
 
-    bench_diff_x(f1, f2, warmup_execs, exec_count, Some(bench_status))
+    let out = bench_diff_x(f1, f2, warmup_execs, exec_count, Some(bench_status));
+    eprintln!();
+    out
 }

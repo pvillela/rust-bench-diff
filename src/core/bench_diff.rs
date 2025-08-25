@@ -1,7 +1,7 @@
 //! Main module implementing functions to compare the difference in latency between two closures.
 
 use super::DiffOut;
-use bench_utils::{BenchCfg, BenchOut, BenchStatus, LatencyUnit, latency};
+use bench_utils::{BenchCfg, BenchOut, LatencyUnit, latency};
 use std::{
     cmp,
     io::{Write, stderr},
@@ -23,6 +23,11 @@ static BENCH_CFG: Mutex<BenchCfg> = Mutex::new(BenchCfg::new(
 pub fn get_bench_cfg() -> BenchCfg {
     let guard = BENCH_CFG.lock().unwrap();
     guard.deref().clone()
+}
+
+pub struct BenchStatus<F1, F2> {
+    pub warmup_status: F1,
+    pub exec_status: F2,
 }
 
 /// Invokes `f1` then `f2` then `f2` then `f1` and returns two pairs of latencies. For each pair,

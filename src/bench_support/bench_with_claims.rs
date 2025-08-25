@@ -366,6 +366,7 @@ pub fn bench_with_claims(args: BenchArgs) {
                     spec_f1.base_median_factor / spec_f2.base_median_factor
                 )
             );
+            println!("*** measured_ratios={:?}", &measured_ratios);
             println!();
         }
         {

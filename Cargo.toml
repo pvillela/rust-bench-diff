@@ -37,7 +37,7 @@ basic_stats = { path = "../basic-stats", default-features = false, optional = tr
 bench_utils = { path = "../bench-utils", default-features = false, optional = true }
 hdrhistogram = "7.5"
 statrs = "0.18"
-rand = { version = "0.9", features = ["std_rng"], optional = true }
+rand = { version = "0.9.2", features = ["std_rng"], optional = true }
 rand_distr = { version = "0.5", optional = true }
 
 [features]

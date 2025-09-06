@@ -36,15 +36,15 @@ pub fn measured_ratio_summary(measured_ratios: &[f64], target_ratio: f64) -> Mea
         .sum::<f64>();
     let rms_dev_from_target = (sum2_dev_target / count as f64).sqrt();
     let idx_min = 0;
-    let idx_p1 = (count / 100) - 1;
-    let idx_p5 = (count / 20) - 1;
-    let idx_p10 = (count / 10) - 1;
-    let idx_p25 = (count / 4) - 1;
-    let idx_median = (count / 2) - 1;
-    let idx_p75 = (count - count / 4) - 1;
-    let idx_p90 = (count - count / 10) - 1;
-    let idx_p95 = (count - count / 20) - 1;
-    let idx_p99 = (count - count / 100) - 1;
+    let idx_p1 = (count / 100).max(1) - 1;
+    let idx_p5 = (count / 20).max(1) - 1;
+    let idx_p10 = (count / 10).max(1) - 1;
+    let idx_p25 = (count / 4).max(1) - 1;
+    let idx_median = (count / 2).max(1) - 1;
+    let idx_p75 = (count - count / 4).max(1) - 1;
+    let idx_p90 = (count - count / 10).max(1) - 1;
+    let idx_p95 = (count - count / 20).max(1) - 1;
+    let idx_p99 = (count - count / 100).max(1) - 1;
     let idx_max = count - 1;
 
     MeasuredRatioSummary {

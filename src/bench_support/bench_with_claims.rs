@@ -3,7 +3,7 @@
 use super::{BenchArgs, BenchMode, get_args, measured_ratio_summary};
 use crate::{
     DiffOut, bench_diff, bench_diff_with_status,
-    dev_utils::{nest_btree_map, quicksort},
+    dev_utils::nest_btree_map,
     get_bench_cfg,
     stats_types::AltHyp,
     test_support::{
@@ -358,7 +358,7 @@ pub fn bench_with_claims(args: BenchArgs) {
         }
 
         {
-            quicksort(&mut measured_ratios);
+            measured_ratios.sort_unstable_by(f64::total_cmp);
             println!(
                 "*** measured_ratios_summary={:?}",
                 measured_ratio_summary(

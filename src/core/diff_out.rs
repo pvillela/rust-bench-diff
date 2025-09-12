@@ -16,7 +16,6 @@ use basic_stats::{
     binomial,
     core::SampleMoments,
     normal::{student_1samp_ci, student_1samp_t, student_1samp_test},
-    wilcoxon::RankSum,
 };
 
 /// Contains the data resulting from a benchmark comparing two closures `f1` and `f2`.
@@ -499,46 +498,27 @@ impl DiffOut {
     }
 
     #[cfg(feature = "_dev_support")]
-    /// Wilcoxon rank sum struct.
-    fn rank_sum(&self) -> RankSum {
-        let iter_f1 = self.out_f1.hist().iter_recorded().map(|x| {
-            let value = x.value_iterated_to();
-            let count = x.count_at_value();
-            (value as f64, count)
-        });
-
-        let iter_f2 = self.out_f2.hist().iter_recorded().map(|x| {
-            let value = x.value_iterated_to();
-            let count = x.count_at_value();
-            (value as f64, count)
-        });
-
-        RankSum::from_iters_with_counts(iter_f1, iter_f2)
-            .expect("data should be in strictly increasing order")
-    }
-
-    #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum *W* statistic for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_w(&self) -> f64 {
-        self.rank_sum().w()
+        self.comp().wilcoxon_rank_sum_w()
     }
 
     #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum normal approximation *z* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
-        self.rank_sum().z().aok()
+        self.comp().wilcoxon_rank_sum_z()
     }
 
     #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum normal approximation *p* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
-        self.rank_sum().z_p(alt_hyp).aok()
+        self.comp().wilcoxon_rank_sum_p(alt_hyp)
     }
 
     #[cfg(feature = "_dev_support")]
     /// Wilcoxon rank sum test for for `latency(f1)` and `latency(f2)`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
     pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
-        self.rank_sum().z_test(alt_hyp, alpha).aok()
+        self.comp().wilcoxon_rank_sum_test(alt_hyp, alpha)
     }
 }

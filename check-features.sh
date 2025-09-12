@@ -3,9 +3,9 @@
 echo "***** --all-targets --all-features"
 cargo check --all-targets --all-features
 
-echo "***** --lib --bins --tests (default feature)"
-cargo check --lib --bins --tests
+echo "***** --lib --tests (default feature)"
+cargo check --lib --tests
 
 # Can't run withoug default features.
 # echo "***** --no-default-features"
-# cargo check --lib --bins --tests --no-default-features
+# cargo check --lib --tests --no-default-features

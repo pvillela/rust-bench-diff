@@ -51,11 +51,7 @@ default = [
 # Helper
 __null = ["dep:basic_stats", "dep:bench_utils"]
 __stats_normal = ["basic_stats/normal", "basic_stats/aok"]
-__stats_opt = [
-    "basic_stats/binomial",
-    "basic_stats/wilcoxon",
-    "basic_stats/aok",
-]
+__stats_opt = ["basic_stats/binomial", "basic_stats/aok"]
 
 # Internal
 _bench = ["_test_support"] # intended only to be used by benches

@@ -133,10 +133,11 @@ impl ClaimResult {
         out: &DiffOut,
         alpha: f64,
     ) -> ClaimResult {
+        let ref_ratio = 1.;
         let claim_type = Self::validated_claim_type("student_diff_test");
-        let claim_id = ClaimId::new(claim_type, None);
+        let claim_id = ClaimId::new(claim_type, Some(ref_ratio));
         let ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
-        let hyp = cmp_hyp(ratio, 1.0);
+        let hyp = cmp_hyp(ratio, ref_ratio);
         let result = {
             let res = out.student_diff_test(0., alt_hyp(hyp), alpha);
             check_hyp_test_result(res, hyp)
@@ -334,13 +335,14 @@ impl ClaimResult {
     fn wilcoxon_rank_sum_test(
         spec_f1: FnSpec,
         spec_f2: FnSpec,
-        out: &DiffOut,
+        out: &Comp,
         alpha: f64,
     ) -> ClaimResult {
+        let ref_ratio = 1.;
         let claim_type = "wilcoxon_rank_sum_test";
-        let claim_id = ClaimId::new(claim_type, None);
+        let claim_id = ClaimId::new(claim_type, Some(ref_ratio));
         let ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
-        let hyp = cmp_hyp(ratio, 1.);
+        let hyp = cmp_hyp(ratio, ref_ratio);
         let result = {
             let res = out.wilcoxon_rank_sum_test(alt_hyp(hyp), alpha);
             check_hyp_test_result(res, hyp)
@@ -354,10 +356,11 @@ impl ClaimResult {
     }
 
     fn binomial_test(spec_f1: FnSpec, spec_f2: FnSpec, out: &DiffOut, alpha: f64) -> ClaimResult {
+        let ref_ratio = 1.;
         let claim_type = "binomial_test";
-        let claim_id = ClaimId::new(claim_type, None);
+        let claim_id = ClaimId::new(claim_type, Some(ref_ratio));
         let ratio = spec_f1.base_median_factor / spec_f2.base_median_factor;
-        let hyp = cmp_hyp(ratio, 1.);
+        let hyp = cmp_hyp(ratio, ref_ratio);
         let result = {
             let res = out.exact_binomial_f1_gt_f2_eq_half_test(alt_hyp(hyp), alpha);
             check_hyp_test_result(res, hyp)
@@ -379,7 +382,7 @@ impl ClaimResult {
         ("ratio_medians_f1_f2_near_ratio_from_lns", false),
         ("target_ratio_medians_f1_f2_in_welch_ratio_ci", true),
         ("target_ratio_medians_f1_f2_in_student_ratio_ci", true),
-        ("wilcoxon_rank_sum_test", false),
+        ("wilcoxon_rank_sum_test", true),
         ("binomial_test", false),
         ("reversed_ratio_medians", true),
         ("anomalous_ratio_medians", true),
@@ -447,8 +450,8 @@ impl ClaimResults {
         &mut self,
         spec_f1: FnSpec,
         spec_f2: FnSpec,
-        alpha: f64,
         comp: &Comp,
+        alpha: f64,
         verbose: bool,
     ) {
         self.push_claim_result(
@@ -478,8 +481,8 @@ impl ClaimResults {
         &mut self,
         spec_f1: FnSpec,
         spec_f2: FnSpec,
-        alpha: f64,
         out: &DiffOut,
+        alpha: f64,
         verbose: bool,
     ) {
         self.push_claim_result(
@@ -513,7 +516,12 @@ impl ClaimResults {
         comp: &Comp,
         verbose: bool,
     ) {
-        self.check_welch_test(spec_f1, spec_f2, alpha, comp, verbose);
+        self.check_welch_test(spec_f1, spec_f2, comp, alpha, verbose);
+
+        self.push_claim_result(
+            ClaimResult::wilcoxon_rank_sum_test(spec_f1, spec_f2, comp, alpha),
+            verbose,
+        );
 
         self.push_claim_result(
             ClaimResult::ratio_medians_f1_f2_near_target(spec_f1, spec_f2, comp),
@@ -560,7 +568,7 @@ impl ClaimResults {
             verbose,
         );
 
-        self.check_student_test(spec_f1, spec_f2, alpha, out, verbose);
+        self.check_student_test(spec_f1, spec_f2, out, alpha, verbose);
 
         self.push_claim_result(
             ClaimResult::ratio_medians_f1_f2_near_ratio_from_lns(spec_f1, spec_f2, out),
@@ -570,10 +578,6 @@ impl ClaimResults {
             ClaimResult::target_ratio_medians_f1_f2_in_student_ratio_ci(
                 spec_f1, spec_f2, out, alpha,
             ),
-            verbose,
-        );
-        self.push_claim_result(
-            ClaimResult::wilcoxon_rank_sum_test(spec_f1, spec_f2, out, alpha),
             verbose,
         );
         self.push_claim_result(

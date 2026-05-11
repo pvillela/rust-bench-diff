@@ -13,7 +13,7 @@ use bench_diff::{
     get_bench_cfg,
     stats_types::AltHyp,
 };
-use bench_utils::{busy_work, calibrate_busy_work};
+use bench_utils::{RunLength, busy_work, calibrate_busy_work};
 
 fn main() {
     let args = get_args();
@@ -43,7 +43,7 @@ fn main() {
         move || busy_work(effort)
     };
 
-    let out = bench_diff_with_status(f1, f2, exec_count, |_| {
+    let out = bench_diff_with_status(f1, f2, RunLength::Count(exec_count), |_| {
         println!("\nbench_diff: f1={name1}, f2={name2}");
         println!();
     });

@@ -11,7 +11,7 @@ use crate::{
         binomial_nsigmas_gt_critical_value, get_scale_params,
     },
 };
-use bench_utils::{Comp, bench_run, bench_run_with_status, calibrate_busy_work};
+use bench_utils::{Comp, RunLength, bench_run, bench_run_with_status, calibrate_busy_work};
 
 fn print_diff_out(out: &DiffOut) {
     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
@@ -281,7 +281,7 @@ pub fn bench_with_claims(args: BenchArgs) {
                         let out = bench_diff_with_status(
                             &mut f1,
                             &mut f2,
-                            *exec_count,
+                            RunLength::Count(*exec_count),
                             |exec_count| {
                                 println!(
                                     "=== bench_diff for: {scenario_name}; exec_count={exec_count} ==="
@@ -292,7 +292,7 @@ pub fn bench_with_claims(args: BenchArgs) {
                         print_diff_out(&out);
                         out
                     } else {
-                        bench_diff(&mut f1, &mut f2, scale_params.exec_count)
+                        bench_diff(&mut f1, &mut f2, RunLength::Count(scale_params.exec_count))
                     };
 
                     measured_ratios.push(diff_out.ratio_medians_f1_f2());
@@ -304,19 +304,27 @@ pub fn bench_with_claims(args: BenchArgs) {
                     let (out1, out2) = if verbose {
                         println!();
                         println!("=== comp for: {scenario_name} ===");
-                        let out1 = bench_run_with_status(&mut f1, *exec_count, |exec_count| {
-                            println!("bench_run for f1={spec_f1}; exec_count={exec_count}");
-                        });
-                        let out2 = bench_run_with_status(&mut f2, *exec_count, |exec_count| {
-                            println!("bench_run for f2={spec_f2}; exec_count={exec_count}");
-                        });
+                        let out1 = bench_run_with_status(
+                            &mut f1,
+                            RunLength::Count(*exec_count),
+                            |exec_count| {
+                                println!("bench_run for f1={spec_f1}; exec_count={exec_count}");
+                            },
+                        );
+                        let out2 = bench_run_with_status(
+                            &mut f2,
+                            RunLength::Count(*exec_count),
+                            |exec_count| {
+                                println!("bench_run for f2={spec_f2}; exec_count={exec_count}");
+                            },
+                        );
                         println!();
                         let comp = Comp::new(&out1, &out2);
                         print_comp_out(&comp);
                         (out1, out2)
                     } else {
-                        let out1 = bench_run(&mut f1, scale_params.exec_count);
-                        let out2 = bench_run(&mut f2, scale_params.exec_count);
+                        let out1 = bench_run(&mut f1, RunLength::Count(scale_params.exec_count));
+                        let out2 = bench_run(&mut f2, RunLength::Count(scale_params.exec_count));
                         (out1, out2)
                     };
 

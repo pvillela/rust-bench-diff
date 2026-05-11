@@ -6,6 +6,7 @@
 //! ```
 
 use bench_diff::{DiffOut, bench_diff_with_status, stats_types::AltHyp};
+use bench_utils::RunLength;
 use std::{thread, time::Duration};
 
 /// This function's latency is at least 21ms.
@@ -29,7 +30,7 @@ fn main() {
 
     println!("*** 1st benchmark ***");
     {
-        let out: DiffOut = bench_diff_with_status(f1, f2, 100, |_| {
+        let out: DiffOut = bench_diff_with_status(f1, f2, RunLength::Count(100), |_| {
             println!("Comparing latency of f1 vs. f2.");
             println!();
         });
@@ -38,7 +39,7 @@ fn main() {
 
     println!("*** 2nd benchmark ***");
     {
-        let out: DiffOut = bench_diff_with_status(f1, f1, 100, |_| {
+        let out: DiffOut = bench_diff_with_status(f1, f1, RunLength::Count(100), |_| {
             println!("Comparing latency of f1 vs. f1.");
             println!();
         });

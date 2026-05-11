@@ -6,7 +6,7 @@
 //! ```
 
 use bench_diff::{DiffOut, bench_diff_with_status, bench_support::comprehensive_print_diff_out};
-use bench_utils::{busy_work, calibrate_busy_work};
+use bench_utils::{RunLength, busy_work, calibrate_busy_work};
 use std::time::Duration;
 
 fn f1(effort: u32) {
@@ -26,7 +26,7 @@ fn main() {
         let out: DiffOut = bench_diff_with_status(
             || f1(effort),
             || f2(effort),
-            1000,
+            RunLength::Count(1000),
             |_| {
                 println!("Comparing latency of f1 vs. f2.");
                 println!();
@@ -40,7 +40,7 @@ fn main() {
         let out: DiffOut = bench_diff_with_status(
             || f1(effort),
             || f1(effort),
-            1000,
+            RunLength::Count(1000),
             |_| {
                 println!("Comparing latency of f1 vs. f1.");
                 println!();

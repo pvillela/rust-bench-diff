@@ -263,8 +263,8 @@ pub fn bench_diff(
     let cfg = get_bench_cfg();
     let warmup_millis = cfg.warmup_millis();
     let execs_per_milli = cfg.executions_per_milli(|| {
-        &mut f1();
-        &mut f2();
+        let _ = &mut f1();
+        let _ = &mut f2();
     });
 
     bench_diff_x(
@@ -321,8 +321,8 @@ pub fn bench_diff_with_status(
     };
 
     let execs_per_milli = cfg.executions_per_milli(|| {
-        &mut f1();
-        &mut f2();
+        let _ = &mut f1();
+        let _ = &mut f2();
     });
 
     let warmup_millis = cfg.warmup_millis();

@@ -11,12 +11,11 @@ use std::{
 };
 
 static BENCH_CFG: Mutex<BenchCfg> = Mutex::new(BenchCfg::new(
-    3000,
-    LatencyUnit::Nano,
-    LatencyUnit::Micro,
-    3,
-    3,
-    1000,
+    BenchCfg::DEFAULT_WARMUP_MILLIS,
+    BenchCfg::DEFAULT_RECORDING_UNIT,
+    BenchCfg::DEFAULT_REPORTING_UNIT,
+    BenchCfg::DEFAULT_SIGFIG,
+    BenchCfg::DEFAULT_STATUS_MILLIS,
     &BENCH_CFG,
 ));
 

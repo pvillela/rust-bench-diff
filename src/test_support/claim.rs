@@ -1,10 +1,10 @@
 use super::binomial_inv_cdf;
 use crate::{
     DiffOut,
-    dev_utils::ApproxEq,
     stats_types::{AcceptedHyp, AltHyp, HypTestResult, PositionWrtCi},
     test_support::FnSpec,
 };
+use basic_stats::dev_utils::ApproxEq;
 use bench_utils::Comp;
 use std::{
     cmp::Ordering,

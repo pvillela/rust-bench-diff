@@ -10,7 +10,7 @@ use basic_stats::{
 };
 use bench_utils::{Comp, LatencyUnit, SummaryStats, summary_stats};
 
-#[cfg(feature = "_dev_support")]
+#[cfg(feature = "_experimental")]
 use basic_stats::{
     aok::AokBasicStats,
     binomial,
@@ -147,7 +147,7 @@ impl DiffOut {
         self.median_f1() / self.median_f2()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Ratio of the minimum of `f1`'s latencies to the minimum of `f2`'s latencies.
     pub fn ratio_mins_f1_f2(&self) -> f64 {
         self.summary_f1().min as f64 / self.summary_f2().min as f64
@@ -221,13 +221,13 @@ impl DiffOut {
         self.mean_diff_ln_f1_f2().exp()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Proportion of paired observations where `f1`s latency is greater than `f2`s.
     pub fn prop_f1_gt_f2(&self) -> f64 {
         (self.count_f1_gt_f2() as f64) / self.nf()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Confidence interval for the probability that `f1`s latency is greater than `f2`s
     /// in a paired observation (Wilson score interval without continuity correction).
     pub fn binomial_f1_gt_f2_ws_ci(&self, alpha: f64) -> Ci {
@@ -238,7 +238,7 @@ impl DiffOut {
         binomial::binomial_ws_ci(n, n_s, alpha).aok()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Position of `value` with respect to the
     /// confidence interval for the probability that `f1`s latency is greater than `f2`s
     /// in a paired observation (Wilson score interval without continuity correction).
@@ -251,7 +251,7 @@ impl DiffOut {
         ci.position_of(value)
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Statistical test of the hypothesis that
     /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `p0`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
@@ -266,7 +266,7 @@ impl DiffOut {
         binomial::exact_binomial_test(self.n(), self.count_f1_gt_f2(), p0, alt_hyp, alpha).aok()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Statistical test of the hypothesis that
     /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `0.5`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
@@ -355,7 +355,7 @@ impl DiffOut {
         self.comp().welch_ln_test(ln_d0, alt_hyp, alpha)
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Student's one-sample t statistic for
     /// `mean(latency(f1) - latency(f2))`.
     pub fn student_diff_t(&self, d0: f64) -> f64 {
@@ -367,14 +367,14 @@ impl DiffOut {
         student_1samp_t(&moments, d0).aok()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Degrees of freedom for Student's one-sample t-test for
     /// `mean(latency(f1) - latency(f2))`.
     pub fn student_diff_df(&self) -> f64 {
         self.nf() - 1.
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Student's confidence interval for
     /// `mean(latency(f1) - latency(f2))`,
     /// with confidence level `(1 - alpha)`.
@@ -390,7 +390,7 @@ impl DiffOut {
         student_1samp_ci(&moments, alpha).aok()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Position of `value` with respect to
     /// Student's confidence interval for
     /// `mean(latency(f1) - latency(f2))`,
@@ -403,7 +403,7 @@ impl DiffOut {
         ci.position_of(value)
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Student's one-sample test of the hypothesis that
     /// `mean(latency(f1) - latency(f2)) == 0`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
@@ -419,7 +419,7 @@ impl DiffOut {
         student_1samp_test(&moments, d0, alt_hyp, alpha).aok()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Student's one-sample t statistic for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_t(&self, ln_d0: f64) -> f64 {
@@ -431,14 +431,14 @@ impl DiffOut {
         student_1samp_t(&moments, ln_d0).aok()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Degrees of freedom for Student's one-sample t-test for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     pub fn student_diff_ln_df(&self) -> f64 {
         self.nf() - 1.
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Student's one-sample confidence interval for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
     /// with confidence level `(1 - alpha)`.
@@ -454,7 +454,7 @@ impl DiffOut {
         student_1samp_ci(&moments, alpha).aok()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Student's one-sample confidence interval for
     /// `median(latency(f1)) / median(latency(f2))`,
     /// with confidence level `(1 - alpha)`.
@@ -468,7 +468,7 @@ impl DiffOut {
         Ci(low, high)
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Position of `value` with respect to
     /// Student's one-sample confidence interval for
     /// `median(latency(f1)) / median(latency(f2))`,
@@ -481,7 +481,7 @@ impl DiffOut {
         ci.position_of(value)
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Student's one-sample test of the hypothesis that
     /// `median(latency(f1)) == median(latency(f2))`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
@@ -497,25 +497,25 @@ impl DiffOut {
         student_1samp_test(&moments, ln_d0, alt_hyp, alpha).aok()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Wilcoxon rank sum *W* statistic for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_w(&self) -> f64 {
         self.comp().wilcoxon_rank_sum_w()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Wilcoxon rank sum normal approximation *z* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
         self.comp().wilcoxon_rank_sum_z()
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Wilcoxon rank sum normal approximation *p* value for `latency(f1)` and `latency(f2)`.
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
         self.comp().wilcoxon_rank_sum_p(alt_hyp)
     }
 
-    #[cfg(feature = "_dev_support")]
+    #[cfg(feature = "_experimental")]
     /// Wilcoxon rank sum test for for `latency(f1)` and `latency(f2)`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
     pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {

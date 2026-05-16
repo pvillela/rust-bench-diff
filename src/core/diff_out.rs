@@ -1,18 +1,17 @@
 //! Module defining the key data structure produced by [`crate::bench_diff`].
 
 use crate::{
-    BenchOut, get_bench_cfg,
+    BenchOut,
     stats_types::{AltHyp, Ci, HypTestResult, PositionWrtCi},
 };
 use basic_stats::{
-    aok::AokFloat,
+    aok::Aok,
     core::{sample_mean, sample_stdev},
 };
-use bench_utils::{Comp, LatencyUnit, SummaryStats, summary_stats};
+use bench_utils::{BenchCfg, Comp, LatencyUnit, SummaryStats, summary_stats};
 
 #[cfg(feature = "_experimental")]
 use basic_stats::{
-    aok::AokBasicStats,
     binomial,
     core::SampleMoments,
     normal::{student_1samp_ci, student_1samp_t, student_1samp_test},
@@ -39,7 +38,7 @@ pub struct DiffOut {
 impl DiffOut {
     /// Creates a new empty instance.
     pub(crate) fn new() -> Self {
-        let cfg = get_bench_cfg();
+        let cfg = BenchCfg::get();
         let out_f1 = BenchOut::new(&cfg);
         let out_f2 = BenchOut::new(&cfg);
         let count_f1_lt_f2 = 0;
@@ -231,8 +230,6 @@ impl DiffOut {
     /// Confidence interval for the probability that `f1`s latency is greater than `f2`s
     /// in a paired observation (Wilson score interval without continuity correction).
     pub fn binomial_f1_gt_f2_ws_ci(&self, alpha: f64) -> Ci {
-        use basic_stats::aok::AokBasicStats;
-
         let n = self.n();
         let n_s = self.count_f1_gt_f2();
         binomial::binomial_ws_ci(n, n_s, alpha).aok()
@@ -261,8 +258,6 @@ impl DiffOut {
         alt_hyp: AltHyp,
         alpha: f64,
     ) -> HypTestResult {
-        use basic_stats::aok::AokBasicStats;
-
         binomial::exact_binomial_test(self.n(), self.count_f1_gt_f2(), p0, alt_hyp, alpha).aok()
     }
 

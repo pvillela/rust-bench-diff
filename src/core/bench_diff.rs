@@ -1,28 +1,12 @@
 //! Main module implementing functions to compare the difference in latency between two closures.
 
 use super::DiffOut;
-use bench_utils::{BenchCfg, BenchOut, LatencyUnit, RunLength, latency};
+use bench_utils::{BenchCfg, BenchOut, RunLength, latency};
 use std::{
     cmp,
     io::{Write, stderr},
-    ops::Deref,
-    sync::Mutex,
     time::{Duration, Instant},
 };
-
-static BENCH_CFG: Mutex<BenchCfg> = Mutex::new(BenchCfg::new(
-    BenchCfg::DEFAULT_WARMUP_MILLIS,
-    BenchCfg::DEFAULT_RECORDING_UNIT,
-    BenchCfg::DEFAULT_REPORTING_UNIT,
-    BenchCfg::DEFAULT_SIGFIG,
-    BenchCfg::DEFAULT_STATUS_MILLIS,
-    &BENCH_CFG,
-));
-
-pub fn get_bench_cfg() -> BenchCfg {
-    let guard = BENCH_CFG.lock().unwrap();
-    guard.deref().clone()
-}
 
 pub struct BenchStatus<F1, F2> {
     pub warmup_status: F1,
@@ -132,7 +116,7 @@ impl<'a> DiffState<'a> {
         let exec_count2 = exec_count / 2;
         assert!(exec_count2 > 0, "exec_count2 must be > 0");
 
-        let unit = get_bench_cfg().recording_unit();
+        let unit = BenchCfg::get().recording_unit();
         let start = Instant::now();
 
         for i in 1..=exec_count2 {
@@ -204,7 +188,7 @@ pub fn bench_diff_x(
 
     let mut state = DiffState::new(&mut out);
 
-    let cfg = get_bench_cfg();
+    let cfg = BenchCfg::get();
     let status_freq = cfg.status_freq(execs_per_milli);
 
     // Warm-up.
@@ -259,7 +243,7 @@ pub fn bench_diff(
     mut f2: impl FnMut(),
     exec_run_length: RunLength,
 ) -> DiffOut {
-    let cfg = get_bench_cfg();
+    let cfg = BenchCfg::get();
     let warmup_millis = cfg.warmup_millis();
     let execs_per_milli = cfg.executions_per_milli(|| {
         let _ = &mut f1();
@@ -301,7 +285,7 @@ pub fn bench_diff_with_status(
     exec_run_length: RunLength,
     header: impl FnOnce(usize),
 ) -> DiffOut {
-    let cfg = get_bench_cfg();
+    let cfg = BenchCfg::get();
 
     let status = |preamble: &'static str, millis: u64, count: usize| {
         let mut status_len: usize = 0;

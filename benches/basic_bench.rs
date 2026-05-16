@@ -6,11 +6,10 @@
 //! ```
 
 use bench_diff::{
-    DiffOut, bench_diff_with_status,
+    BenchCfg, DiffOut, bench_diff_with_status,
     bench_support::bench_basic_naive::{
         ANOMALY_TOLERANCE, Args, get_args, report_median_mean_anomalies,
     },
-    get_bench_cfg,
     stats_types::AltHyp,
 };
 use bench_utils::{RunLength, busy_work, calibrate_busy_work};
@@ -26,7 +25,7 @@ fn main() {
         exec_count,
     } = args;
 
-    get_bench_cfg().with_recording_unit(latency_unit).set();
+    BenchCfg::get().with_recording_unit(latency_unit).set();
 
     let base_effort = calibrate_busy_work(latency_unit.latency_from_f64(base_median));
 

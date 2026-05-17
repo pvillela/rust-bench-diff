@@ -8,7 +8,7 @@ use basic_stats::{
     aok::Aok,
     core::{sample_mean, sample_stdev},
 };
-use bench_utils::{BenchCfg, Comp, LatencyUnit, SummaryStats, summary_stats};
+use bench_utils::{BenchCfg, Comp, LatencyUnit, PanicIfNeeded, SummaryStats, summary_stats};
 
 #[cfg(feature = "_experimental")]
 use basic_stats::{
@@ -94,9 +94,19 @@ impl DiffOut {
         self.out_f1.nf()
     }
 
+    /// The current value of [`BenchCfg::panic_on_error`].
+    fn panic_on_error(&self) -> bool {
+        let cfg = BenchCfg::get();
+        BenchCfg::panic_on_error(&cfg)
+    }
+
     /// Summary descriptive statistics for `f1`.
     ///
     /// Includes sample size, mean, standard deviation, median, several percentiles, min, and max.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn summary_f1(&self) -> SummaryStats {
         summary_stats(&self.out_f1)
     }
@@ -104,6 +114,10 @@ impl DiffOut {
     /// Summary descriptive statistics for `f2`.
     ///
     /// Includes sample size, mean, standard deviation, median, several percentiles, min, and max.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn summary_f2(&self) -> SummaryStats {
         summary_stats(&self.out_f2)
     }
@@ -117,11 +131,19 @@ impl DiffOut {
     }
 
     /// Mean of `f1`'s latencies.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn mean_f1(&self) -> f64 {
         self.summary_f1().mean
     }
 
-    /// Mean of `f1`'s latencies.
+    /// Mean of `f2`'s latencies.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn mean_f2(&self) -> f64 {
         self.summary_f2().mean
     }
@@ -142,14 +164,26 @@ impl DiffOut {
     }
 
     /// Ratio of the median of `f1`'s latencies to the median of `f2`'s latencies.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the median of `f2`` is zero.
     pub fn ratio_medians_f1_f2(&self) -> f64 {
-        self.median_f1() / self.median_f2()
+        (self.median_f1() / self.median_f2())
+            .panic_if_needed(self.panic_on_error(), "median of `f2` is zero")
     }
 
     #[cfg(feature = "_experimental")]
     /// Ratio of the minimum of `f1`'s latencies to the minimum of `f2`'s latencies.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the minimum of `f2`'s latencies` is zero.
     pub fn ratio_mins_f1_f2(&self) -> f64 {
-        self.summary_f1().min as f64 / self.summary_f2().min as f64
+        (self.summary_f1().min as f64 / self.summary_f2().min as f64).panic_if_needed(
+            self.panic_on_error(),
+            "minimum of `f2`'s latencies` is zero",
+        )
     }
 
     /// Count of paired observations where `f1`'s latency is less than `f2`'s.
@@ -168,60 +202,108 @@ impl DiffOut {
     }
 
     /// Mean of the natural logarithms of `f1`'s latencies.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn mean_ln_f1(&self) -> f64 {
         self.out_f1.mean_ln()
     }
 
-    /// Standard deviation of the natural logarithms `f1`'s latecies.
+    /// Standard deviation of the natural logarithms `f1`'s latencies.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn stdev_ln_f1(&self) -> f64 {
         self.out_f1.stdev_ln()
     }
 
     /// Mean of the natural logarithms of `f2`'s latencies.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn mean_ln_f2(&self) -> f64 {
         self.out_f2.mean_ln()
     }
 
-    /// Standard deviation of the natural logarithms `f2`'s latecies.
+    /// Standard deviation of the natural logarithms `f2`'s latencies.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn stdev_ln_f2(&self) -> f64 {
         self.out_f2.stdev_ln()
     }
 
     /// Mean of the differences between paired latencies of `f1` and `f2`.
     /// Equal to the difference between the mean of `f1`'s latencies and the mean of `f2`'s latencies.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn mean_diff_f1_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_diff_f1_f2()).aok()
+        sample_mean(self.n(), self.sum_diff_f1_f2())
+            .aok()
+            .panic_if_needed(self.panic_on_error(), "number of observations == 0")
     }
 
     /// Standard deviation of the differences between paired latencies of `f1` and `f2`.
     /// (*Not* the difference between the standard deviation of `f1`'s latencies and
     /// the standard deviation of`f2`'s latencies.)
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is `<= 1`.
     pub fn stdev_diff_f1_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_diff_f1_f2(), self.sum2_diff_f1_f2 as f64).aok()
+        sample_stdev(self.n(), self.sum_diff_f1_f2(), self.sum2_diff_f1_f2 as f64)
+            .aok()
+            .panic_if_needed(self.panic_on_error(), "number of observations <= 1")
     }
 
     /// Mean of the differences between the natural logarithms of paired latencies of `f1` and `f2`.
     /// (Same as the difference between the mean of the natural logarithms of `f1`'s latencies and
     /// the mean of the natural logarithms of`f2`'s latencies.)
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn mean_diff_ln_f1_f2(&self) -> f64 {
-        sample_mean(self.n(), self.sum_diff_ln_f1_f2()).aok()
+        sample_mean(self.n(), self.sum_diff_ln_f1_f2())
+            .aok()
+            .panic_if_needed(self.panic_on_error(), "number of observations == 0")
     }
 
     /// Standard deviation of the differences between the natural logarithms of paired latencies of `f1` and `f2`.
     /// (*Not* the difference between the standard deviation of the natural logarithms of `f1`'s latencies and
     /// the standard deviation of the natural logarithms of`f2`'s latencies.)
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is `<= 1`.
     pub fn stdev_diff_ln_f1_f2(&self) -> f64 {
-        sample_stdev(self.n(), self.sum_diff_ln_f1_f2(), self.sum2_diff_ln_f1_f2).aok()
+        sample_stdev(self.n(), self.sum_diff_ln_f1_f2(), self.sum2_diff_ln_f1_f2)
+            .aok()
+            .panic_if_needed(self.panic_on_error(), "number of observations <= 1")
     }
 
     /// Estimated ratio of the median `f1` latency to the median `f2` latency,
     /// computed as the `exp()` of [`Self::mean_diff_ln_f1_f2`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn ratio_medians_f1_f2_from_lns(&self) -> f64 {
         self.mean_diff_ln_f1_f2().exp()
     }
 
     #[cfg(feature = "_experimental")]
     /// Proportion of paired observations where `f1`s latency is greater than `f2`s.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is zero.
     pub fn prop_f1_gt_f2(&self) -> f64 {
         (self.count_f1_gt_f2() as f64) / self.nf()
     }
@@ -229,16 +311,33 @@ impl DiffOut {
     #[cfg(feature = "_experimental")]
     /// Confidence interval for the probability that `f1`s latency is greater than `f2`s
     /// in a paired observation (Wilson score interval without continuity correction).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() == 0`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn binomial_f1_gt_f2_ws_ci(&self, alpha: f64) -> Ci {
         let n = self.n();
         let n_s = self.count_f1_gt_f2();
-        binomial::binomial_ws_ci(n, n_s, alpha).aok()
+        binomial::binomial_ws_ci(n, n_s, alpha)
+            .aok()
+            .panic_if_needed(
+                self.panic_on_error(),
+                "number of observations == 0 or `alpha` not in open interval `(0, 1)`",
+            )
     }
 
     #[cfg(feature = "_experimental")]
     /// Position of `value` with respect to the
     /// confidence interval for the probability that `f1`s latency is greater than `f2`s
     /// in a paired observation (Wilson score interval without continuity correction).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() == 0`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn binomial_value_position_wrt_f1_gt_f2_ws_ci(
         &self,
         value: f64,
@@ -252,19 +351,37 @@ impl DiffOut {
     /// Statistical test of the hypothesis that
     /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `p0`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() == 0`.
+    /// - `p0` not in closed interval `[0, 1]`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn exact_binomial_f1_gt_f2_test(
         &self,
         p0: f64,
         alt_hyp: AltHyp,
         alpha: f64,
     ) -> HypTestResult {
-        binomial::exact_binomial_test(self.n(), self.count_f1_gt_f2(), p0, alt_hyp, alpha).aok()
+        binomial::exact_binomial_test(self.n(), self.count_f1_gt_f2(), p0, alt_hyp, alpha)
+            .aok()
+            .panic_if_needed(
+                self.panic_on_error(),
+                "number of observations == 0, `p0` not in closed interval `[0, 1]`, or `alpha` not in open interval `(0, 1)`",
+            )
     }
 
     #[cfg(feature = "_experimental")]
     /// Statistical test of the hypothesis that
     /// the probability that `f1`s latency is greater than `f2`s (in a paired observation) is `0.5`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() == 0`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn exact_binomial_f1_gt_f2_eq_half_test(
         &self,
         alt_hyp: AltHyp,
@@ -287,6 +404,12 @@ impl DiffOut {
     /// Arguments:
     /// - `ln_d0`: hypothesized value of `mean(ln(latency(f1))) - mean(ln(latency(f2)))`, or equivalently,
     ///   `ln(median(latency(f1)) / median(latency(f2)))`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - the number of log-transformed observations for either `f1` or `f2` is `<= 1`.
+    /// - both `stdev_ln_f1()` and `stdev_ln_f2()` are `0`.
     pub fn welch_ln_t(&self, ln_d0: f64) -> f64 {
         self.comp().welch_ln_t(ln_d0)
     }
@@ -297,6 +420,12 @@ impl DiffOut {
     /// Under the assumption that latencies are approximately log-normal, `mean(ln(latency(f))) == ln(median(latency(f)))`.
     /// This assumption is widely supported by performance analysis theory and empirical data.
     /// Thus, this statistics equivalently pertains to `ln(median(latency(f1)) / median(latency(f2)))`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - the number of log-transformed observations for either `f1` or `f2` is `<= 1`.
+    /// - both `stdev_ln_f1()` and `stdev_ln_f2()` are `0`.
     pub fn welch_ln_df(&self) -> f64 {
         self.comp().welch_ln_df()
     }
@@ -309,6 +438,13 @@ impl DiffOut {
     /// This assumption is widely supported by performance analysis theory and empirical data.
     ///
     /// This is also the confidence interval for the difference of medians of logarithms under the above assumption.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - the number of log-transformed observations for either `f1` or `f2` is `<= 1`.
+    /// - both `stdev_ln_f1()` and `stdev_ln_f2()` are `0`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn welch_ln_ci(&self, alpha: f64) -> Ci {
         self.comp().welch_ln_ci(alpha)
     }
@@ -319,6 +455,13 @@ impl DiffOut {
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - the number of log-transformed observations for either `f1` or `f2` is `<= 1`.
+    /// - both `stdev_ln_f1()` and `stdev_ln_f2()` are `0`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn welch_ratio_ci(&self, alpha: f64) -> Ci {
         self.comp().welch_ratio_ci(alpha)
     }
@@ -330,6 +473,13 @@ impl DiffOut {
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - the number of log-transformed observations for either `f1` or `f2` is `<= 1`.
+    /// - both `stdev_ln_f1()` and `stdev_ln_f2()` are `0`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn welch_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         self.comp().welch_value_position_wrt_ratio_ci(value, alpha)
     }
@@ -346,6 +496,13 @@ impl DiffOut {
     ///   `ln(median(latency(f1)) / median(latency(f2)))`.
     /// - `alt_hyp`: alternative hypothesis.
     /// - `alpha`: confidence level is `1 - alpha`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - the number of log-transformed observations for either `f1` or `f2` is `<= 1`.
+    /// - both `stdev_ln_f1()` and `stdev_ln_f2()` are `0`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn welch_ln_test(&self, ln_d0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         self.comp().welch_ln_test(ln_d0, alt_hyp, alpha)
     }
@@ -353,19 +510,36 @@ impl DiffOut {
     #[cfg(feature = "_experimental")]
     /// Student's one-sample t statistic for
     /// `mean(latency(f1) - latency(f2))`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() <= 1`.
+    /// - `self.stdev_diff_f1_f2() == 0`.
     pub fn student_diff_t(&self, d0: f64) -> f64 {
         let moments = SampleMoments::new(
             self.out_f1.n(),
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
-        student_1samp_t(&moments, d0).aok()
+        student_1samp_t(&moments, d0).aok().panic_if_needed(
+            self.panic_on_error(),
+            "number of observations <= 1 or `standard deviation of differences == 0`",
+        )
     }
 
     #[cfg(feature = "_experimental")]
     /// Degrees of freedom for Student's one-sample t-test for
     /// `mean(latency(f1) - latency(f2))`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** the number of observations is `<= 1`:
     pub fn student_diff_df(&self) -> f64 {
+        // See `basic_stats::normal::student_1samp_df`
+        if self.panic_on_error() && self.n() <= 1 {
+            panic!("number of observations <= 1")
+        }
         self.nf() - 1.
     }
 
@@ -376,13 +550,22 @@ impl DiffOut {
     ///
     /// Assumes that `latency(f1) - latency(f2)` is normally distributed. This assumption is *not* supported by
     /// performance analysis theory or empirical data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() <= 1`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn student_diff_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.out_f1.n(),
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
-        student_1samp_ci(&moments, alpha).aok()
+        student_1samp_ci(&moments, alpha).aok().panic_if_needed(
+            self.panic_on_error(),
+            "number of observations <= 1 or `alpha` not in open interval `(0, 1)`",
+        )
     }
 
     #[cfg(feature = "_experimental")]
@@ -393,6 +576,12 @@ impl DiffOut {
     ///
     /// Assumes that `latency(f1) - latency(f2)` is normally distributed. This assumption is *not* supported by
     /// performance analysis theory or empirical data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() <= 1`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn student_value_position_wrt_diff_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.student_diff_ci(alpha);
         ci.position_of(value)
@@ -405,25 +594,46 @@ impl DiffOut {
     ///
     /// Assumes that `latency(f1) - latency(f2)` is normally distributed. This assumption is *not* supported by
     /// performance analysis theory or empirical data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() <= 1`.
+    /// - `self.stdev_diff_f1_f2() == 0`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn student_diff_test(&self, d0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.out_f1.n(),
             self.sum_diff_f1_f2(),
             self.sum2_diff_f1_f2 as f64,
         );
-        student_1samp_test(&moments, d0, alt_hyp, alpha).aok()
+        student_1samp_test(&moments, d0, alt_hyp, alpha)
+            .aok()
+            .panic_if_needed(
+                self.panic_on_error(),
+                "number of observations <= 1, standard deviation of differences == 0, or `alpha` not in open interval `(0, 1)`",
+            )
     }
 
     #[cfg(feature = "_experimental")]
     /// Student's one-sample t statistic for
     /// `mean(ln(latency(f1)) - ln(latency(f2)))` (where `ln` is the natural logarithm).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() <= 1`.
+    /// - `self.stdev_diff_ln_f1_f2() == 0`.
     pub fn student_diff_ln_t(&self, ln_d0: f64) -> f64 {
         let moments = SampleMoments::new(
             self.out_f1.n(),
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
-        student_1samp_t(&moments, ln_d0).aok()
+        student_1samp_t(&moments, ln_d0).aok().panic_if_needed(
+            self.panic_on_error(),
+            "number of observations <= 1 or `standard deviation of differences of logarithms == 0`",
+        )
     }
 
     #[cfg(feature = "_experimental")]
@@ -440,13 +650,22 @@ impl DiffOut {
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() <= 1`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn student_diff_ln_ci(&self, alpha: f64) -> Ci {
         let moments = SampleMoments::new(
             self.out_f1.n(),
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
-        student_1samp_ci(&moments, alpha).aok()
+        student_1samp_ci(&moments, alpha).aok().panic_if_needed(
+            self.panic_on_error(),
+            "number of observations <= 1 or `alpha` not in open interval `(0, 1)`",
+        )
     }
 
     #[cfg(feature = "_experimental")]
@@ -456,6 +675,12 @@ impl DiffOut {
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() <= 1`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn student_ratio_ci(&self, alpha: f64) -> Ci {
         let Ci(log_low, log_high) = self.student_diff_ln_ci(alpha);
         let low = log_low.exp();
@@ -471,6 +696,12 @@ impl DiffOut {
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() <= 1`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn student_value_position_wrt_ratio_ci(&self, value: f64, alpha: f64) -> PositionWrtCi {
         let ci = self.student_ratio_ci(alpha);
         ci.position_of(value)
@@ -483,29 +714,57 @@ impl DiffOut {
     ///
     /// Assumes that both `latency(f1)` and `latency(f2)` are approximately log-normal.
     /// This assumption is widely supported by performance analysis theory and empirical data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - `self.n() <= 1`.
+    /// - `self.stdev_diff_ln_f1_f2() == 0`.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn student_diff_ln_test(&self, ln_d0: f64, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         let moments = SampleMoments::new(
             self.out_f1.n(),
             self.sum_diff_ln_f1_f2(),
             self.sum2_diff_ln_f1_f2,
         );
-        student_1samp_test(&moments, ln_d0, alt_hyp, alpha).aok()
+        student_1samp_test(&moments, ln_d0, alt_hyp, alpha)
+            .aok()
+            .panic_if_needed(
+                self.panic_on_error(),
+                "number of observations <= 1, standard deviation of differences of logarithms == 0, or `alpha` not in open interval `(0, 1)`",
+            )
     }
 
     #[cfg(feature = "_experimental")]
     /// Wilcoxon rank sum *W* statistic for `latency(f1)` and `latency(f2)`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** either sample is empty.
     pub fn wilcoxon_rank_sum_w(&self) -> f64 {
         self.comp().wilcoxon_rank_sum_w()
     }
 
     #[cfg(feature = "_experimental")]
     /// Wilcoxon rank sum normal approximation *z* value for `latency(f1)` and `latency(f2)`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - either sample is empty.
+    /// - there are too many rank ties between the two samples.
     pub fn wilcoxon_rank_sum_z(&self) -> f64 {
         self.comp().wilcoxon_rank_sum_z()
     }
 
     #[cfg(feature = "_experimental")]
     /// Wilcoxon rank sum normal approximation *p* value for `latency(f1)` and `latency(f2)`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - either sample is empty.
+    /// - there are too many rank ties between the two samples.
     pub fn wilcoxon_rank_sum_p(&self, alt_hyp: AltHyp) -> f64 {
         self.comp().wilcoxon_rank_sum_p(alt_hyp)
     }
@@ -513,6 +772,13 @@ impl DiffOut {
     #[cfg(feature = "_experimental")]
     /// Wilcoxon rank sum test for for `latency(f1)` and `latency(f2)`,
     /// with alternative hypothesis `alt_hyp` and confidence level `(1 - alpha)`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.panic_on_error() == true` **and** any of the following conditions is true:
+    /// - either sample is empty.
+    /// - there are too many rank ties between the two samples.
+    /// - `alpha` not in open interval `(0, 1)`.
     pub fn wilcoxon_rank_sum_test(&self, alt_hyp: AltHyp, alpha: f64) -> HypTestResult {
         self.comp().wilcoxon_rank_sum_test(alt_hyp, alpha)
     }

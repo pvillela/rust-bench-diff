@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//workspaces/bench-utils/**)",
+      "Read(//workspaces/**)",
+      "Bash(cargo check *)"
+    ]
+  }
+}

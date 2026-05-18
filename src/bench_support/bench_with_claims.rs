@@ -10,9 +10,7 @@ use crate::{
         binomial_nsigmas_gt_critical_value, get_scale_params,
     },
 };
-use bench_utils::{
-    BenchCfg, Comp, RunLength, bench_run, bench_run_with_status, calibrate_busy_work,
-};
+use bench_utils::{BenchCfg, BusyWork, Comp, RunLength, bench_run, bench_run_with_status};
 
 fn print_diff_out(out: &DiffOut) {
     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
@@ -244,7 +242,7 @@ pub fn bench_with_claims(args: BenchArgs) {
         }
     };
 
-    let base_effort = calibrate_busy_work(*base_latency);
+    let base_effort = BusyWork::new(*base_latency).effort();
 
     println!();
     print_args();

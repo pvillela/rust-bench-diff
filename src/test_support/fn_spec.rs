@@ -1,4 +1,4 @@
-use bench_utils::busy_work;
+use bench_utils::BusyWork;
 use rand::{SeedableRng, rngs::StdRng};
 use rand_distr::{Distribution, LogNormal};
 use std::fmt::{Debug, Display};
@@ -155,7 +155,7 @@ impl MyFnMut {
     pub fn invoke(&mut self) {
         match self {
             Self::Det { median_effort } => {
-                busy_work(*median_effort);
+                BusyWork::work(*median_effort);
             }
 
             Self::NonDet {
@@ -165,7 +165,7 @@ impl MyFnMut {
             } => {
                 let factor = lognormal.sample(rng);
                 let effort = (*median_effort as f64) * factor;
-                busy_work(effort as u32);
+                BusyWork::work(effort as u32);
             }
         }
     }

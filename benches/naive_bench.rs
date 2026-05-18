@@ -8,7 +8,7 @@
 use bench_diff::bench_support::bench_basic_naive::{
     ANOMALY_TOLERANCE, Args, bench_naive, get_args, report_median_mean_anomalies,
 };
-use bench_utils::{LatencyUnit, busy_work, calibrate_busy_work};
+use bench_utils::{BusyWork, LatencyUnit};
 
 fn main() {
     let args = get_args();
@@ -21,12 +21,12 @@ fn main() {
         exec_count,
     } = args;
 
-    let base_effort = calibrate_busy_work(latency_unit.latency_from_f64(base_median));
+    let base_effort = BusyWork::new(latency_unit.latency_from_f64(base_median)).effort();
 
     let (median1, mean1) = {
         let name = format!("hi_{}pct_median_no_var", target_relative_diff_pct);
         let effort = (base_effort as f64 * (1. + target_relative_diff_pct as f64 / 100.)) as u32;
-        let f = || busy_work(effort);
+        let f = BusyWork::from_effort(effort).fun();
         let out = bench_naive(LatencyUnit::Nano, f, exec_count);
         let summary = out.summary_f1();
         println!("\n{} summary: {:?}", name, summary);
@@ -38,7 +38,7 @@ fn main() {
     let (median2, mean2) = {
         let name = "base_median_no_var";
         let effort = base_effort;
-        let f = || busy_work(effort);
+        let f = BusyWork::from_effort(effort).fun();
         let out = bench_naive(LatencyUnit::Nano, f, exec_count);
         let summary = out.summary_f1();
         println!("\n{} summary: {:?}", name, summary);

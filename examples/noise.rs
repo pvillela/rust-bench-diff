@@ -1,6 +1,6 @@
 //! Process that generates noise that can be executed concurrently with benchmarks.
 
-use bench_utils::{busy_work, calibrate_busy_work, latency};
+use bench_utils::{BusyWork, latency};
 use std::{
     hint::black_box,
     io::{Write, stderr},
@@ -49,8 +49,7 @@ fn noise(exec_secs: usize, n_threads: usize) {
 
     eprintln!("exec_secs={exec_secs}, exec_count={exec_count}");
 
-    let target_effort = calibrate_busy_work(TARGET_LATENCY);
-    let f = move || busy_work(target_effort);
+    let bw = BusyWork::new(TARGET_LATENCY);
 
     let mut exec_status = {
         let mut status_len: usize = 0;
@@ -70,6 +69,7 @@ fn noise(exec_secs: usize, n_threads: usize) {
 
     thread::scope(|s| {
         for n in 0..n_threads {
+            let f = bw.fun();
             s.spawn(move || noise_core(f, exec_count, |i| exec_status(i, n)));
         }
     });

@@ -245,7 +245,7 @@ pub fn bench_diff(
 ) -> DiffOut {
     let cfg = BenchCfg::get();
     let warmup_millis = cfg.warmup_millis();
-    let execs_per_milli = cfg.executions_per_milli(|| {
+    let execs_per_milli = cfg.execs_per_milli(|| {
         let _ = &mut f1();
         let _ = &mut f2();
     });
@@ -303,7 +303,7 @@ pub fn bench_diff_with_status(
         }
     };
 
-    let execs_per_milli = cfg.executions_per_milli(|| {
+    let execs_per_milli = cfg.execs_per_milli(|| {
         let _ = &mut f1();
         let _ = &mut f2();
     });

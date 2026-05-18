@@ -6,46 +6,31 @@
 //! ```
 
 use bench_diff::{DiffOut, bench_diff_with_status, bench_support::comprehensive_print_diff_out};
-use bench_utils::{RunLength, busy_work, calibrate_busy_work};
+use bench_utils::{BusyWork, RunLength};
 use std::time::Duration;
 
-fn f1(effort: u32) {
-    busy_work(effort);
-}
-
-fn f2(effort: u32) {
-    let hi_effort = ((effort as f64) * 1.05) as u32;
-    busy_work(hi_effort);
-}
-
 fn main() {
-    let effort = calibrate_busy_work(Duration::from_micros(100));
+    let bw = BusyWork::new(Duration::from_micros(100));
+    let hi_effort = (bw.effort() as f64 * 1.05) as u32;
+
+    let f1 = bw.fun();
+    let f2 = BusyWork::from_effort(hi_effort).fun();
 
     println!("*** 1st benchmark ***");
     {
-        let out: DiffOut = bench_diff_with_status(
-            || f1(effort),
-            || f2(effort),
-            RunLength::Count(1000),
-            |_| {
-                println!("Comparing latency of f1 vs. f2.");
-                println!();
-            },
-        );
+        let out: DiffOut = bench_diff_with_status(&f1, &f2, RunLength::Count(1000), |_| {
+            println!("Comparing latency of f1 vs. f2.");
+            println!();
+        });
         comprehensive_print_diff_out(&out);
     }
 
     println!("*** 2nd benchmark ***");
     {
-        let out: DiffOut = bench_diff_with_status(
-            || f1(effort),
-            || f1(effort),
-            RunLength::Count(1000),
-            |_| {
-                println!("Comparing latency of f1 vs. f1.");
-                println!();
-            },
-        );
+        let out: DiffOut = bench_diff_with_status(&f1, &f1, RunLength::Count(1000), |_| {
+            println!("Comparing latency of f1 vs. f1.");
+            println!();
+        });
         comprehensive_print_diff_out(&out);
     }
 }

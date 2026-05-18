@@ -12,7 +12,7 @@ use bench_diff::{
     },
     stats_types::AltHyp,
 };
-use bench_utils::{RunLength, busy_work, calibrate_busy_work};
+use bench_utils::{BusyWork, RunLength};
 
 fn main() {
     let args = get_args();
@@ -27,20 +27,18 @@ fn main() {
 
     BenchCfg::get().with_recording_unit(latency_unit).set();
 
-    let base_effort = calibrate_busy_work(latency_unit.latency_from_f64(base_median));
+    let base_bw = BusyWork::new(latency_unit.latency_from_f64(base_median));
 
     let name1 = format!("hi_{}pct_median_no_var", target_relative_diff_pct);
     let name2 = "base_median_no_var";
 
     let f1 = {
-        let effort = (base_effort as f64 * (1. + target_relative_diff_pct as f64 / 100.)) as u32;
-        move || busy_work(effort)
+        let effort =
+            (base_bw.effort() as f64 * (1. + target_relative_diff_pct as f64 / 100.)) as u32;
+        BusyWork::from_effort(effort).fun()
     };
 
-    let f2 = {
-        let effort = base_effort;
-        move || busy_work(effort)
-    };
+    let f2 = base_bw.fun();
 
     let out = bench_diff_with_status(f1, f2, RunLength::Count(exec_count), |_| {
         println!("\nbench_diff: f1={name1}, f2={name2}");

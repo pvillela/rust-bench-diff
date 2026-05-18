@@ -87,7 +87,7 @@ pub fn bench_naive(unit: LatencyUnit, mut f: impl FnMut(), exec_count: usize) ->
         }
     };
 
-    let mut out = DiffOut::new();
+    let mut out = DiffOut::new(&BenchCfg::get());
     let mut state = DiffState::new(&mut out);
     warm_up(&mut state, unit, &mut f, &mut warm_up_status);
     state.reset();

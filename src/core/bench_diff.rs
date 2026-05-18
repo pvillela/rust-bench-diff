@@ -184,7 +184,7 @@ pub fn bench_diff_x(
         }
     };
 
-    let mut out = DiffOut::new();
+    let mut out = DiffOut::new(&BenchCfg::get());
 
     let mut state = DiffState::new(&mut out);
 

@@ -37,8 +37,7 @@ pub struct DiffOut {
 
 impl DiffOut {
     /// Creates a new empty instance.
-    pub(crate) fn new() -> Self {
-        let cfg = BenchCfg::get();
+    pub(crate) fn new(cfg: &BenchCfg) -> Self {
         let out_f1 = BenchOut::new(&cfg);
         let out_f2 = BenchOut::new(&cfg);
         let count_f1_lt_f2 = 0;
@@ -94,10 +93,9 @@ impl DiffOut {
         self.out_f1.nf()
     }
 
-    /// The current value of [`BenchCfg::panic_on_error`].
-    fn panic_on_error(&self) -> bool {
-        let cfg = BenchCfg::get();
-        BenchCfg::panic_on_error(&cfg)
+    /// The value of [`BenchCfg::panic_on_error`] at the time `self` was constructed.
+    pub fn panic_on_error(&self) -> bool {
+        self.out_f1.panic_on_error()
     }
 
     /// Summary descriptive statistics for `f1`.

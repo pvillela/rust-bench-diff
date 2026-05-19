@@ -6,7 +6,7 @@
 //! ```
 
 use bench_diff::{
-    BenchCfg, DiffOut, bench_diff_with_status,
+    BenchCfg, DiffOut, bench_diff_with_status_and_cfg,
     bench_support::bench_basic_naive::{
         ANOMALY_TOLERANCE, Args, get_args, report_median_mean_anomalies,
     },
@@ -25,7 +25,7 @@ fn main() {
         exec_count,
     } = args;
 
-    BenchCfg::get().with_recording_unit(latency_unit).set();
+    let cfg = BenchCfg::default().with_recording_unit(latency_unit);
 
     let base_bw = BusyWork::new(latency_unit.latency_from_f64(base_median));
 
@@ -40,7 +40,7 @@ fn main() {
 
     let f2 = base_bw.fun();
 
-    let out = bench_diff_with_status(f1, f2, RunLength::Count(exec_count), |_| {
+    let out = bench_diff_with_status_and_cfg(&cfg, f1, f2, RunLength::Count(exec_count), |_| {
         println!("\nbench_diff: f1={name1}, f2={name2}");
         println!();
     });

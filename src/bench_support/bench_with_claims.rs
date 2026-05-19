@@ -2,7 +2,7 @@
 
 use super::{BenchArgs, BenchMode, get_args, measured_ratio_summary};
 use crate::{
-    DiffOut, bench_diff, bench_diff_with_status,
+    DiffOut, bench_diff_with_cfg, bench_diff_with_status_and_cfg,
     dev_utils::nest_btree_map,
     stats_types::AltHyp,
     test_support::{
@@ -10,7 +10,7 @@ use crate::{
         binomial_nsigmas_gt_critical_value, get_scale_params,
     },
 };
-use bench_utils::{BenchCfg, BusyWork, Comp, RunLength, bench_run, bench_run_with_status};
+use bench_utils::{BenchCfg, BusyWork, Comp, RunLength, bench_run, bench_run_with_status_and_cfg};
 
 fn print_diff_out(out: &DiffOut) {
     let ratio_medians_f1_f2 = out.ratio_medians_f1_f2();
@@ -175,10 +175,9 @@ pub fn bench_with_claims(args: BenchArgs) {
         base_latency,
     } = scale_params;
 
-    BenchCfg::get()
+    let cfg = BenchCfg::default()
         .with_recording_unit(*recording_unit)
-        .with_reporting_unit(*reporting_unit)
-        .set();
+        .with_reporting_unit(*reporting_unit);
 
     let print_args = || {
         println!("*** args = {args:?}");
@@ -277,7 +276,8 @@ pub fn bench_with_claims(args: BenchArgs) {
                 BenchMode::Diff => {
                     let diff_out = if verbose {
                         println!();
-                        let out = bench_diff_with_status(
+                        let out = bench_diff_with_status_and_cfg(
+                            &cfg,
                             &mut f1,
                             &mut f2,
                             RunLength::Count(*exec_count),
@@ -291,7 +291,12 @@ pub fn bench_with_claims(args: BenchArgs) {
                         print_diff_out(&out);
                         out
                     } else {
-                        bench_diff(&mut f1, &mut f2, RunLength::Count(scale_params.exec_count))
+                        bench_diff_with_cfg(
+                            &cfg,
+                            &mut f1,
+                            &mut f2,
+                            RunLength::Count(scale_params.exec_count),
+                        )
                     };
 
                     measured_ratios.push(diff_out.ratio_medians_f1_f2());
@@ -303,14 +308,16 @@ pub fn bench_with_claims(args: BenchArgs) {
                     let (out1, out2) = if verbose {
                         println!();
                         println!("=== comp for: {scenario_name} ===");
-                        let out1 = bench_run_with_status(
+                        let out1 = bench_run_with_status_and_cfg(
+                            &cfg,
                             &mut f1,
                             RunLength::Count(*exec_count),
                             |exec_count| {
                                 println!("bench_run for f1={spec_f1}; exec_count={exec_count}");
                             },
                         );
-                        let out2 = bench_run_with_status(
+                        let out2 = bench_run_with_status_and_cfg(
+                            &cfg,
                             &mut f2,
                             RunLength::Count(*exec_count),
                             |exec_count| {

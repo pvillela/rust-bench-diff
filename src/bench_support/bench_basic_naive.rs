@@ -46,8 +46,6 @@ fn warm_up(
 }
 
 pub fn bench_naive(unit: LatencyUnit, mut f: impl FnMut(), exec_count: usize) -> DiffOut {
-    BenchCfg::get().with_recording_unit(unit).set();
-
     let mut warm_up_status = {
         let mut status_len: usize = 0;
 
@@ -87,7 +85,7 @@ pub fn bench_naive(unit: LatencyUnit, mut f: impl FnMut(), exec_count: usize) ->
         }
     };
 
-    let mut out = DiffOut::new(&BenchCfg::get());
+    let mut out = DiffOut::new(&BenchCfg::default());
     let mut state = DiffState::new(&mut out);
     warm_up(&mut state, unit, &mut f, &mut warm_up_status);
     state.reset();

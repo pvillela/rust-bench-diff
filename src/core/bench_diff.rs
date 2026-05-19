@@ -1,7 +1,7 @@
 //! Main module implementing functions to compare the difference in latency between two closures.
 
 use super::DiffOut;
-use bench_utils::{BenchCfg, BenchOut, RunLength, latency};
+use bench_utils::{BenchCfg, BenchOut, LatencyUnit, RunLength, latency};
 use std::{
     cmp,
     io::{Write, stderr},
@@ -61,6 +61,10 @@ impl<'a> DiffState<'a> {
         }
     }
 
+    pub fn recording_unit(&self) -> LatencyUnit {
+        self.out_f1.recording_unit()
+    }
+
     pub(crate) fn reset(&mut self) {
         self.out_f1.reset();
         self.out_f2.reset();
@@ -107,6 +111,9 @@ impl<'a> DiffState<'a> {
         mut f2: impl FnMut(),
         run_length: RunLength,
         status_freq: usize,
+        // Used in control of the exit from the iteration loop when both `status_freq` and `exec_count` are too high
+        // compared to `run_length`.
+        est_count_from_dur: usize,
         exec_status: &mut Option<impl FnMut(usize)>,
         prev_status_count: usize,
     ) -> usize {
@@ -116,7 +123,8 @@ impl<'a> DiffState<'a> {
         let exec_count2 = exec_count / 2;
         assert!(exec_count2 > 0, "exec_count2 must be > 0");
 
-        let unit = BenchCfg::get().recording_unit();
+        let unit = self.recording_unit();
+        let mut est_remaining_iters = est_count_from_dur;
         let start = Instant::now();
 
         for i in 1..=exec_count2 {
@@ -126,15 +134,30 @@ impl<'a> DiffState<'a> {
                 let elapsed1 = unit.latency_as_u64(latency1);
                 let elapsed2 = unit.latency_as_u64(latency2);
                 self.capture_data(elapsed1, elapsed2);
+                if est_remaining_iters > 0 {
+                    est_remaining_iters -= 1;
+                }
 
-                if i % status_freq == 0 || i == exec_count2 {
-                    if let Some(exec_status) = exec_status {
-                        // `i * 2` to account for duos
-                        exec_status(prev_status_count + i * 2);
+                if i % status_freq == 0 || i == exec_count2 || est_remaining_iters == 0 {
+                    let elapsed = start.elapsed();
+                    let finished = i == exec_count || elapsed >= run_time;
+
+                    if i % status_freq == 0 || finished {
+                        if let Some(exec_status) = exec_status {
+                            // `i * 2` to account for duos
+                            exec_status(prev_status_count + i * 2);
+                        }
                     }
 
-                    if start.elapsed().ge(&run_time) {
+                    if finished {
                         return i * 2;
+                    }
+
+                    if est_remaining_iters == 0 {
+                        let remaining_time = run_time - elapsed;
+                        let avg_time_per_iter = elapsed / i as u32;
+                        est_remaining_iters =
+                            remaining_time.div_duration_f64(avg_time_per_iter).ceil() as usize;
                     }
                 }
             }
@@ -146,6 +169,7 @@ impl<'a> DiffState<'a> {
 
 /// Compares latencies for two closures `f1` and `f2` and *optionally* outputs information about the benchmark
 /// and its execution status.
+/// Runs with the default [`BenchCfg`].
 ///
 /// This function repeatedly executes *duos* of pairs (`f1`, `f2`), (`f2`, `f1`) and collects the resulting
 /// latency data in a [`DiffOut`] object.
@@ -168,13 +192,57 @@ impl<'a> DiffState<'a> {
 ///   Its argument is the current number of executions performed.
 ///   (See the source code of [`bench_diff_with_status`] for an example.)
 pub fn bench_diff_x(
+    f1: impl FnMut(),
+    f2: impl FnMut(),
+    warmup_millis: u64,
+    exec_run_length: RunLength,
+    warmup_status: Option<impl FnMut(usize)>,
+    exec_status: Option<impl FnMut(usize)>,
+) -> DiffOut {
+    let cfg = BenchCfg::default();
+    bench_diff_x_with_cfg(
+        &cfg,
+        f1,
+        f2,
+        warmup_millis,
+        exec_run_length,
+        warmup_status,
+        exec_status,
+    )
+}
+
+/// Compares latencies for two closures `f1` and `f2` and *optionally* outputs information about the benchmark
+/// and its execution status.
+///
+/// This function repeatedly executes *duos* of pairs (`f1`, `f2`), (`f2`, `f1`) and collects the resulting
+/// latency data in a [`DiffOut`] object.
+/// Prior to data collection, the benchmark is "warmed-up" by executing the duos of pairs for
+/// [`get_warmup_millis`] milliseconds.
+///
+/// Arguments:
+/// - `cfg` - bench configuration used to run the benchmark.
+/// - `f1` - first target for comparison.
+/// - `f2` - second target for comparison.
+/// - `exec_count` - number of executions (sample size) for each function. If it is not a multiple of 4, the
+///   closest multiple of 4 less than it will be used.
+/// - `warmup_status` - is invoked every so often during warm-up and can be used to output the warm-up status,
+///   e.g., how much warm-up time has elapsed and the target warm-up time. The first argument is the warm-up
+///   execution iteration, the second is the elapsed warm-up time, and the third is the target warm-up time.
+///   (See the source code of [`bench_diff_with_status`] for an example.)
+/// - `pre_exec` - is invoked once at the beginning of data collection, after warm-up. It can be used,
+///   for example, to output a preamble to the execution status (see `exec_status` below).
+/// - `exec_status` - is invoked after the execution of each *duo* and can be used to output on the execution
+///   status, e.g., how many observations have been collected for the pair of functions versus `exec_count`.
+///   Its argument is the current number of executions performed.
+///   (See the source code of [`bench_diff_with_status`] for an example.)
+pub fn bench_diff_x_with_cfg(
+    cfg: &BenchCfg,
     mut f1: impl FnMut(),
     mut f2: impl FnMut(),
     warmup_millis: u64,
     exec_run_length: RunLength,
     mut warmup_status: Option<impl FnMut(usize)>,
     mut exec_status: Option<impl FnMut(usize)>,
-    execs_per_milli: f64,
 ) -> DiffOut {
     let exec_run_length_2 = match exec_run_length {
         RunLength::Count(count) => RunLength::Count(count / 2),
@@ -184,12 +252,17 @@ pub fn bench_diff_x(
         }
     };
 
-    let mut out = DiffOut::new(&BenchCfg::get());
-
+    let mut out = DiffOut::new(cfg);
     let mut state = DiffState::new(&mut out);
-
-    let cfg = BenchCfg::get();
+    let execs_per_milli = cfg.execs_per_milli(|| {
+        f1();
+        f2();
+    });
     let status_freq = cfg.status_freq(execs_per_milli);
+
+    let warmup_run_length = RunLength::Duration(Duration::from_millis(cfg.warmup_millis()));
+    let warmup_est_count = warmup_run_length.estimated_count(execs_per_milli);
+    let exec_est_count_2 = exec_run_length_2.estimated_count(execs_per_milli);
 
     // Warm-up.
     state.execute(
@@ -197,6 +270,7 @@ pub fn bench_diff_x(
         &mut f2,
         RunLength::Duration(Duration::from_millis(warmup_millis)),
         status_freq,
+        warmup_est_count,
         &mut warmup_status,
         0,
     );
@@ -207,6 +281,7 @@ pub fn bench_diff_x(
         &mut f2,
         exec_run_length_2,
         status_freq,
+        exec_est_count_2,
         &mut exec_status,
         0,
     );
@@ -217,6 +292,7 @@ pub fn bench_diff_x(
         &mut f1,
         exec_run_length_2,
         status_freq,
+        exec_est_count_2,
         &mut exec_status,
         prev_status_count,
     );
@@ -225,6 +301,7 @@ pub fn bench_diff_x(
 }
 
 /// Compares latencies for two closures `f1` and `f2`.
+/// Runs with the default [`BenchCfg`].
 ///
 /// This function repeatedly executes *duos* of pairs (`f1`, `f2`), (`f2`, `f1`) and collects the resulting
 /// latency data in a [`DiffOut`] object.
@@ -238,31 +315,48 @@ pub fn bench_diff_x(
 /// - `f2` - second target for comparison.
 /// - `exec_count` - number of executions (sample size) for each function. If it is not a multiple of 4, the
 ///   closest multiple of 4 less than it will be used.
-pub fn bench_diff(
-    mut f1: impl FnMut(),
-    mut f2: impl FnMut(),
+pub fn bench_diff(f1: impl FnMut(), f2: impl FnMut(), exec_run_length: RunLength) -> DiffOut {
+    let cfg = BenchCfg::default();
+    bench_diff_with_cfg(&cfg, f1, f2, exec_run_length)
+}
+
+/// Compares latencies for two closures `f1` and `f2`.
+///
+/// This function repeatedly executes *duos* of pairs (`f1`, `f2`), (`f2`, `f1`) and collects the resulting
+/// latency data in a [`DiffOut`] object.
+/// Prior to data collection, the benchmark is "warmed-up" by executing the duos of pairs for
+/// [`get_warmup_millis`] milliseconds.
+/// This function calls [`bench_diff_x`] with no-op closures for the arguments that support the output of
+/// benchmark status.
+///
+/// Arguments:
+/// - `cfg` - bench configuration used to run the benchmark.
+/// - `f1` - first target for comparison.
+/// - `f2` - second target for comparison.
+/// - `exec_count` - number of executions (sample size) for each function. If it is not a multiple of 4, the
+///   closest multiple of 4 less than it will be used.
+pub fn bench_diff_with_cfg(
+    cfg: &BenchCfg,
+    f1: impl FnMut(),
+    f2: impl FnMut(),
     exec_run_length: RunLength,
 ) -> DiffOut {
-    let cfg = BenchCfg::get();
     let warmup_millis = cfg.warmup_millis();
-    let execs_per_milli = cfg.execs_per_milli(|| {
-        let _ = &mut f1();
-        let _ = &mut f2();
-    });
 
-    bench_diff_x(
+    bench_diff_x_with_cfg(
+        cfg,
         f1,
         f2,
         warmup_millis,
         exec_run_length,
         None::<fn(usize)>,
         None::<fn(usize)>,
-        execs_per_milli,
     )
 }
 
 /// Compares latencies for two closures `f1` and `f2` and outputs information about the benchmark and its
 /// execution status. Execution status is output to `stderr`.
+/// Runs with the default [`BenchCfg`].
 ///
 /// This function repeatedly executes *duos* of pairs (`f1`, `f2`), (`f2`, `f1`) and collects the resulting
 /// latency data in a [`DiffOut`] object.
@@ -280,13 +374,41 @@ pub fn bench_diff(
 ///   to output information about the functions being compared to `stdout` and/or `stderr`. The
 ///   argument is the `exec_count`.
 pub fn bench_diff_with_status(
+    f1: impl FnMut(),
+    f2: impl FnMut(),
+    exec_run_length: RunLength,
+    header: impl FnOnce(usize),
+) -> DiffOut {
+    let cfg = BenchCfg::default();
+    bench_diff_with_status_and_cfg(&cfg, f1, f2, exec_run_length, header)
+}
+
+/// Compares latencies for two closures `f1` and `f2` and outputs information about the benchmark and its
+/// execution status. Execution status is output to `stderr`.
+///
+/// This function repeatedly executes *duos* of pairs (`f1`, `f2`), (`f2`, `f1`) and collects the resulting
+/// latency data in a [`DiffOut`] object.
+/// Prior to data collection, the benchmark is "warmed-up" by executing the duos of pairs for
+/// [`get_warmup_millis`] milliseconds.
+/// This function calls [`bench_diff_x`] with pre-defined closures for the arguments that support the output of
+/// benchmark status to `stderr`.
+///
+/// Arguments:
+/// - `cfg` - bench configuration used to run the benchmark.
+/// - `f1` - first target for comparison.
+/// - `f2` - second target for comparison.
+/// - `exec_count` - number of executions (sample size) for each function. If it is not a multiple of 4, the
+///   closest multiple of 4 less than it will be used.
+/// - `header` - is invoked once at the start of this function's execution; it can be used, for example,
+///   to output information about the functions being compared to `stdout` and/or `stderr`. The
+///   argument is the `exec_count`.
+pub fn bench_diff_with_status_and_cfg(
+    cfg: &BenchCfg,
     mut f1: impl FnMut(),
     mut f2: impl FnMut(),
     exec_run_length: RunLength,
     header: impl FnOnce(usize),
 ) -> DiffOut {
-    let cfg = BenchCfg::get();
-
     let status = |preamble: &'static str, millis: u64, count: usize| {
         let mut status_len: usize = 0;
 
@@ -323,14 +445,14 @@ pub fn bench_diff_with_status(
 
     header(exec_count);
 
-    let out = bench_diff_x(
+    let out = bench_diff_x_with_cfg(
+        cfg,
         f1,
         f2,
         warmup_millis,
         exec_run_length,
         Some(warmup_status),
         Some(exec_status),
-        execs_per_milli,
     );
     eprintln!();
     out

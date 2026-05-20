@@ -1,10 +1,10 @@
 //! Main module implementing functions to compare the difference in latency between two closures.
 
 use super::DiffOut;
-use bench_utils::{BenchCfg, BenchOut, LatencyUnit, RunLength, latency};
+use bench_utils::{BenchCfg, BenchOut, LatencyUnit, RunLength, latency, make_status};
 use std::{
     cmp,
-    io::{Write, stderr},
+    io::stderr,
     time::{Duration, Instant},
 };
 
@@ -409,22 +409,6 @@ pub fn bench_diff_with_status_and_cfg(
     exec_run_length: RunLength,
     header: impl FnOnce(usize),
 ) -> DiffOut {
-    let status = |preamble: &'static str, millis: u64, count: usize| {
-        let mut status_len: usize = 0;
-
-        move |i: usize| {
-            if status_len == 0 {
-                eprint!("{preamble} for (approx.) {millis} millis: ");
-                stderr().flush().expect("unexpected I/O error");
-            }
-            eprint!("{}", "\u{8}".repeat(status_len));
-            let status = format!("{i} of (approx.) {count} executions.");
-            status_len = status.len();
-            eprint!("{status}");
-            stderr().flush().expect("unexpected I/O error");
-        }
-    };
-
     let execs_per_milli = cfg.execs_per_milli(|| {
         let _ = &mut f1();
         let _ = &mut f2();
@@ -433,15 +417,17 @@ pub fn bench_diff_with_status_and_cfg(
     let warmup_millis = cfg.warmup_millis();
     let warmup_run_length = RunLength::Duration(Duration::from_millis(warmup_millis));
     let warmup_est_count = warmup_run_length.estimated_count(execs_per_milli);
-    let warmup_status = status("Warming up", warmup_millis, warmup_est_count);
+
+    let warmup_status = make_status("Warming up", warmup_millis, warmup_est_count, stderr());
 
     let exec_count = exec_run_length.estimated_count(execs_per_milli);
     let exec_millis = exec_run_length
         .estimated_duration(execs_per_milli)
         .as_millis() as u64;
+
     // The `\n` below is to separate warmup status from exec status. Otherwise, they get mixed up due to
     // the `eprint!("{}", "\u{8}".repeat(status_len))` line in the `status` closure.
-    let exec_status = status("\nExecuting bench_diff", exec_millis, exec_count);
+    let exec_status = make_status("\nExecuting bench_diff", exec_millis, exec_count, stderr());
 
     header(exec_count);
 

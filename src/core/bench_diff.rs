@@ -120,8 +120,11 @@ impl<'a> DiffState<'a> {
         assert!(status_freq > 0, "status_freq must be > 0");
 
         let (exec_count, run_time) = run_length.get_exec_count_and_duration();
-        let exec_count2 = exec_count / 2;
+        let exec_count2 = exec_count / 2; // to account for duos
         assert!(exec_count2 > 0, "exec_count2 must be > 0");
+
+        #[allow(unused)]
+        let exec_count = (); // prevent its use below, something that previously caused a bug
 
         let unit = self.recording_unit();
         let mut est_remaining_iters = est_count_from_dur;
@@ -140,7 +143,7 @@ impl<'a> DiffState<'a> {
 
                 if i % status_freq == 0 || i == exec_count2 || est_remaining_iters == 0 {
                     let elapsed = start.elapsed();
-                    let finished = i == exec_count || elapsed >= run_time;
+                    let finished = i == exec_count2 || elapsed >= run_time;
 
                     if i % status_freq == 0 || finished {
                         if let Some(exec_status) = exec_status {
@@ -200,7 +203,7 @@ pub fn bench_diff_x(
     exec_status: Option<impl FnMut(usize)>,
 ) -> DiffOut {
     let cfg = BenchCfg::default();
-    bench_diff_x_with_cfg(
+    bench_diff_x_arg_cfg(
         &cfg,
         f1,
         f2,
@@ -235,7 +238,7 @@ pub fn bench_diff_x(
 ///   status, e.g., how many observations have been collected for the pair of functions versus `exec_count`.
 ///   Its argument is the current number of executions performed.
 ///   (See the source code of [`bench_diff_with_status`] for an example.)
-pub fn bench_diff_x_with_cfg(
+pub fn bench_diff_x_arg_cfg(
     cfg: &BenchCfg,
     mut f1: impl FnMut(),
     mut f2: impl FnMut(),
@@ -317,7 +320,7 @@ pub fn bench_diff_x_with_cfg(
 ///   closest multiple of 4 less than it will be used.
 pub fn bench_diff(f1: impl FnMut(), f2: impl FnMut(), exec_run_length: RunLength) -> DiffOut {
     let cfg = BenchCfg::default();
-    bench_diff_with_cfg(&cfg, f1, f2, exec_run_length)
+    bench_diff_arg_cfg(&cfg, f1, f2, exec_run_length)
 }
 
 /// Compares latencies for two closures `f1` and `f2`.
@@ -335,7 +338,7 @@ pub fn bench_diff(f1: impl FnMut(), f2: impl FnMut(), exec_run_length: RunLength
 /// - `f2` - second target for comparison.
 /// - `exec_count` - number of executions (sample size) for each function. If it is not a multiple of 4, the
 ///   closest multiple of 4 less than it will be used.
-pub fn bench_diff_with_cfg(
+pub fn bench_diff_arg_cfg(
     cfg: &BenchCfg,
     f1: impl FnMut(),
     f2: impl FnMut(),
@@ -343,7 +346,7 @@ pub fn bench_diff_with_cfg(
 ) -> DiffOut {
     let warmup_millis = cfg.warmup_millis();
 
-    bench_diff_x_with_cfg(
+    bench_diff_x_arg_cfg(
         cfg,
         f1,
         f2,
@@ -380,7 +383,7 @@ pub fn bench_diff_with_status(
     header: impl FnOnce(usize),
 ) -> DiffOut {
     let cfg = BenchCfg::default();
-    bench_diff_with_status_and_cfg(&cfg, f1, f2, exec_run_length, header)
+    bench_diff_with_status_arg_cfg(&cfg, f1, f2, exec_run_length, header)
 }
 
 /// Compares latencies for two closures `f1` and `f2` and outputs information about the benchmark and its
@@ -402,7 +405,7 @@ pub fn bench_diff_with_status(
 /// - `header` - is invoked once at the start of this function's execution; it can be used, for example,
 ///   to output information about the functions being compared to `stdout` and/or `stderr`. The
 ///   argument is the `exec_count`.
-pub fn bench_diff_with_status_and_cfg(
+pub fn bench_diff_with_status_arg_cfg(
     cfg: &BenchCfg,
     mut f1: impl FnMut(),
     mut f2: impl FnMut(),
@@ -431,7 +434,7 @@ pub fn bench_diff_with_status_and_cfg(
 
     header(exec_count);
 
-    let out = bench_diff_x_with_cfg(
+    let out = bench_diff_x_arg_cfg(
         cfg,
         f1,
         f2,

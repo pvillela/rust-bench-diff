@@ -58,9 +58,10 @@ _experimental = [
 ] # to hide functionality developed but not intended for clients
 _test_support = [
     "_experimental",
+    "basic_stats/_dev_utils",
     "dep:bench_utils",
     "bench_utils/busy_work",
-    "basic_stats/_dev_utils",
+    "bench_utils/_test_support",
     "dep:rand",
     "dep:rand_distr",
 ] # intended only for tests and benches
